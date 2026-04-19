@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "<6.0,>=5.0"
+djangorestframework = "<4.0,>=3.15"
+djangorestframework-simplejwt = "<6.0,>=5.3"
+social-auth-app-django = "<6.0,>=5.4"
+djangorestframework-camel-case = "<2.0,>=1.4"
+django-cors-headers = "<5.0,>=4.3"
+drf-spectacular = "<1.0,>=0.27"
+python-decouple = ">=3.8"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
