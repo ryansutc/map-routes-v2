@@ -38,10 +38,7 @@ const Route = z
     title: z.string().max(255).nullish(),
     activity_date: z.string().datetime({ offset: true }),
     activity_type: z.string().max(100),
-    distance: z
-      .string()
-      .regex(/^-?\d{0,8}(?:\.\d{0,2})?$/)
-      .optional(),
+    distance: z.number(),
     notes: z.string().nullish(),
     route_link: z.string().max(500).nullish(),
     owner: z.string().email(),
@@ -54,10 +51,7 @@ const RouteWriteRequest = z
     title: z.string().max(255).nullish(),
     activity_date: z.string().datetime({ offset: true }),
     activity_type: z.string().min(1).max(100),
-    distance: z
-      .string()
-      .regex(/^-?\d{0,8}(?:\.\d{0,2})?$/)
-      .optional(),
+    distance: z.number(),
     notes: z.string().nullish(),
     route_link: z.string().max(500).nullish(),
     is_public: z.boolean().optional(),
@@ -69,10 +63,7 @@ const RouteWrite = z
     title: z.string().max(255).nullish(),
     activity_date: z.string().datetime({ offset: true }),
     activity_type: z.string().max(100),
-    distance: z
-      .string()
-      .regex(/^-?\d{0,8}(?:\.\d{0,2})?$/)
-      .optional(),
+    distance: z.number(),
     notes: z.string().nullish(),
     route_link: z.string().max(500).nullish(),
     is_public: z.boolean().optional(),
@@ -83,7 +74,7 @@ const PatchedRouteWriteRequest = z
     title: z.string().max(255).nullable(),
     activity_date: z.string().datetime({ offset: true }),
     activity_type: z.string().min(1).max(100),
-    distance: z.string().regex(/^-?\d{0,8}(?:\.\d{0,2})?$/),
+    distance: z.number(),
     notes: z.string().nullable(),
     route_link: z.string().max(500).nullable(),
     is_public: z.boolean(),
