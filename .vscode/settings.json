@@ -1,0 +1,24 @@
+{
+  // use ruff for python
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+
+  // use prettier for typescript/ javascript/ json
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // format on save
+  "editor.formatOnSave": true,
+
+  // in backend enable pytest, disable unittest
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false
+}
