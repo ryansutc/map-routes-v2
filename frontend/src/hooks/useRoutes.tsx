@@ -10,7 +10,7 @@ export function useRoutes() {
 
   return useQuery({
     queryKey: [ROUTE_ITEMS_QUERY_KEY, user, userIsAuthenticated],
-    queryFn: () => zodiosAPI.getApiRoute(),
+    queryFn: () => zodiosAPI.route_list(),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
     gcTime: 24 * 60 * 60 * 1000, // 24 hours
   });

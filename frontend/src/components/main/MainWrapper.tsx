@@ -12,7 +12,7 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
   useEffect(() => {
     async function checkStatus() {
       try {
-        const userInfo = await zodiosAPI.getApiAuthStatus();
+        const userInfo = await zodiosAPI.auth_status_retrieve();
         if (userInfo && userInfo.is_authenticated) {
           setUser(userInfo.user_name!);
           setUserIsAuthenticated(userInfo.is_authenticated);
