@@ -24,5 +24,4 @@ Then follow steps to build/run backend.
 
 ### Notes
 
-React UX Code is copied from my recent [coursera_django_customer_frontend](https://github.com/ryansutc/coursera_django_customer_frontend/tree/main) project,
-as is the state mgmt approach and API validation/contract process tooling approach.
+React UX Code is copied from my recent [coursera_django_customer_frontend](https://github.com/ryansutc/coursera_django_customer_frontend/tree/main) project, as is the state mgmt approach and API validation/contract process tooling approach.

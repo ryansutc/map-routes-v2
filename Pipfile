@@ -14,6 +14,8 @@ drf-spectacular = "<1.0,>=0.27"
 python-decouple = ">=3.8"
 
 [dev-packages]
+ruff = "*"
+pytest = "*"
 
 [requires]
 python_version = "3.12"

@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "NODE_OPTIONS='--max-old-space-size=8192' pnpm exec tsc -b && NODE_OPTIONS='--max-old-space-size=8192' pnpm exec vite build && pnpm run copy-esri-assets",
-    "copy-esri-assets": "cp -r node_modules/@arcgis/core/assets ../Backend/wwwroot/react/assets/esri",
     "lint": "eslint .",
     "preview": "vite preview",
     "schema-fetch": "curl -s 'http://localhost:8000/api/schema/?format=json' -o ./docs/schema.json",

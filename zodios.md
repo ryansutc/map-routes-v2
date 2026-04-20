@@ -37,7 +37,7 @@
 │       │  [3] pnpm run schema-json-to-ts                         │
 │       │      json2ts                                            │
 │       ▼                                                         │
-│   src/types/django_api_types.ts  ◄── plain TypeScript types     │
+│   src/types/aspnet_api_types.ts  ◄── plain TypeScript types     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -78,6 +78,6 @@ Which executes in sequence:
 | -------------------- | ------------------------------ | ------------------------------------------------------------- |
 | `schema-to-zod`      | `openapi-zod-client`           | `docs/schema.json` → `src/generatedtypes/django_generated.ts` |
 | `schema-zod-to-json` | `tsx generate-schema-types.ts` | `django_generated.ts` → `docs/schema_json.json`               |
-| `schema-json-to-ts`  | `json2ts`                      | `docs/schema.json` → `src/types/django_api_types.ts`          |
+| `schema-json-to-ts`  | `json2ts`                      | `docs/schema.json` → `src/types/aspnet_api_types.ts`          |
 
-> **Note:** The `schema-zod-to-json` and `schema-json-to-ts` steps currently reference the old `django_generated.ts` file — those may need updating to point to `django_generated.ts` if you want them to reflect the Django schema.
+> **Note:** The `schema-zod-to-json` and `schema-json-to-ts` steps currently reference the old `aspnet_generated.ts` file — those may need updating to point to `django_generated.ts` if you want them to reflect the Django schema.
