@@ -1,4 +1,5 @@
 import { zodiosAPI } from "@/api/axiosClient";
+import { ROUTES_QUERY_KEY } from "@/hooks/useRoutes";
 import { useStore } from "@/state/store";
 import { Grid } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,8 +32,8 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
 
       checkStatus();
     } else {
-      // if authenticated status changes, refetch routeItems
-      queryClient.invalidateQueries({ queryKey: ["routeItems"] });
+      // if authenticated status changes, refetch the routes list
+      queryClient.invalidateQueries({ queryKey: ROUTES_QUERY_KEY });
     }
   }, [setUserIsAuthenticated, userIsAuthenticated]);
 
