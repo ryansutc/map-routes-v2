@@ -1,5 +1,6 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { NotFound } from "./__not-found";
 
 export const Route = createRootRoute({
   component: () => (
@@ -8,4 +9,5 @@ export const Route = createRootRoute({
       <TanStackRouterDevtools />
     </>
   ),
+  notFoundComponent: NotFound,
 });
