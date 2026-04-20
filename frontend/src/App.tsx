@@ -50,9 +50,9 @@ function App() {
 
   return (
     <>
-      <CssBaseline />
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
+          <CssBaseline />
           <Container
             id="appContainer"
             component="main"
