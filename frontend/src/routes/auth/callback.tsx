@@ -24,7 +24,7 @@ function AuthCallback() {
       setUserIsAuthenticated(true);
       history.replaceState(null, '', window.location.pathname);
     }
-    void navigate({ to: '/' });
+    void navigate({ to: '/routes' });
   }, [setUser, setUserIsAuthenticated, navigate]);
 
   return (
