@@ -1,24 +1,132 @@
-import { AppBar, Box, Toolbar, Typography } from "@mui/material";
-import type { PropsWithChildren } from "react";
+import { useState } from "react";
+import type { MouseEvent, PropsWithChildren } from "react";
+import {
+  AppBar,
+  Avatar,
+  Box,
+  Button,
+  IconButton,
+  Menu,
+  MenuItem,
+  Toolbar,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 
-/**
- * AppShell — top-chrome wrapper for the app.
- *
- * Phase 0 stub: intentionally not wired into __root.tsx yet.
- * Phase 2 will mount this around <Outlet /> and add the Google
- * sign-in / avatar menu on the right side of the AppBar.
- */
+import { zodiosAPI } from "@/api/axiosClient";
+import { useStore } from "@/state/store";
+import { GOOGLE_LOGIN_URL } from "@/utils/environment";
+
 export default function AppShell({ children }: PropsWithChildren) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user, userIsAuthenticated, setUser, setUserIsAuthenticated } =
+    useStore();
+
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const menuOpen = Boolean(menuAnchor);
+
+  const handleAvatarClick = (e: MouseEvent<HTMLElement>) => {
+    setMenuAnchor(e.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleSignOut = async () => {
+    handleMenuClose();
+    setSignOutError(null);
+    try {
+      await zodiosAPI.auth_logout_create(undefined);
+    } catch (e) {
+      console.error("Sign-out request failed:", e);
+      setSignOutError("Sign-out failed. Please try again.");
+      return;
+    }
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    setUser(null);
+    setUserIsAuthenticated(false);
+    queryClient.invalidateQueries();
+    void navigate({ to: "/routes" });
+  };
+
+  const avatarLetter = (user ?? "?").charAt(0).toUpperCase();
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <AppBar position="sticky" color="primary" enableColorOnDark>
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography
+            variant="h6"
+            component={Link}
+            to="/routes"
+            sx={{
+              flexGrow: 1,
+              color: "inherit",
+              textDecoration: "none",
+            }}
+          >
             map-routes
           </Typography>
-          {/* Phase 2: Google sign-in button / authed avatar menu mount here. */}
+
+          {userIsAuthenticated ? (
+            <>
+              <Tooltip title={user ?? "Account"}>
+                <IconButton
+                  onClick={handleAvatarClick}
+                  size="small"
+                  aria-label="Open account menu"
+                  aria-controls={menuOpen ? "account-menu" : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={menuOpen ? "true" : undefined}
+                  sx={{ ml: 1 }}
+                >
+                  <Avatar sx={{ width: 32, height: 32 }}>{avatarLetter}</Avatar>
+                </IconButton>
+              </Tooltip>
+              <Menu
+                id="account-menu"
+                anchorEl={menuAnchor}
+                open={menuOpen}
+                onClose={handleMenuClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+              >
+                <MenuItem onClick={() => void handleSignOut()}>
+                  Sign out
+                </MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <Button
+              color="inherit"
+              variant="outlined"
+              href={GOOGLE_LOGIN_URL}
+              sx={{ textTransform: "none" }}
+            >
+              Sign in with Google
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
+      {signOutError && (
+        <Box
+          role="alert"
+          sx={{
+            bgcolor: "error.main",
+            color: "error.contrastText",
+            px: 2,
+            py: 1,
+          }}
+        >
+          {signOutError}
+        </Box>
+      )}
       <Box component="main" sx={{ flexGrow: 1 }}>
         {children}
       </Box>

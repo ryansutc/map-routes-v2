@@ -56,11 +56,13 @@ function App() {
           <Container
             id="appContainer"
             component="main"
+            maxWidth={false}
+            disableGutters
             sx={{
               display: "flex",
               flexDirection: "column",
+              width: "100%",
             }}
-            style={{ paddingLeft: 0, paddingRight: 0 }}
           >
             <MainWrapper>
               <RouterProvider router={router} />
