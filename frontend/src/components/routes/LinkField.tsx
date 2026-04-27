@@ -10,7 +10,7 @@ function LinkField({
   id: number;
   keyVal: string;
 }) {
-  const href = getEnvHref(`/map/${id}`);
+  const href = getEnvHref(`/routes/${id}`);
   return (
     <TableCell component="th" scope="row" key={keyVal}>
       <Link href={href}>{title}</Link>
