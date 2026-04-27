@@ -16,7 +16,13 @@ export default function RoutesTable() {
 
   const { data: routeItems, isLoading, error, isError } = useRoutes();
 
-  const ignoreFields = ["activity_type", "distance", "is_public", "owner"];
+  const ignoreFields = [
+    "id",
+    "activity_type",
+    "distance",
+    "is_public",
+    "owner",
+  ];
   const fields =
     routeItems &&
     // @ts-expect-error routeItems is not empty
@@ -30,8 +36,8 @@ export default function RoutesTable() {
     return <div>{`Error Occurred loading table ${error}`}</div>;
   }
   return (
-    <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }} aria-label="simple table">
+    <TableContainer component={Paper} sx={{ maxWidth: "96%", mx: 2 }}>
+      <Table sx={{ minWidth: 600 }} aria-label="simple table">
         <TableHead>
           <TableRow>
             {fields &&
