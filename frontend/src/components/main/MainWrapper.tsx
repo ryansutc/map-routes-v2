@@ -35,7 +35,7 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
       // if authenticated status changes, refetch the routes list
       queryClient.invalidateQueries({ queryKey: ROUTES_QUERY_KEY });
     }
-  }, [setUserIsAuthenticated, userIsAuthenticated]);
+  }, [queryClient, setUser, setUserIsAuthenticated, userIsAuthenticated]);
 
   if (error) {
     const errorMessage =
@@ -51,9 +51,12 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
       id="rootWrapper"
       container
       spacing={2}
-      justifyContent="center"
-      style={{ width: "100%" }}
-      size={12}
+      sx={{
+        width: "100%",
+        "& > *": {
+          width: "100%",
+        },
+      }}
     >
       {children}
     </Grid>
