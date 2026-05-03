@@ -15,11 +15,14 @@
       "program": "${workspaceFolder}/django_backend/manage.py"
     },
     {
-      "name": "Launch Chrome",
-      "request": "launch",
+      "name": "Attach Chrome",
+      "request": "attach",
       "type": "chrome",
       "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/frontend/src"
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "port": 9222,
+      "preLaunchTask": "Launch Chrome (debug)",
+      "restart": true
     }
   ]
 }
