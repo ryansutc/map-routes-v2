@@ -1,13 +1,16 @@
-from .base import *
 from decouple import config
+
+from .base import *
 
 DEBUG = False
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="").split(",")
 
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="").split(",")
 
-SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS = config('SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS', default='').split(',')
+SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS = config(
+    "SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS", default=""
+).split(",")
 
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
