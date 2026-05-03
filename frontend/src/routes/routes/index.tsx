@@ -11,7 +11,6 @@ import {
   Tabs,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
@@ -106,18 +105,7 @@ function RoutesIndex() {
           aria-label="Route list tabs"
         >
           <Tab label="Public" value="public" />
-          <Tooltip
-            title={userIsAuthenticated ? "" : "Sign in to see your routes"}
-            disableHoverListener={!!userIsAuthenticated}
-          >
-            <span>
-              <Tab
-                label="My Routes"
-                value="mine"
-                disabled={!userIsAuthenticated}
-              />
-            </span>
-          </Tooltip>
+          <Tab label="My Routes" value="mine" />
         </Tabs>
 
         <ToggleButtonGroup
