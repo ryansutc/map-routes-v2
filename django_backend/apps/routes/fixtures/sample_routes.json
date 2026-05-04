@@ -1,0 +1,618 @@
+[
+  {
+    "model": "routes.route",
+    "pk": 100,
+    "fields": {
+      "title": "Sunshine Coast Mountain Bike Ride",
+      "activity_date": "2026-04-12T09:15:00Z",
+      "activity_type": "bike",
+      "distance": "32.4",
+      "notes": "Mountain Bike Ride from the Ferry to Gibsons, BC through the foothills of the mountains.",
+      "route_link": "https://www.dropbox.com/scl/fi/jy6km3pstsyq8fvixksqe/Sunshine_coast_ferry_bike_ride.gpx?rlkey=etd3jvuse6tq5568nz354ffne&dl=0",
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2026-04-12T20:30:00Z",
+      "updated_at": "2026-04-12T20:30:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 101,
+    "fields": {
+      "title": "Burke Mountain",
+      "activity_date": "2026-04-05T08:00:00Z",
+      "activity_type": "bike",
+      "distance": "14.5",
+      "notes": "Ride don't slide",
+      "route_link": "39afcd5d16df4ad190a6434cc0583724",
+      "owner": "ryansutc@gmail.com",
+      "is_public": true,
+      "created_at": "2026-04-05T16:45:00Z",
+      "updated_at": "2026-04-05T16:45:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 102,
+    "fields": {
+      "title": "Joffre Lakes Trail",
+      "activity_date": "2025-09-22T10:30:00Z",
+      "activity_type": "hike",
+      "distance": "10.00",
+      "notes": "Three turquoise lakes. Crowded on weekends.",
+      "route_link": "https://www.alltrails.com/trail/canada/british-columbia/joffre-lakes",
+      "owner": "alice@example.com",
+      "is_public": true,
+      "created_at": "2025-09-22T22:00:00Z",
+      "updated_at": "2025-09-22T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 103,
+    "fields": {
+      "title": "Lynn Canyon Suspension Bridge",
+      "activity_date": "2026-03-15T11:00:00Z",
+      "activity_type": "hike",
+      "distance": "5.00",
+      "notes": null,
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": false,
+      "created_at": "2026-03-15T18:00:00Z",
+      "updated_at": "2026-03-15T18:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 104,
+    "fields": {
+      "title": "Burnaby Mountain Loop",
+      "activity_date": "2026-02-08T07:45:00Z",
+      "activity_type": "bike",
+      "distance": "22.40",
+      "notes": "Quick before-work ride. Lots of climbing.",
+      "route_link": "https://www.strava.com/segments/example",
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2026-02-08T15:00:00Z",
+      "updated_at": "2026-02-08T15:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 105,
+    "fields": {
+      "title": "False Creek Sunrise Run",
+      "activity_date": "2026-04-20T06:30:00Z",
+      "activity_type": "run",
+      "distance": "8.20",
+      "notes": "Pancake flat and gorgeous at sunrise.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2026-04-20T14:00:00Z",
+      "updated_at": "2026-04-20T14:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 106,
+    "fields": {
+      "title": "Garibaldi Lake",
+      "activity_date": "2025-08-14T08:00:00Z",
+      "activity_type": "hike",
+      "distance": "18.00",
+      "notes": "Long but worth every step. Camped overnight at the lake.",
+      "route_link": "https://bcparks.ca/garibaldi-park/",
+      "owner": "bob@example.com",
+      "is_public": true,
+      "created_at": "2025-08-15T03:30:00Z",
+      "updated_at": "2025-08-15T03:30:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 107,
+    "fields": {
+      "title": "False Creek Kayak Loop",
+      "activity_date": "2025-07-19T16:00:00Z",
+      "activity_type": "kayak",
+      "distance": "6.40",
+      "notes": "Rented from Granville Island. Calm evening paddle.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2025-07-19T22:00:00Z",
+      "updated_at": "2025-07-19T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 108,
+    "fields": {
+      "title": "Whistler Day on the Hill",
+      "activity_date": "2026-01-30T08:30:00Z",
+      "activity_type": "ski",
+      "distance": "35.10",
+      "notes": "Bluebird day. Hit Symphony Bowl twice.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": false,
+      "created_at": "2026-01-30T22:30:00Z",
+      "updated_at": "2026-01-30T22:30:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 109,
+    "fields": {
+      "title": "Cypress Snowshoe to Bowen Lookout",
+      "activity_date": "2026-02-22T10:00:00Z",
+      "activity_type": "snowshoe",
+      "distance": "7.00",
+      "notes": "Easy snowshoe trail with epic Howe Sound views.",
+      "route_link": "https://cypressmountain.com/snowshoeing",
+      "owner": "carol@example.com",
+      "is_public": true,
+      "created_at": "2026-02-22T18:00:00Z",
+      "updated_at": "2026-02-22T18:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 110,
+    "fields": {
+      "title": "Pacific Spirit Trail Run",
+      "activity_date": "2026-03-29T09:00:00Z",
+      "activity_type": "trail run",
+      "distance": "12.30",
+      "notes": "Forest trails, easy on the knees.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2026-03-29T15:30:00Z",
+      "updated_at": "2026-03-29T15:30:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 111,
+    "fields": {
+      "title": "Kennedy Falls Walk",
+      "activity_date": "2025-10-11T13:00:00Z",
+      "activity_type": "bike",
+      "distance": "28.50",
+      "notes": "Kennedy Falls Walk.",
+      "route_link": "3d03317e31f54c7cb2dbc1ca83ba427f",
+      "owner": "ryansutc@gmail.com",
+      "is_public": true,
+      "created_at": "2025-10-11T22:00:00Z",
+      "updated_at": "2025-10-11T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 112,
+    "fields": {
+      "title": "Squamish Smoke Bluffs",
+      "activity_date": "2025-06-07T10:00:00Z",
+      "activity_type": "climb",
+      "distance": "3.80",
+      "notes": "Approach + several routes on Burgers and Fries. 5.8 to 5.10a.",
+      "route_link": "https://www.mountainproject.com/area/smoke-bluffs",
+      "owner": "bob@example.com",
+      "is_public": true,
+      "created_at": "2025-06-07T20:00:00Z",
+      "updated_at": "2025-06-07T20:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 113,
+    "fields": {
+      "title": "Buntzen Lake Loop",
+      "activity_date": "2025-11-02T09:30:00Z",
+      "activity_type": "hike",
+      "distance": "11.20",
+      "notes": "Fall colours were peaking. Floating bridge at the north end is worth it.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2025-11-02T17:00:00Z",
+      "updated_at": "2025-11-02T17:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 114,
+    "fields": {
+      "title": "Mount Seymour First Pump Peak",
+      "activity_date": "2025-07-26T08:00:00Z",
+      "activity_type": "hike",
+      "distance": "9.10",
+      "notes": null,
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": false,
+      "created_at": "2025-07-26T16:30:00Z",
+      "updated_at": "2025-07-26T16:30:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 115,
+    "fields": {
+      "title": "UBC Endowment Lands Long Run",
+      "activity_date": "2026-04-18T07:00:00Z",
+      "activity_type": "run",
+      "distance": "14.60",
+      "notes": "Marathon training, easy pace.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2026-04-18T13:00:00Z",
+      "updated_at": "2026-04-18T13:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 116,
+    "fields": {
+      "title": "Indian Arm Paddle",
+      "activity_date": "2025-08-30T07:30:00Z",
+      "activity_type": "kayak",
+      "distance": "22.00",
+      "notes": "Long paddle to Granite Falls. Weather held.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": false,
+      "created_at": "2025-08-30T22:00:00Z",
+      "updated_at": "2025-08-30T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 117,
+    "fields": {
+      "title": "Capilano Canyon Walk",
+      "activity_date": "2026-03-08T13:30:00Z",
+      "activity_type": "walk",
+      "distance": "4.20",
+      "notes": "Easy stroll along the river.",
+      "route_link": null,
+      "owner": "carol@example.com",
+      "is_public": true,
+      "created_at": "2026-03-08T19:00:00Z",
+      "updated_at": "2026-03-08T19:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 118,
+    "fields": {
+      "title": "BCMC Trail to Grouse",
+      "activity_date": "2025-09-07T07:30:00Z",
+      "activity_type": "hike",
+      "distance": "16.40",
+      "notes": "BCMC up, Skyride down. Less crowded than the Grind.",
+      "route_link": "https://www.alltrails.com/trail/canada/british-columbia/bcmc-trail",
+      "owner": "alice@example.com",
+      "is_public": true,
+      "created_at": "2025-09-07T15:00:00Z",
+      "updated_at": "2025-09-07T15:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 119,
+    "fields": {
+      "title": "Sea-to-Sky Highway Ride",
+      "activity_date": "2025-05-25T07:00:00Z",
+      "activity_type": "bike",
+      "distance": "45.80",
+      "notes": "Horseshoe Bay to Squamish. Brutal headwind on the return.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2025-05-25T18:00:00Z",
+      "updated_at": "2025-05-25T18:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 120,
+    "fields": {
+      "title": "Manning Park XC Ski",
+      "activity_date": "2026-01-12T09:00:00Z",
+      "activity_type": "ski",
+      "distance": "18.30",
+      "notes": "Lightning Lakes loop. Fresh tracks.",
+      "route_link": null,
+      "owner": "bob@example.com",
+      "is_public": true,
+      "created_at": "2026-01-12T19:00:00Z",
+      "updated_at": "2026-01-12T19:00:00Z"
+    }
+  },
+  {
+    "model": "routes.route",
+    "pk": 121,
+    "fields": {
+      "title": "Lighthouse Park Sunset Walk",
+      "activity_date": "2025-12-21T15:30:00Z",
+      "activity_type": "walk",
+      "distance": "3.10",
+      "notes": "Solstice walk. Caught the last light at Point Atkinson.",
+      "route_link": null,
+      "owner": "test@example.com",
+      "is_public": true,
+      "created_at": "2025-12-21T23:00:00Z",
+      "updated_at": "2025-12-21T23:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 100,
+    "fields": {
+      "title": "Sunshine Coast",
+      "url": "https://dropbox.com/scl/fi/gh6ljlfaiieheragzjmaq/cambodia.jpg?rlkey=9fmsr7tknzw6btli9ofn8lkue&dl=0",
+      "latitude": 49.3017,
+      "longitude": -123.1411,
+      "route": 100,
+      "created_at": "2026-04-12T20:30:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 101,
+    "fields": {
+      "title": "Well Good Trail",
+      "url": "https://www.dropbox.com/scl/fi/27yhbphnf3u4ps05zc641/wellgood_burke.jpg?rlkey=qhuxdp171f2bjksc4tbjmyd65&dl=0",
+      "latitude": 49.3234167,
+      "longitude": -122.7287528,
+      "route": 100,
+      "created_at": "2026-04-12T20:30:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 102,
+    "fields": {
+      "title": "Top of the Grind",
+      "url": "https://picsum.photos/seed/grouse1/800/450",
+      "latitude": 49.3804,
+      "longitude": -123.0782,
+      "route": 101,
+      "created_at": "2026-04-05T16:45:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 103,
+    "fields": {
+      "title": "Upper Joffre Lake",
+      "url": "https://picsum.photos/seed/joffre1/800/450",
+      "latitude": 50.3692,
+      "longitude": -122.4979,
+      "route": 102,
+      "created_at": "2025-09-22T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 104,
+    "fields": {
+      "title": "Middle Lake reflection",
+      "url": "https://picsum.photos/seed/joffre2/800/450",
+      "latitude": 50.3651,
+      "longitude": -122.5012,
+      "route": 102,
+      "created_at": "2025-09-22T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 105,
+    "fields": {
+      "title": "Burnaby Mountain summit",
+      "url": "https://picsum.photos/seed/burnaby1/800/450",
+      "latitude": 49.2785,
+      "longitude": -122.9148,
+      "route": 104,
+      "created_at": "2026-02-08T15:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 106,
+    "fields": {
+      "title": "Sunrise over Science World",
+      "url": "https://picsum.photos/seed/falsecreek1/800/450",
+      "latitude": 49.2734,
+      "longitude": -123.1038,
+      "route": 105,
+      "created_at": "2026-04-20T14:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 107,
+    "fields": {
+      "title": "Garibaldi Lake from the Battleship Islands",
+      "url": "https://picsum.photos/seed/garibaldi1/800/450",
+      "latitude": 49.9461,
+      "longitude": -123.0227,
+      "route": 106,
+      "created_at": "2025-08-15T03:30:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 108,
+    "fields": {
+      "title": "Black Tusk in the distance",
+      "url": "https://picsum.photos/seed/garibaldi2/800/450",
+      "latitude": 49.9697,
+      "longitude": -123.0411,
+      "route": 106,
+      "created_at": "2025-08-15T03:30:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 109,
+    "fields": {
+      "title": "Granville Island launch",
+      "url": "https://picsum.photos/seed/kayak1/800/450",
+      "latitude": 49.2715,
+      "longitude": -123.134,
+      "route": 107,
+      "created_at": "2025-07-19T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 110,
+    "fields": {
+      "title": "Top of Symphony chair",
+      "url": "https://picsum.photos/seed/whistler1/800/450",
+      "latitude": 50.0596,
+      "longitude": -122.9486,
+      "route": 108,
+      "created_at": "2026-01-30T22:30:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 111,
+    "fields": {
+      "title": "Bowen Lookout viewpoint",
+      "url": "https://picsum.photos/seed/cypress1/800/450",
+      "latitude": 49.3978,
+      "longitude": -123.2043,
+      "route": 109,
+      "created_at": "2026-02-22T18:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 112,
+    "fields": {
+      "title": "Fromme singletrack",
+      "url": "https://picsum.photos/seed/fromme1/800/450",
+      "latitude": 49.3631,
+      "longitude": -123.0481,
+      "route": 111,
+      "created_at": "2025-10-11T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 113,
+    "fields": {
+      "title": "Burgers and Fries crag",
+      "url": "https://picsum.photos/seed/squamish1/800/450",
+      "latitude": 49.7016,
+      "longitude": -123.1558,
+      "route": 112,
+      "created_at": "2025-06-07T20:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 114,
+    "fields": {
+      "title": "Floating bridge",
+      "url": "https://picsum.photos/seed/buntzen1/800/450",
+      "latitude": 49.3458,
+      "longitude": -122.8658,
+      "route": 113,
+      "created_at": "2025-11-02T17:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 115,
+    "fields": {
+      "title": "First Pump Peak summit cairn",
+      "url": "https://picsum.photos/seed/seymour1/800/450",
+      "latitude": 49.4211,
+      "longitude": -122.9472,
+      "route": 114,
+      "created_at": "2025-07-26T16:30:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 116,
+    "fields": {
+      "title": "Granite Falls",
+      "url": "https://picsum.photos/seed/indianarm1/800/450",
+      "latitude": 49.4847,
+      "longitude": -122.8703,
+      "route": 116,
+      "created_at": "2025-08-30T22:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 117,
+    "fields": {
+      "title": "Capilano Canyon footbridge",
+      "url": "https://picsum.photos/seed/capilano1/800/450",
+      "latitude": 49.3517,
+      "longitude": -123.1051,
+      "route": 117,
+      "created_at": "2026-03-08T19:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 118,
+    "fields": {
+      "title": "Howe Sound from the BCMC",
+      "url": "https://picsum.photos/seed/bcmc1/800/450",
+      "latitude": 49.3777,
+      "longitude": -123.0825,
+      "route": 118,
+      "created_at": "2025-09-07T15:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 119,
+    "fields": {
+      "title": "Britannia Beach pull-off",
+      "url": "https://picsum.photos/seed/seatosky1/800/450",
+      "latitude": 49.6203,
+      "longitude": -123.2067,
+      "route": 119,
+      "created_at": "2025-05-25T18:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 120,
+    "fields": {
+      "title": "Lightning Lake fresh tracks",
+      "url": "https://picsum.photos/seed/manning1/800/450",
+      "latitude": 49.0653,
+      "longitude": -120.7822,
+      "route": 120,
+      "created_at": "2026-01-12T19:00:00Z"
+    }
+  },
+  {
+    "model": "routes.photo",
+    "pk": 121,
+    "fields": {
+      "title": "Point Atkinson lighthouse at golden hour",
+      "url": "https://picsum.photos/seed/lighthouse1/800/450",
+      "latitude": 49.3303,
+      "longitude": -123.2647,
+      "route": 121,
+      "created_at": "2025-12-21T23:00:00Z"
+    }
+  }
+]
