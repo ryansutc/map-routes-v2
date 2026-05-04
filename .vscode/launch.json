@@ -15,11 +15,15 @@
       "program": "${workspaceFolder}/django_backend/manage.py"
     },
     {
-      "name": "Launch Chrome",
+      "name": "Launch Chrome Debug",
       "request": "launch",
       "type": "chrome",
       "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/frontend/src"
+      "webRoot": "${workspaceFolder}/frontend",
+      "sourceMapPathOverrides": {
+        "/src/routes/*/%24*": "${workspaceFolder}/frontend/src/routes/*/$*",
+        "/*": "${workspaceFolder}/frontend/*"
+      }
     }
   ]
 }

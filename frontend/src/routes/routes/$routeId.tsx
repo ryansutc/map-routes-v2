@@ -58,7 +58,6 @@ function RouteDetail() {
     // eslint-disable-next-line no-console
     console.log(`Coordinates: ${coords} (${e.x},${e.y})`);
   };
-
   return (
     <Grid container sx={{ height: "calc(100vh - 64px)", width: "100%", px: 0 }}>
       <Grid size={{ xs: 12, sm: 8 }} sx={{ paddingRight: !isMobile ? 2 : 0 }}>
@@ -93,8 +92,8 @@ function RouteDetail() {
                 <>
                   <LayerController
                     map={map}
-                    // @ts-expect-error routeLink is a string
-                    layers={[routeItem?.routeLink]}
+                    // @ts-expect-error value can be undefined
+                    layers={routeItem?.route_link && [routeItem?.route_link]}
                     view={view}
                   />
                   <PhotoController

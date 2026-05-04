@@ -2,18 +2,19 @@ import RouteCardGrid from "@/components/routes/RouteCardGrid";
 import RouteTableView from "@/components/routes/RouteTableView";
 import { useRoutes } from "@/hooks/useRoutes";
 import { useStore } from "@/state/store";
+import { GOOGLE_LOGIN_URL } from "@/utils/environment";
 import {
   Box,
+  CircularProgress,
   Stack,
   Tab,
   Tabs,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo } from "react";
 
 type RoutesListSearch = {
   tab?: "public" | "mine";
@@ -23,6 +24,14 @@ export const Route = createFileRoute("/routes/")({
   validateSearch: (search: Record<string, unknown>): RoutesListSearch => {
     const raw = search.tab;
     return raw === "mine" ? { tab: "mine" } : {};
+  },
+  // Guard: if auth has already resolved to false when navigating to ?tab=mine,
+  // redirect immediately to Google OAuth before the component mounts.
+  beforeLoad: ({ search }) => {
+    const { userIsAuthenticated } = useStore.getState();
+    if (search.tab === "mine" && userIsAuthenticated === false) {
+      throw redirect({ href: GOOGLE_LOGIN_URL });
+    }
   },
   component: RoutesIndex,
   errorComponent: RoutesError,
@@ -36,6 +45,14 @@ function RoutesIndex() {
   const userIsAuthenticated = useStore((s) => s.userIsAuthenticated);
   const listView = useStore((s) => s.listView);
   const setListView = useStore((s) => s.setListView);
+
+  // Cold-load guard: auth was undefined when beforeLoad ran but has now resolved.
+  // Redirect to OAuth instead of showing an empty/broken "My Routes" tab.
+  useEffect(() => {
+    if (tab === "mine" && userIsAuthenticated === false) {
+      window.location.href = GOOGLE_LOGIN_URL;
+    }
+  }, [tab, userIsAuthenticated]);
 
   const { data: routes, isLoading, isError, error } = useRoutes();
 
@@ -64,6 +81,15 @@ function RoutesIndex() {
     if (value) setListView(value);
   };
 
+  // Auth still resolving — show spinner to prevent flash before redirect fires
+  if (tab === "mine" && userIsAuthenticated === undefined) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
       <Stack
@@ -79,18 +105,7 @@ function RoutesIndex() {
           aria-label="Route list tabs"
         >
           <Tab label="Public" value="public" />
-          <Tooltip
-            title={userIsAuthenticated ? "" : "Sign in to see your routes"}
-            disableHoverListener={!!userIsAuthenticated}
-          >
-            <span>
-              <Tab
-                label="My Routes"
-                value="mine"
-                disabled={!userIsAuthenticated}
-              />
-            </span>
-          </Tooltip>
+          <Tab label="My Routes" value="mine" />
         </Tabs>
 
         <ToggleButtonGroup

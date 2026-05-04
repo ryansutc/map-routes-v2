@@ -6,7 +6,7 @@
 export function dropboxShareUrlToDirectDownload(url: string): string {
   if (!url) return "";
   const newUrl = url
-    .replace("www.dropbox.com", "dl.dropboxusercontent.com")
+    .replace("dropbox.com", "dl.dropboxusercontent.com")
     .replace("?dl=0", "?raw=1");
 
   return newUrl;
