@@ -1,9 +1,10 @@
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
 import PhotoController from "@/components/map/PhotoController";
-import RouteInfoContainer from "@/components/map/RouteInfoContainer";
+import RouteInfoContainer, { RouteInfoSkeleton } from "@/components/map/RouteInfoContainer";
 import Toggle3d from "@/components/map/Toggle3d";
-import { useRoute } from "@/hooks/useRoute";
+import PhotoGallery from "@/components/routes/PhotoGallery";
+import { useRoute } from "@/hooks/useRoute.tsx";
 import theme from "@/utils/muitheme";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
@@ -58,6 +59,7 @@ function RouteDetail() {
     // eslint-disable-next-line no-console
     console.log(`Coordinates: ${coords} (${e.x},${e.y})`);
   };
+
   return (
     <Grid container sx={{ height: "calc(100vh - 64px)", width: "100%", px: 0 }}>
       <Grid size={{ xs: 12, sm: 8 }} sx={{ paddingRight: !isMobile ? 2 : 0 }}>
@@ -110,9 +112,22 @@ function RouteDetail() {
 
       <Grid
         size={{ xs: 12, sm: 4 }}
-        sx={{ px: isMobile ? 4 : 0, paddingLeft: !isMobile ? 2 : 0 }}
+        sx={{
+          px: isMobile ? 4 : 0,
+          paddingLeft: !isMobile ? 2 : 0,
+          overflowY: "auto",
+          height: isMobile ? "auto" : "calc(100vh - 64px)",
+        }}
       >
-        {routeItem && <RouteInfoContainer routeItem={routeItem} />}
+        {isLoading && <RouteInfoSkeleton />}
+        {routeItem && (
+          <>
+            <RouteInfoContainer routeItem={routeItem} />
+            <Box sx={{ px: 2, pb: 2 }}>
+              <PhotoGallery photos={routeItem.photos} />
+            </Box>
+          </>
+        )}
       </Grid>
     </Grid>
   );
