@@ -47,7 +47,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     tanstackRouter({
       target: "react",
-      autoCodeSplitting: true,
+      autoCodeSplitting: mode !== "development",
     }),
     react(),
     tsconfigPaths(),
