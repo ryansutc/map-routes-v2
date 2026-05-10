@@ -17,7 +17,7 @@ class RegisterSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=6)
     confirm_password = serializers.CharField(write_only=True)
 
-    def validate(self, data):
+    def validate(self, data: dict[str, str]) -> dict[str, str]:
         """Ensure password and confirm_password fields match."""
         if data["password"] != data["confirm_password"]:
             raise serializers.ValidationError("Passwords do not match.")

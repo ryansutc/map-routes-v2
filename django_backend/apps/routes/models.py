@@ -22,7 +22,7 @@ class Route(models.Model):
 
         db_table = "Route"
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return the route title or a fallback string."""
         return self.title or f"Route {self.id}"
 

@@ -4,12 +4,15 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.base_user import AbstractBaseUser
+from django.http import HttpRequest, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -24,7 +27,7 @@ from .serializers import (
 User = get_user_model()
 
 
-def get_tokens_for_user(user):
+def get_tokens_for_user(user: AbstractBaseUser) -> str:
     """Return a JWT access token string for the given user."""
     refresh = RefreshToken.for_user(user)
     return str(refresh.access_token)
@@ -36,7 +39,7 @@ class LoginJwtView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(request=LoginSerializer, responses=JwtAuthResponseSerializer)
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """Authenticate with email and password and return a JWT access token."""
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -64,7 +67,7 @@ class RegisterJwtView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(request=RegisterSerializer, responses=JwtAuthResponseSerializer)
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """Register a new user account and return a JWT access token."""
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -95,7 +98,7 @@ class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(responses={200: {"description": "Logout successful"}})
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """Return a logout confirmation response."""
         return Response({"message": "Logout successful"})
 
@@ -106,7 +109,7 @@ class AuthStatusView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(responses=AuthStatusSerializer)
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         """Return authentication status and email for the current user."""
         return Response(
             {
@@ -122,7 +125,7 @@ class GoogleLoginRedirectView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(responses={302: {"description": "Redirect to Google OAuth login"}})
-    def get(self, request):
+    def get(self, request: Request) -> HttpResponseRedirect:
         """Redirect to the Google OAuth2 login URL."""
         return redirect("/social/login/google-oauth2/")
 
@@ -131,7 +134,7 @@ class GoogleLoginRedirectView(APIView):
 class GoogleCallbackView(View):
     """View that handles the post-OAuth callback and forwards the JWT to the SPA."""
 
-    def get(self, request):
+    def get(self, request: HttpRequest) -> HttpResponseRedirect:
         """Read the JWT from the session and redirect to the frontend with the token."""
         token = request.session.pop("social_auth_jwt", None)
         email = request.session.pop("social_auth_email", None)
