@@ -1,3 +1,5 @@
+"""Development-specific Django settings."""
+
 from .base import *
 
 DEBUG = True

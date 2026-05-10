@@ -1,8 +1,10 @@
+"""Settings package that selects development or production configuration."""
+
 from decouple import config
 
-environment = config('ENVIRONMENT', default='development')
+environment = config("ENVIRONMENT", default="development")
 
-if environment == 'production':
+if environment == "production":
     from .production import *
 else:
     from .development import *

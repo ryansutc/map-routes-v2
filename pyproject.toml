@@ -1,0 +1,32 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312" #virtual env runs python 3.12.11 
+exclude = [
+    "*/migrations/*",
+    ".ruff_cache",
+    ".venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (unused imports, undefined names)
+    "I",   # isort (import sorting)
+    "B",   # flake8-bugbear (common bugs)
+    "UP",  # pyupgrade (modernize syntax)
+    "DJ",  # flake8-django (Django-specific checks)
+    "D",   # pydocstyle (docstring conventions)
+]
+ignore = [
+    "E501", # line too long — handled by formatter, not linter
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "django_backend"]
+
+[tool.ruff.format]
+quote-style = "double"

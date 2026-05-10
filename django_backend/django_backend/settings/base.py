@@ -1,3 +1,5 @@
+"""Base Django settings shared by all environments."""
+
 from datetime import timedelta
 from pathlib import Path
 
@@ -5,9 +7,7 @@ from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = config(
-    "DJANGO_SECRET_KEY", default="django-insecure-dev-key-change-in-production"
-)
+SECRET_KEY = config("DJANGO_SECRET_KEY", default="django-insecure-dev-key-change-in-production")
 
 DEBUG = config("DEBUG", default=True, cast=bool)
 
