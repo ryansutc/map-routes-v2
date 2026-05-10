@@ -1,7 +1,10 @@
+"""Utilities for parsing GPX files into GeoJSON and activity metadata."""
+
 import gpxpy
 
 
 def parse_gpx(file_bytes: bytes) -> dict:
+    """Parse a GPX file and return activity metadata and a GeoJSON FeatureCollection."""
     try:
         gpx = gpxpy.parse(file_bytes)
     except gpxpy.gpx.GPXException as exc:

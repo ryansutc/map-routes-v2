@@ -1,9 +1,12 @@
+"""Utilities for interacting with the ArcGIS Online REST API."""
+
 import requests
 
 _SHARING_REST = "https://www.arcgis.com/sharing/rest"
 
 
 def get_token(username: str, password: str) -> str:
+    """Obtain a short-lived ArcGIS Online token for the given credentials."""
     resp = requests.post(
         f"{_SHARING_REST}/generateToken",
         data={
@@ -23,6 +26,7 @@ def get_token(username: str, password: str) -> str:
 
 
 def upload_geojson(token: str, username: str, geojson_str: str, title: str) -> str:
+    """Upload a GeoJSON string as an ArcGIS Online item and return its item ID."""
     resp = requests.post(
         f"{_SHARING_REST}/content/users/{username}/addItem",
         data={
@@ -43,6 +47,7 @@ def upload_geojson(token: str, username: str, geojson_str: str, title: str) -> s
 
 
 def share_item_public(token: str, username: str, item_id: str) -> None:
+    """Share an ArcGIS Online item publicly with everyone."""
     resp = requests.post(
         f"{_SHARING_REST}/content/users/{username}/shareItems",
         data={
