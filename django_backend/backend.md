@@ -10,9 +10,11 @@
 
 ```bash
 cd django_backend
-python -m venv .venv  # or use existing .venv at repo root
-source .venv/bin/activate
-pip install -r requirements.txt  # or use pipenv: pipenv install
+pipenv shell  # to activate pipenv virtual environment
+pipenv install # to install packages or add a package
+# install a dev dependency
+pipenv install --dev ruff
+
 python manage.py migrate
 python manage.py runserver     # http://localhost:8000
 ```

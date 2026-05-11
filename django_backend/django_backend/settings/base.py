@@ -163,3 +163,6 @@ CORS_ALLOW_HEADERS = [
 ]
 
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
+
+ARCGIS_USERNAME = config("ARCGIS_USERNAME", default=None)
+ARCGIS_PASSWORD = config("ARCGIS_PASSWORD", default=None)
