@@ -13,6 +13,8 @@ django-cors-headers = "<5.0,>=4.3"
 drf-spectacular = "<1.0,>=0.27"
 python-decouple = ">=3.8"
 gpxpy = "*"
+cloudinary = "*"
+pillow = "*"
 
 [dev-packages]
 ruff = "*"
