@@ -12,6 +12,8 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
+from apps.shared_utils.error_utils import print_debug_error
+
 from .arcgis import get_token, share_item_public, upload_geojson
 from .gpx_utils import parse_gpx
 from .models import Route
@@ -92,7 +94,9 @@ class ParseGpxView(APIView):
         if "file" not in request.FILES:
             return Response({"detail": "No file provided."}, status=400)
 
-        file_bytes = request.FILES["file"].read()
+        uploaded_file = request.FILES["file"]
+        file_bytes = uploaded_file.read()
+        title = uploaded_file.name.removesuffix(".gpx") or "map-routes-gpx-upload"
 
         try:
             parsed = parse_gpx(file_bytes)
@@ -107,17 +111,20 @@ class ParseGpxView(APIView):
         try:
             token = get_token(username, password)
             geojson_str = json.dumps(parsed["geojson"])
-            item_id = upload_geojson(token, username, geojson_str, title="map-routes-gpx-upload")
+            item_id = upload_geojson(token, username, geojson_str, title=title)
             share_item_public(token, username, item_id)
         except Exception as exc:
+            print_debug_error()
             return Response({"detail": f"ArcGIS error: {exc}"}, status=502)
 
-        return Response({
-            "arcgis_item_id": item_id,
-            "geojson": parsed["geojson"],
-            "date": parsed["date"],
-            "distance_m": parsed["distance_m"],
-            "duration_s": parsed["duration_s"],
-            "avg_pace_decimal": parsed["avg_pace_decimal"],
-            "elevation_gain_m": parsed["elevation_gain_m"],
-        })
+        return Response(
+            {
+                "arcgis_item_id": item_id,
+                "geojson": parsed["geojson"],
+                "date": parsed["date"],
+                "distance_m": parsed["distance_m"],
+                "duration_s": parsed["duration_s"],
+                "avg_pace_decimal": parsed["avg_pace_decimal"],
+                "elevation_gain_m": parsed["elevation_gain_m"],
+            }
+        )
