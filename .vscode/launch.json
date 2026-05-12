@@ -12,7 +12,8 @@
       "args": ["runserver"],
       "django": true,
       "autoStartBrowser": false,
-      "program": "${workspaceFolder}/django_backend/manage.py"
+      "program": "${workspaceFolder}/django_backend/manage.py",
+      "cwd": "${workspaceFolder}/django_backend"
     },
     {
       "name": "Launch Chrome Debug",

@@ -31,12 +31,12 @@ def upload_geojson(token: str, username: str, geojson_str: str, title: str) -> s
         f"{_SHARING_REST}/content/users/{username}/addItem",
         data={
             "title": title,
-            "type": "GeoJSON",
+            "type": "GeoJson",
             "tags": "map-routes",
-            "text": geojson_str,
             "f": "json",
             "token": token,
         },
+        files={"file": (f"{title}.geojson", geojson_str.encode(), "application/geo+json")},
         timeout=30,
     )
     resp.raise_for_status()

@@ -12,6 +12,7 @@ djangorestframework-camel-case = "<2.0,>=1.4"
 django-cors-headers = "<5.0,>=4.3"
 drf-spectacular = "<1.0,>=0.27"
 python-decouple = ">=3.8"
+gpxpy = "*"
 
 [dev-packages]
 ruff = "*"
