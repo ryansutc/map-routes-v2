@@ -98,17 +98,21 @@ class RoutePhotoView(APIView):
             print_debug_error()
             return Response({"detail": "Photo upload to Cloudinary failed."}, status=502)
 
+        title = request.data.get("title") or None
+
         photo = Photo.objects.create(
             route=route,
             url=secure_url,
             latitude=lat,
             longitude=lng,
+            title=title,
         )
 
         return Response(
             {
                 "id": photo.id,
                 "url": photo.url,
+                "title": photo.title,
                 "latitude": photo.latitude,
                 "longitude": photo.longitude,
                 "has_gps": lat is not None and lng is not None,
