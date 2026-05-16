@@ -87,6 +87,8 @@ class RoutePhotoView(APIView):
         try:
             image = Image.open(uploaded_file)
             lat, lng = _extract_gps(image)
+            lat = round(lat, 6) if lat is not None else None
+            lng = round(lng, 6) if lng is not None else None
         except Exception:
             lat, lng = None, None
 
