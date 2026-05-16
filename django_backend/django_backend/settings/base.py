@@ -166,3 +166,7 @@ FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
 
 ARCGIS_USERNAME = config("ARCGIS_USERNAME", default=None)
 ARCGIS_PASSWORD = config("ARCGIS_PASSWORD", default=None)
+
+CLOUDINARY_CLOUD_NAME = config("CLOUDINARY_CLOUD_NAME", default=None)
+CLOUDINARY_API_KEY = config("CLOUDINARY_API_KEY", default=None)
+CLOUDINARY_API_SECRET = config("CLOUDINARY_API_SECRET", default=None)

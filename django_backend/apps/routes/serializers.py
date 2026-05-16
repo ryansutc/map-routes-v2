@@ -8,11 +8,17 @@ from .models import Photo, Route
 class PhotoSerializer(serializers.ModelSerializer):
     """Serializer for the Photo model."""
 
+    has_gps = serializers.SerializerMethodField()
+
     class Meta:
         """Meta options for PhotoSerializer."""
 
         model = Photo
-        fields = ["id", "title", "url", "latitude", "longitude", "route_id"]
+        fields = ["id", "title", "url", "latitude", "longitude", "route_id", "has_gps"]
+
+    def get_has_gps(self, obj: Photo) -> bool:
+        """Return True if the photo has GPS coordinates."""
+        return obj.latitude is not None and obj.longitude is not None
 
 
 class RouteSerializer(serializers.ModelSerializer):
@@ -31,6 +37,11 @@ class RouteSerializer(serializers.ModelSerializer):
             "activity_date",
             "activity_type",
             "distance",
+            "duration",
+            "avg_pace",
+            "elevation_gain",
+            "arcgis_item_id",
+            "geojson",
             "notes",
             "route_link",
             "owner",
@@ -55,6 +66,11 @@ class RouteWriteSerializer(serializers.ModelSerializer):
             "activity_date",
             "activity_type",
             "distance",
+            "duration",
+            "avg_pace",
+            "elevation_gain",
+            "arcgis_item_id",
+            "geojson",
             "notes",
             "route_link",
             "is_public",

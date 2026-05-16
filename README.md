@@ -29,6 +29,8 @@ python manage.py migrate
 python manage.py loaddata apps/routes/fixtures/sample_routes.json
 ```
 
+launch: http://localhost:8000/api/schema/swagger-ui
+
 ### Frontend Setup
 
 ```
