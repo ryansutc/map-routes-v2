@@ -167,6 +167,16 @@ const PhotoUploadResponse = z.object({
   has_gps: z.boolean(),
 });
 
+const ParseGpxResponse = z.object({
+  arcgis_item_id: z.string(),
+  geojson: z.unknown(),
+  date: z.string(),
+  distance_m: z.number(),
+  duration_s: z.number().nullable(),
+  avg_pace_decimal: z.number().nullable(),
+  elevation_gain_m: z.number().nullable(),
+});
+
 export const schemas = {
   LoginRequest,
   JwtAuthResponse,
@@ -177,6 +187,7 @@ export const schemas = {
   NullEnum,
   Photo,
   PhotoUploadResponse,
+  ParseGpxResponse,
   Route,
   RouteWriteRequest,
   RouteWrite,
@@ -362,8 +373,15 @@ export const endpoints = makeApi([
     path: "/api/route/parse-gpx/",
     alias: "route_parse_gpx_create",
     description: `Accept a GPX file, parse it, upload to ArcGIS, and return metadata.`,
-    requestFormat: "json",
-    response: z.void(),
+    requestFormat: "form-data",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ file: z.instanceof(File) }),
+      },
+    ],
+    response: ParseGpxResponse,
   },
 ]);
 
