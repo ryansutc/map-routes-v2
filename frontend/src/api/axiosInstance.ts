@@ -3,10 +3,7 @@ import axios from "axios";
 
 export const axiosInstance = axios.create({
   baseURL: BACKEND_DOMAIN,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: API_TIMEOUT, // 5 seconds timeout
+  timeout: API_TIMEOUT,
   withCredentials: true,
 });
 
