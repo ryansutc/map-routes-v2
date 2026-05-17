@@ -147,24 +147,6 @@ const PatchedRouteWriteRequest = z
     is_public: z.boolean(),
   })
   .partial();
-const PhotoUploadResponse = z.object({
-  id: z.number().int(),
-  url: z.string(),
-  latitude: z.number().nullable(),
-  longitude: z.number().nullable(),
-  has_gps: z.boolean(),
-});
-
-const ParseGpxResponse = z.object({
-  arcgis_item_id: z.string(),
-  geojson: z.unknown(),
-  date: z.string(),
-  distance_m: z.number(),
-  duration_s: z.number().nullable(),
-  avg_pace_decimal: z.number().nullable(),
-  elevation_gain_m: z.number().nullable(),
-});
-
 export const schemas = {
   LoginRequest,
   JwtAuthResponse,
@@ -174,8 +156,6 @@ export const schemas = {
   BlankEnum,
   NullEnum,
   Photo,
-  PhotoUploadResponse,
-  ParseGpxResponse,
   Route,
   RouteWriteRequest,
   RouteWrite,
@@ -341,34 +321,22 @@ export const endpoints = makeApi([
     path: "/api/route/:id/photos/",
     alias: "route_photos_create",
     description: `Accept an image file, extract GPS EXIF, upload to Cloudinary, save Photo record.`,
-    requestFormat: "form-data",
+    requestFormat: "json",
     parameters: [
       {
         name: "id",
         type: "Path",
         schema: z.number().int(),
       },
-      {
-        name: "body",
-        type: "Body",
-        schema: z.object({ file: z.instanceof(File) }),
-      },
     ],
-    response: PhotoUploadResponse,
+    response: z.void(),
   },
   {
     method: "post",
     path: "/api/route/parse-gpx/",
     alias: "route_parse_gpx_create",
     description: `Accept a GPX file, parse it, upload to ArcGIS, and return metadata.`,
-    requestFormat: "form-data",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: z.object({ file: z.instanceof(File) }),
-      },
-    ],
-    response: ParseGpxResponse,
+    requestFormat: "json",
+    response: z.void(),
   },
 ]);
