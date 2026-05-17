@@ -28,8 +28,8 @@ const ActivityTypeEnum = z.enum([
   "Skiing",
   "Other",
 ]);
-const BlankEnum = z.unknown();
-const NullEnum = z.unknown();
+const BlankEnum = z.literal("");
+const NullEnum = z.literal(null);
 const Photo = z.object({
   id: z.number().int(),
   title: z.string().max(255).nullish(),
