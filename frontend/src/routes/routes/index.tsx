@@ -5,6 +5,7 @@ import { useStore } from "@/state/store";
 import { GOOGLE_LOGIN_URL } from "@/utils/environment";
 import {
   Box,
+  Button,
   CircularProgress,
   Stack,
   Tab,
@@ -13,7 +14,12 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 
 type RoutesListSearch = {
@@ -108,20 +114,31 @@ function RoutesIndex() {
           <Tab label="My Routes" value="mine" />
         </Tabs>
 
-        <ToggleButtonGroup
-          value={listView}
-          exclusive
-          onChange={handleViewChange}
-          size="small"
-          aria-label="List presentation"
-        >
-          <ToggleButton value="cards" aria-label="Card view">
-            Cards
-          </ToggleButton>
-          <ToggleButton value="table" aria-label="Table view">
-            Table
-          </ToggleButton>
-        </ToggleButtonGroup>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Button
+            component={Link}
+            to="/routes/new"
+            variant="contained"
+            size="small"
+            disabled={!userIsAuthenticated}
+          >
+            + New Route
+          </Button>
+          <ToggleButtonGroup
+            value={listView}
+            exclusive
+            onChange={handleViewChange}
+            size="small"
+            aria-label="List presentation"
+          >
+            <ToggleButton value="cards" aria-label="Card view">
+              Cards
+            </ToggleButton>
+            <ToggleButton value="table" aria-label="Table view">
+              Table
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
       </Stack>
 
       {isError ? (

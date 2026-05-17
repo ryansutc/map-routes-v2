@@ -5,6 +5,7 @@ from typing import Any
 
 from django.conf import settings
 from django.db.models import Q, QuerySet
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
@@ -17,7 +18,12 @@ from apps.shared_utils.error_utils import print_debug_error
 from .arcgis import get_token, share_item_public, upload_geojson
 from .gpx_utils import parse_gpx
 from .models import Route
-from .serializers import RouteSerializer, RouteWriteSerializer
+from .serializers import (
+    ParseGpxRequestSerializer,
+    ParseGpxResponseSerializer,
+    RouteSerializer,
+    RouteWriteSerializer,
+)
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -89,6 +95,7 @@ class ParseGpxView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser]
 
+    @extend_schema(request=ParseGpxRequestSerializer, responses={200: ParseGpxResponseSerializer})
     def post(self, request: Request) -> Response:
         """Accept a GPX file, parse it, upload to ArcGIS, and return metadata."""
         if "file" not in request.FILES:

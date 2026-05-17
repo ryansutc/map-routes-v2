@@ -75,3 +75,6 @@ env/
 db.sqlite3
 db.sqlite3-journal
 app.db
+
+
+.claude/worktrees

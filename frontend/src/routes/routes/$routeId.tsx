@@ -1,7 +1,9 @@
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
 import PhotoController from "@/components/map/PhotoController";
-import RouteInfoContainer, { RouteInfoSkeleton } from "@/components/map/RouteInfoContainer";
+import RouteInfoContainer, {
+  RouteInfoSkeleton,
+} from "@/components/map/RouteInfoContainer";
 import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery from "@/components/routes/PhotoGallery";
 import { useRoute } from "@/hooks/useRoute.tsx";
@@ -95,7 +97,9 @@ function RouteDetail() {
                   <LayerController
                     map={map}
                     // @ts-expect-error value can be undefined
-                    layers={routeItem?.route_link && [routeItem?.route_link]}
+                    layers={
+                      (routeItem?.route_link && [routeItem?.route_link]) ?? []
+                    }
                     view={view}
                   />
                   <PhotoController
