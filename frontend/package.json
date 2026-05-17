@@ -28,6 +28,7 @@
     "@zodios/core": "^10.9.6",
     "axios": "^1.10.0",
     "json-schema-to-typescript": "^15.0.4",
+    "nanoid": "^5.1.11",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-dropzone": "^15.0.0",

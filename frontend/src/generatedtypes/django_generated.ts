@@ -333,15 +333,20 @@ export const endpoints = makeApi([
     path: "/api/route/:id/photos/",
     alias: "route_photos_create",
     description: `Accept an image file, extract GPS EXIF, upload to Cloudinary, save Photo record.`,
-    requestFormat: "json",
+    requestFormat: "form-data",
     parameters: [
       {
         name: "id",
         type: "Path",
         schema: z.number().int(),
       },
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ file: z.instanceof(File), title: z.string().optional() }),
+      },
     ],
-    response: z.void(),
+    response: Photo,
   },
   {
     method: "post",

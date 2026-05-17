@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Box, Step, StepLabel, Stepper } from "@mui/material";
 import RouteMetadataStep from "./RouteMetadataStep";
+import PhotoUploadStep from "./PhotoUploadStep";
 import type { ParseGpxResponse } from "@/types/api";
 
 export type ActivityType =
@@ -36,8 +37,12 @@ export default function CreateRouteWizard() {
     setStep(1);
   };
 
+  const handleBack = () => setStep(0);
+
+  const maxWidth = step === 1 ? 1100 : 800;
+
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 800, mx: "auto" }}>
+    <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth, mx: "auto" }}>
       <Stepper activeStep={step} sx={{ mb: 4 }}>
         {STEPS.map((label) => (
           <Step key={label}>
@@ -53,12 +58,7 @@ export default function CreateRouteWizard() {
         />
       )}
       {step === 1 && (
-        <Box>
-          {/* Phase 3: PhotoUploadStep stub */}
-          <Box sx={{ p: 4, textAlign: "center", color: "text.secondary" }}>
-            Photo upload coming in Phase 3
-          </Box>
-        </Box>
+        <PhotoUploadStep wizardState={wizardState} onBack={handleBack} />
       )}
     </Box>
   );
