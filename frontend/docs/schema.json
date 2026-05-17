@@ -434,6 +434,16 @@
         "operationId": "route_parse_gpx_create",
         "description": "Accept a GPX file, parse it, upload to ArcGIS, and return metadata.",
         "tags": ["route"],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseGpxRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "security": [
           {
             "jwtAuth": []
@@ -441,7 +451,14 @@
         ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseGpxResponse"
+                }
+              }
+            },
+            "description": ""
           }
         }
       }
@@ -517,6 +534,59 @@
       },
       "NullEnum": {
         "enum": [null]
+      },
+      "ParseGpxRequestRequest": {
+        "type": "object",
+        "description": "Serializer for the multipart file upload accepted by ParseGpxView.",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary"
+          }
+        },
+        "required": ["file"]
+      },
+      "ParseGpxResponse": {
+        "type": "object",
+        "description": "Serializer for the response returned by ParseGpxView.",
+        "properties": {
+          "arcgis_item_id": {
+            "type": "string"
+          },
+          "geojson": {},
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "distance_m": {
+            "type": "number",
+            "format": "double"
+          },
+          "duration_s": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "avg_pace_decimal": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "elevation_gain_m": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "required": [
+          "arcgis_item_id",
+          "avg_pace_decimal",
+          "date",
+          "distance_m",
+          "duration_s",
+          "elevation_gain_m",
+          "geojson"
+        ]
       },
       "PatchedRouteWriteRequest": {
         "type": "object",

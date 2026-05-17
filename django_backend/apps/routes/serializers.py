@@ -51,6 +51,24 @@ class RouteSerializer(serializers.ModelSerializer):
         read_only_fields = ["owner"]
 
 
+class ParseGpxRequestSerializer(serializers.Serializer):
+    """Serializer for the multipart file upload accepted by ParseGpxView."""
+
+    file = serializers.FileField()
+
+
+class ParseGpxResponseSerializer(serializers.Serializer):
+    """Serializer for the response returned by ParseGpxView."""
+
+    arcgis_item_id = serializers.CharField()
+    geojson = serializers.JSONField()
+    date = serializers.DateTimeField()
+    distance_m = serializers.FloatField()
+    duration_s = serializers.FloatField(allow_null=True)
+    avg_pace_decimal = serializers.FloatField(allow_null=True)
+    elevation_gain_m = serializers.FloatField(allow_null=True)
+
+
 class RouteWriteSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating Route instances."""
 
