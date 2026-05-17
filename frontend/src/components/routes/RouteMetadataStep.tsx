@@ -1,5 +1,4 @@
-import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import { useParseGpx } from "@/hooks/useParseGpx";
 import {
   Alert,
   Box,
@@ -15,9 +14,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useParseGpx } from "@/hooks/useParseGpx";
-import type { WizardState, ActivityType } from "./CreateRouteWizard";
+import { useCallback, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import type { ActivityType, WizardState } from "./CreateRouteWizard";
 
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 const ACTIVITY_TYPES: ActivityType[] = [
   "Hiking",
   "Running",
@@ -57,19 +58,26 @@ function formatElevation(m: number | null): string {
 export default function RouteMetadataStep({ wizardState, onNext }: Props) {
   const [gpxFile, setGpxFile] = useState<File | null>(null);
   const [title, setTitle] = useState(wizardState.title);
-  const [activityType, setActivityType] = useState<ActivityType | "">(wizardState.activityType);
+  const [activityType, setActivityType] = useState<ActivityType | "">(
+    wizardState.activityType,
+  );
   const [isPublic, setIsPublic] = useState(wizardState.isPublic);
   const [notes, setNotes] = useState(wizardState.notes);
   const [submitted, setSubmitted] = useState(false);
 
   const parseGpx = useParseGpx();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      setGpxFile(acceptedFiles[0] ?? null);
-      parseGpx.reset();
-    }
-  }, [parseGpx]);
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (file) {
+        setGpxFile(file);
+        parseGpx.reset();
+        parseGpx.mutate(file);
+      }
+    },
+    [parseGpx],
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -77,11 +85,6 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
     maxFiles: 1,
     disabled: parseGpx.isPending,
   });
-
-  const handleParse = () => {
-    if (!gpxFile) return;
-    parseGpx.mutate(gpxFile);
-  };
 
   const canAdvance =
     parseGpx.isSuccess && title.trim() !== "" && activityType !== "";
@@ -132,28 +135,44 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
           )}
         </Box>
 
-        <Box sx={{ mt: 1, display: "flex", alignItems: "center", gap: 2 }}>
-          <Button
-            variant="contained"
-            onClick={handleParse}
-            disabled={!gpxFile || parseGpx.isPending}
-            size="small"
-          >
-            {parseGpx.isPending ? (
+        {(parseGpx.isPending || parseGpx.isSuccess) && (
+          <Box sx={{ mt: 1, display: "flex", alignItems: "center", gap: 1 }}>
+            {parseGpx.isPending && (
               <>
-                <CircularProgress size={16} sx={{ mr: 1 }} color="inherit" />
-                Parsing…
+                <CircularProgress size={16} color="inherit" />
+                <Typography variant="body2" color="text.secondary">
+                  Parsing…
+                </Typography>
               </>
-            ) : (
-              "Parse GPX"
             )}
-          </Button>
-          {parseGpx.isSuccess && (
-            <Typography variant="body2" color="success.main">
-              Parsed successfully
-            </Typography>
-          )}
-        </Box>
+            {parseGpx.isSuccess && (
+              <>
+                <CheckCircleIcon sx={{ fontSize: 16, color: "success.main" }} />
+                <Typography variant="body2" color="success.main">
+                  Parsed successfully
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="inherit"
+                  onClick={() => {
+                    setGpxFile(null);
+                    parseGpx.reset();
+                  }}
+                  sx={{
+                    py: 0,
+                    minWidth: 0,
+                    fontSize: "0.75rem",
+                    borderWidth: 0,
+                    color: "text.primary",
+                  }}
+                >
+                  Clear
+                </Button>
+              </>
+            )}
+          </Box>
+        )}
 
         {parseGpx.isError && (
           <Alert severity="error" sx={{ mt: 1 }}>
@@ -216,7 +235,11 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
         size="small"
       />
 
-      <FormControl fullWidth size="small" error={submitted && activityType === ""}>
+      <FormControl
+        fullWidth
+        size="small"
+        error={submitted && activityType === ""}
+      >
         <InputLabel id="activity-type-label">Activity Type *</InputLabel>
         <Select
           labelId="activity-type-label"
@@ -231,7 +254,11 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
           ))}
         </Select>
         {submitted && activityType === "" && (
-          <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+          <Typography
+            variant="caption"
+            color="error"
+            sx={{ mt: 0.5, ml: 1.75 }}
+          >
             Activity type is required
           </Typography>
         )}
