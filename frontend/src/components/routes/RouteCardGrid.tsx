@@ -45,13 +45,30 @@ function RouteCard({ route }: { route: Route }) {
           alignItems: "stretch",
         }}
       >
-        <CardMedia
-          component="img"
-          height="160"
-          image={thumbnailFor(route)}
-          alt={route.title ?? "Route thumbnail"}
-          sx={{ objectFit: "cover", bgcolor: "grey.200" }}
-        />
+        <Box sx={{ position: "relative" }}>
+          <CardMedia
+            component="img"
+            height="160"
+            image={thumbnailFor(route)}
+            alt={route.title ?? "Route thumbnail"}
+            sx={{ objectFit: "cover", bgcolor: "grey.200", display: "block" }}
+          />
+          <Typography
+            variant="caption"
+            sx={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              px: 1,
+              py: 0.5,
+              bgcolor: "rgba(200,200,200,0.65)",
+              color: "text.primary",
+            }}
+          >
+            uploaded {formatDate(route.created_at, "mmm-dd-yyyy")}
+          </Typography>
+        </Box>
         <CardContent sx={{ flexGrow: 1 }}>
           <Typography variant="h6" component="div" gutterBottom noWrap>
             {route.title ?? "Untitled route"}

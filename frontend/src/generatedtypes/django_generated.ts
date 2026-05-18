@@ -68,6 +68,7 @@ const Route = z.object({
   owner: z.string().email(),
   is_public: z.boolean().optional(),
   photos: z.array(Photo),
+  created_at: z.string().datetime({ offset: true }),
 });
 const RouteWriteRequest = z.object({
   title: z.string().max(255).nullish(),
@@ -333,20 +334,15 @@ export const endpoints = makeApi([
     path: "/api/route/:id/photos/",
     alias: "route_photos_create",
     description: `Accept an image file, extract GPS EXIF, upload to Cloudinary, save Photo record.`,
-    requestFormat: "form-data",
+    requestFormat: "json",
     parameters: [
       {
         name: "id",
         type: "Path",
         schema: z.number().int(),
       },
-      {
-        name: "body",
-        type: "Body",
-        schema: z.object({ file: z.instanceof(File), title: z.string().optional() }),
-      },
     ],
-    response: Photo,
+    response: z.void(),
   },
   {
     method: "post",

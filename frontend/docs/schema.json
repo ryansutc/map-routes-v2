@@ -806,9 +806,21 @@
               "$ref": "#/components/schemas/Photo"
             },
             "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
           }
         },
-        "required": ["activity_date", "distance", "id", "owner", "photos"]
+        "required": [
+          "activity_date",
+          "created_at",
+          "distance",
+          "id",
+          "owner",
+          "photos"
+        ]
       },
       "RouteWrite": {
         "type": "object",
