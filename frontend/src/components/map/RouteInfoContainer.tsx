@@ -81,6 +81,11 @@ export default function RouteInfoContainer({ routeItem }: { routeItem: Route }) 
       <Typography variant="body2" color="text.secondary" gutterBottom>
         by {routeItem.owner}
       </Typography>
+      {routeItem.created_at && (
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          uploaded {formatDate(routeItem.created_at, "mmm-dd-yyyy")}
+        </Typography>
+      )}
 
       {routeItem.notes && (
         <>
