@@ -1,13 +1,13 @@
-import { axiosInstance } from "@/api/axiosInstance";
 import { zodiosAPI } from "@/api/axiosClient";
-import MapContainer from "@/components/map/MapContainer";
+import { axiosInstance } from "@/api/axiosInstance";
 import LayerController from "@/components/map/LayerController";
+import MapContainer from "@/components/map/MapContainer";
 import type { PhotoDto } from "@/types/api";
-import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
-import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
+import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import Map from "@arcgis/core/Map";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -53,10 +53,7 @@ type Props = {
 
 const MAX_PHOTOS = 20;
 
-async function uploadPhotoFile(
-  routeId: number,
-  file: File,
-): Promise<PhotoDto> {
+async function uploadPhotoFile(routeId: number, file: File): Promise<PhotoDto> {
   const formData = new FormData();
   formData.append("file", file);
   const res = await axiosInstance.post<PhotoDto>(
@@ -101,21 +98,18 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
     },
   });
 
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      setQueue((prev) => {
-        const remaining = MAX_PHOTOS - prev.length;
-        const toAdd = acceptedFiles.slice(0, remaining).map((file) => ({
-          id: nanoid(),
-          file,
-          previewUrl: URL.createObjectURL(file),
-          status: "pending" as PhotoStatus,
-        }));
-        return [...prev, ...toAdd];
-      });
-    },
-    [],
-  );
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setQueue((prev) => {
+      const remaining = MAX_PHOTOS - prev.length;
+      const toAdd = acceptedFiles.slice(0, remaining).map((file) => ({
+        id: nanoid(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        status: "pending" as PhotoStatus,
+      }));
+      return [...prev, ...toAdd];
+    });
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -172,9 +166,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
     // Upload photos sequentially
     for (const item of queue) {
       setQueue((prev) =>
-        prev.map((q) =>
-          q.id === item.id ? { ...q, status: "uploading" } : q,
-        ),
+        prev.map((q) => (q.id === item.id ? { ...q, status: "uploading" } : q)),
       );
       try {
         const photo = await uploadPhotoFile(routeId, item.file);
@@ -259,9 +251,22 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
   const canPublish = !isPublishing;
 
   return (
-    <Box sx={{ display: "flex", gap: 2, flexDirection: { xs: "column", md: "row" } }}>
+    <Box
+      sx={{
+        display: "flex",
+        gap: 2,
+        flexDirection: { xs: "column", md: "row" },
+      }}
+    >
       {/* Left panel */}
-      <Box sx={{ flex: "0 0 340px", display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box
+        sx={{
+          flex: "0 0 340px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
         <Typography variant="subtitle1" fontWeight={600}>
           Add Photos (optional)
         </Typography>
@@ -287,7 +292,12 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
               : `Drag & drop images, or click to select (max ${MAX_PHOTOS})`}
           </Typography>
           {queue.length > 0 && (
-            <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+              mt={0.5}
+            >
               {queue.length} / {MAX_PHOTOS} photos added
             </Typography>
           )}
@@ -296,7 +306,11 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
         {queue.length > 0 && (
           <>
             <Divider />
-            <List dense disablePadding sx={{ maxHeight: 280, overflowY: "auto" }}>
+            <List
+              dense
+              disablePadding
+              sx={{ maxHeight: 280, overflowY: "auto" }}
+            >
               {queue.map((item) => (
                 <ListItem
                   key={item.id}
@@ -317,7 +331,14 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
                   <Box
                     component="img"
                     src={item.previewUrl}
-                    sx={{ width: 40, height: 40, objectFit: "cover", borderRadius: 1, mr: 1, flexShrink: 0 }}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      objectFit: "cover",
+                      borderRadius: 1,
+                      mr: 1,
+                      flexShrink: 0,
+                    }}
                   />
                   <ListItemText
                     primary={item.file.name}
@@ -337,7 +358,12 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
           </Alert>
         )}
 
-        <Stack direction="row" spacing={1} justifyContent="space-between" sx={{ mt: "auto", pt: 1 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          justifyContent="space-between"
+          sx={{ mt: "auto", pt: 1 }}
+        >
           <Button variant="outlined" onClick={onBack} disabled={isPublishing}>
             Back
           </Button>
@@ -345,7 +371,11 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
             variant="contained"
             onClick={() => void handlePublish()}
             disabled={!canPublish}
-            startIcon={isPublishing ? <CircularProgress size={16} color="inherit" /> : undefined}
+            startIcon={
+              isPublishing ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : undefined
+            }
           >
             {isPublishing ? "Publishing…" : "Publish Route"}
           </Button>
@@ -354,7 +384,10 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
 
       {/* Right panel: map */}
       <Box sx={{ flex: 1, minHeight: 400, position: "relative" }}>
-        <div id="wizardMapDiv" style={{ width: "100%", height: "100%", minHeight: 400 }}>
+        <div
+          id="wizardMapDiv"
+          style={{ width: "100%", height: "100%", minHeight: 400 }}
+        >
           <MapContainer
             attachToId="wizardMapDiv"
             mapProperties={{ basemap: "satellite" }}
@@ -366,11 +399,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
             onUnload={() => {}}
           >
             {map && view && arcgisItemId && (
-              <LayerController
-                map={map}
-                view={view}
-                layers={[arcgisItemId]}
-              />
+              <LayerController map={map} view={view} layers={[arcgisItemId]} />
             )}
           </MapContainer>
         </div>
