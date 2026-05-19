@@ -36,3 +36,8 @@ launch: http://localhost:8000/api/schema/swagger-ui
 ```
 pnpm run dev
 ```
+
+### Inspiration
+
+https://github.com/alexalmansa/TrailReplay
+https://www.gpxprofile.com/

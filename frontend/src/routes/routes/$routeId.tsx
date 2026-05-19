@@ -7,11 +7,14 @@ import RouteInfoContainer, {
 import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery from "@/components/routes/PhotoGallery";
 import { useRoute } from "@/hooks/useRoute.tsx";
+import { useRouteAnimation } from "@/hooks/useRouteAnimation";
 import theme from "@/utils/muitheme";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
-import { Box, Grid, Typography, useMediaQuery } from "@mui/material";
+import { Box, Grid, IconButton, LinearProgress, Tooltip, Typography, useMediaQuery } from "@mui/material";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import StopIcon from "@mui/icons-material/Stop";
 
 import { createFileRoute } from "@tanstack/react-router";
 import React, { useState } from "react";
@@ -38,6 +41,12 @@ function RouteDetail() {
 
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
+
+  const { isPlaying, progress, play, stop } = useRouteAnimation(
+    map,
+    view,
+    routeItem?.arcgis_item_id
+  );
 
   const viewDiv = React.useRef<HTMLDivElement>(
     null,
@@ -113,6 +122,41 @@ function RouteDetail() {
                   <Toggle3d />
                 </>
               )}
+            {/* Animation controls */}
+            {routeItem?.arcgis_item_id && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 24,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  bgcolor: "rgba(0,0,0,0.65)",
+                  borderRadius: 3,
+                  px: 2,
+                  py: 0.5,
+                  zIndex: 10,
+                  minWidth: 200,
+                }}
+              >
+                <Tooltip title={isPlaying ? "Stop" : "Replay route"}>
+                  <IconButton
+                    size="small"
+                    onClick={isPlaying ? stop : play}
+                    sx={{ color: "white" }}
+                  >
+                    {isPlaying ? <StopIcon /> : <PlayArrowIcon />}
+                  </IconButton>
+                </Tooltip>
+                <LinearProgress
+                  variant="determinate"
+                  value={progress * 100}
+                  sx={{ flex: 1, borderRadius: 1, height: 6 }}
+                />
+              </Box>
+            )}
           </MapContainer>
         </div>
       </Grid>
