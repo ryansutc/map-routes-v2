@@ -68,6 +68,7 @@ const Route = z.object({
   owner: z.string().email(),
   is_public: z.boolean().optional(),
   photos: z.array(Photo),
+  created_at: z.string().datetime({ offset: true }),
 });
 const RouteWriteRequest = z.object({
   title: z.string().max(255).nullish(),

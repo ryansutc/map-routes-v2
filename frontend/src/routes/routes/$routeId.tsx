@@ -98,7 +98,10 @@ function RouteDetail() {
                     map={map}
                     // @ts-expect-error value can be undefined
                     layers={
-                      (routeItem?.route_link && [routeItem?.route_link]) ?? []
+                      (routeItem?.arcgis_item_id && [
+                        routeItem?.arcgis_item_id,
+                      ]) ??
+                      []
                     }
                     view={view}
                   />

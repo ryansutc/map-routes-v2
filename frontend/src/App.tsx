@@ -1,4 +1,5 @@
 import MainWrapper from "@/components/main/MainWrapper";
+import { ToastContainer } from "@/components/layout/ToastContainer";
 
 import theme from "@/utils/muitheme";
 import { Container, ThemeProvider } from "@mui/material";
@@ -69,6 +70,7 @@ function App() {
             </MainWrapper>
           </Container>
         </ThemeProvider>
+        <ToastContainer />
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </>

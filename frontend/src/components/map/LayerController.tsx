@@ -4,6 +4,7 @@ import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
 import { useEffect } from "react";
+import { useToast } from "@/hooks/useToast";
 function LayerController({
   map,
   layers,
@@ -13,6 +14,7 @@ function LayerController({
   view: MapView | SceneView | null;
   layers: string[];
 }) {
+  const { enqueueError } = useToast();
   useEffect(() => {
     if (map && view && view) {
       layers.forEach((layer) => {
@@ -39,23 +41,38 @@ function LayerController({
         });
 
         map.add(featureLayer);
-        featureLayer.when(() => {
-          featureLayer.queryExtent().then((res) => {
-            // Ensure view is ready before calling goTo
-            if (view && view.ready) {
-              view.goTo(res.extent).catch((error) => {
-                console.warn("Error during view.goTo:", error);
-              });
-            } else {
-              // Wait for view to be ready
-              view?.when(() => {
+
+        let loadFailed = false;
+
+        view.on("layerview-create-error", (event) => {
+          if (event.layer === featureLayer && !loadFailed) {
+            enqueueError(`Failed to display map layer "${layer}".`);
+            console.error(`layerview-create-error for layer "${layer}":`, event.error);
+          }
+        });
+
+        featureLayer.when(
+          () => {
+            featureLayer.queryExtent().then((res) => {
+              if (view && view.ready) {
                 view.goTo(res.extent).catch((error) => {
                   console.warn("Error during view.goTo:", error);
                 });
-              });
-            }
-          });
-        });
+              } else {
+                view?.when(() => {
+                  view.goTo(res.extent).catch((error) => {
+                    console.warn("Error during view.goTo:", error);
+                  });
+                });
+              }
+            });
+          },
+          (error: unknown) => {
+            loadFailed = true;
+            enqueueError(`Failed to load map layer "${layer}".`);
+            console.error(`Layer "${layer}" failed to load:`, error);
+          }
+        );
       });
     }
 

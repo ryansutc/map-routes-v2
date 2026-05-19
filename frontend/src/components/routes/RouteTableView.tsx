@@ -20,6 +20,7 @@ import type { z } from "zod";
 type Route = z.infer<typeof schemas.Route>;
 
 const COLUMNS = ["Title", "Activity", "Date", "Distance", "Visibility"];
+const XL_COLUMNS = ["Uploaded"];
 
 function SkeletonRows() {
   return (
@@ -61,6 +62,11 @@ export default function RouteTableView({
           <TableRow>
             {COLUMNS.map((col) => (
               <TableCell key={col}>{col}</TableCell>
+            ))}
+            {XL_COLUMNS.map((col) => (
+              <TableCell key={col} sx={{ display: { xs: "none", xl: "table-cell" } }}>
+                {col}
+              </TableCell>
             ))}
           </TableRow>
         </TableHead>
@@ -110,6 +116,9 @@ export default function RouteTableView({
                       color={route.is_public ? "success" : "default"}
                       variant={route.is_public ? "filled" : "outlined"}
                     />
+                  </TableCell>
+                  <TableCell sx={{ display: { xs: "none", xl: "table-cell" } }}>
+                    uploaded {formatDate(route.created_at, "mmm-dd-yyyy")}
                   </TableCell>
                 </TableRow>
               );

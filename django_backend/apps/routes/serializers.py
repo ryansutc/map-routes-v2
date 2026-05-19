@@ -47,8 +47,9 @@ class RouteSerializer(serializers.ModelSerializer):
             "owner",
             "is_public",
             "photos",
+            "created_at",
         ]
-        read_only_fields = ["owner"]
+        read_only_fields = ["owner", "created_at"]
 
 
 class ParseGpxRequestSerializer(serializers.Serializer):
