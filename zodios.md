@@ -1,5 +1,7 @@
 # Django → Zodios Type Generation Pipeline
 
+A custom way to generate type-safe frontend usage of an API automatically. See 
+
 ## Full Workflow
 
 ```
@@ -19,7 +21,6 @@
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                       FRONTEND PIPELINE                         │
-│                    (pnpm run schema)                            │
 │                                                                 │
 │   schema.json                                                   │
 │       │                                                         │
@@ -37,7 +38,7 @@
 │       │  [3] pnpm run schema-json-to-ts                         │
 │       │      json2ts                                            │
 │       ▼                                                         │
-│   src/types/aspnet_api_types.ts  ◄── plain TypeScript types     │
+│   src/types/django_api_types.ts  ◄── plain TypeScript types     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -66,7 +67,7 @@
 curl http://localhost:8000/api/schema/ > frontend/docs/schema.json
 ```
 
-**Step 2** — Run all three generation steps from `frontend/`:
+**Step 2** — Run fetch + Zod generation from `frontend/`:
 
 ```bash
 pnpm run schema
@@ -74,10 +75,14 @@ pnpm run schema
 
 Which executes in sequence:
 
-| Sub-command          | Tool                           | Input → Output                                                |
-| -------------------- | ------------------------------ | ------------------------------------------------------------- |
-| `schema-to-zod`      | `openapi-zod-client`           | `docs/schema.json` → `src/generatedtypes/django_generated.ts` |
-| `schema-zod-to-json` | `tsx generate-schema-types.ts` | `django_generated.ts` → `docs/schema_json.json`               |
-| `schema-json-to-ts`  | `json2ts`                      | `docs/schema.json` → `src/types/aspnet_api_types.ts`          |
+| Sub-command     | Tool                 | Input → Output                                                |
+| --------------- | -------------------- | ------------------------------------------------------------- |
+| `schema-fetch`  | `curl`               | `http://localhost:8000/api/schema/` → `docs/schema.json`      |
+| `schema-to-zod` | `openapi-zod-client` | `docs/schema.json` → `src/generatedtypes/django_generated.ts` |
 
-> **Note:** The `schema-zod-to-json` and `schema-json-to-ts` steps currently reference the old `aspnet_generated.ts` file — those may need updating to point to `django_generated.ts` if you want them to reflect the Django schema.
+The following steps are available separately and can be run individually if needed:
+
+| Sub-command          | Tool                           | Input → Output                                          |
+| -------------------- | ------------------------------ | ------------------------------------------------------- |
+| `schema-zod-to-json` | `tsx generate-schema-types.ts` | `django_generated.ts` → `docs/schema_json.json`         |
+| `schema-json-to-ts`  | `json2ts`                      | `docs/schema.json` → `src/types/django_api_types.ts`    |
