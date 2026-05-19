@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Box, Step, StepLabel, Stepper } from "@mui/material";
+import {
+  Box,
+  Step,
+  StepLabel,
+  Stepper,
+  Typography,
+} from "@mui/material";
 import RouteMetadataStep from "./RouteMetadataStep";
 import PhotoUploadStep from "./PhotoUploadStep";
 import type { ParseGpxResponse } from "@/types/api";
@@ -43,6 +49,11 @@ export default function CreateRouteWizard() {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth, mx: "auto" }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6">
+          Create Route
+        </Typography>
+      </Box>
       <Stepper activeStep={step} sx={{ mb: 4 }}>
         {STEPS.map((label) => (
           <Step key={label}>

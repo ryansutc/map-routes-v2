@@ -3,6 +3,7 @@ import type {} from "@redux-devtools/extension"; // required for devtools typing
 
 import { combine, devtools, persist } from "zustand/middleware";
 
+import type { UnitSystem } from "@/utils/units";
 import type { PageType } from "@/types/state_types";
 import type { ExtractState } from "zustand";
 import { create } from "zustand";
@@ -25,6 +26,8 @@ type MapRouteState = {
   setViewMode: (viewMode: "2d" | "3d") => void;
   listView: ListView;
   setListView: (view: ListView) => void;
+  units: UnitSystem;
+  setUnits: (units: UnitSystem) => void;
 };
 
 export const useStore = create<MapRouteState>()(
@@ -37,6 +40,7 @@ export const useStore = create<MapRouteState>()(
           userIsAuthenticated: undefined, // user isAuthenticated is undefined until we check
           viewMode: "2d" as "2d" | "3d",
           listView: "cards" as ListView,
+          units: "metric" as UnitSystem,
         } as MapRouteState,
         (set) => ({
           setPage: (page: PageType) => set({ page }, undefined, "page/setPage"),
@@ -56,13 +60,14 @@ export const useStore = create<MapRouteState>()(
           setListView: (view: ListView) => {
             set({ listView: view }, undefined, "list/setListView");
           },
+          setUnits: (units: UnitSystem) => {
+            set({ units }, undefined, "units/setUnits");
+          },
         })
       ),
       {
         name: "map-routes-store",
-        // Only persist UI preferences; auth state and transient view mode
-        // are recomputed on load from the API / Zustand defaults.
-        partialize: (state) => ({ listView: state.listView }),
+        partialize: (state) => ({ listView: state.listView, units: state.units }),
       }
     )
   )

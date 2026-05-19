@@ -8,6 +8,8 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  ToggleButton,
+  ToggleButtonGroup,
   Toolbar,
   Tooltip,
   Typography,
@@ -19,10 +21,12 @@ import { zodiosAPI } from "@/api/axiosClient";
 import { useStore } from "@/state/store";
 import { GOOGLE_LOGIN_URL } from "@/utils/environment";
 
+const TOGGLE_BORDER_COLOR = "rgba(255,255,255,0.5)";
+
 export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, userIsAuthenticated, setUser, setUserIsAuthenticated } =
+  const { user, userIsAuthenticated, setUser, setUserIsAuthenticated, units, setUnits } =
     useStore();
 
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -73,6 +77,21 @@ export default function AppShell({ children }: PropsWithChildren) {
           >
             map-routes
           </Typography>
+
+          <ToggleButtonGroup
+            value={units}
+            exclusive
+            onChange={(_, v) => { if (v) setUnits(v); }}
+            size="small"
+            sx={{ mr: 1 }}
+          >
+            <Tooltip title={units === "metric" ? "" : "Switch to metric (km)"}>
+              <ToggleButton value="metric" sx={{ color: "inherit", borderColor: TOGGLE_BORDER_COLOR }}>km</ToggleButton>
+            </Tooltip>
+            <Tooltip title={units === "imperial" ? "" : "Switch to imperial (mi)"}>
+              <ToggleButton value="imperial" sx={{ color: "inherit", borderColor: TOGGLE_BORDER_COLOR }}>mi</ToggleButton>
+            </Tooltip>
+          </ToggleButtonGroup>
 
           {userIsAuthenticated ? (
             <>

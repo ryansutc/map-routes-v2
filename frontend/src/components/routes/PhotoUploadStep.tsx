@@ -69,6 +69,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [createdRouteId, setCreatedRouteId] = useState<number | null>(null);
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
   const photoLayerRef = useRef<GraphicsLayer | null>(null);
@@ -140,6 +141,37 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
     );
   };
 
+  const retryItem = async (id: string) => {
+    if (!createdRouteId) return;
+    const item = queue.find((q) => q.id === id);
+    if (!item) return;
+    setQueue((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, status: "uploading", errorMsg: undefined } : q)),
+    );
+    try {
+      const photo = await uploadPhotoFile(createdRouteId, item.file);
+      const hasGps = photo.has_gps;
+      setQueue((prev) =>
+        prev.map((q) =>
+          q.id === id
+            ? { ...q, status: hasGps ? "placed" : "no-gps", lat: photo.latitude ?? undefined, lng: photo.longitude ?? undefined }
+            : q,
+        ),
+      );
+      if (hasGps && photo.latitude != null && photo.longitude != null) {
+        addPhotoPin(photo.latitude, photo.longitude);
+      }
+    } catch (err) {
+      setQueue((prev) =>
+        prev.map((q) =>
+          q.id === id
+            ? { ...q, status: "error", errorMsg: (err as Error)?.message ?? "Upload failed" }
+            : q,
+        ),
+      );
+    }
+  };
+
   const removeItem = (id: string) => {
     setQueue((prev) => {
       const item = prev.find((q) => q.id === id);
@@ -157,6 +189,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
     try {
       const route = await createRoute.mutateAsync();
       routeId = route.id;
+      setCreatedRouteId(routeId);
     } catch (err) {
       setPublishError((err as Error)?.message ?? "Failed to create route");
       setIsPublishing(false);
@@ -324,6 +357,15 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
                         sx={{ minWidth: 0, fontSize: "0.7rem" }}
                       >
                         Remove
+                      </Button>
+                    ) : item.status === "error" && createdRouteId ? (
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => void retryItem(item.id)}
+                        sx={{ minWidth: 0, fontSize: "0.7rem" }}
+                      >
+                        Retry
                       </Button>
                     ) : undefined
                   }

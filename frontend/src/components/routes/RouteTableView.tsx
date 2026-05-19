@@ -1,5 +1,7 @@
 import { schemas } from "@/generatedtypes/django_generated";
 import { formatDate } from "@/utils/datetimeHelpers";
+import { formatDistance } from "@/utils/units";
+import { useStore } from "@/state/store";
 import {
   Box,
   Chip,
@@ -46,6 +48,7 @@ export default function RouteTableView({
   isLoading?: boolean;
 }) {
   const navigate = useNavigate();
+  const { units } = useStore();
 
   if (!isLoading && !routes.length) {
     return (
@@ -108,7 +111,7 @@ export default function RouteTableView({
                   <TableCell>
                     {formatDate(route.activity_date, "mmm-dd-yyyy")}
                   </TableCell>
-                  <TableCell>{route.distance.toFixed(1)} km</TableCell>
+                  <TableCell>{formatDistance(route.distance, units)}</TableCell>
                   <TableCell>
                     <Chip
                       label={route.is_public ? "Public" : "Private"}
