@@ -1,5 +1,11 @@
 import { useParseGpx } from "@/hooks/useParseGpx";
 import {
+  formatDistance,
+  formatElevation,
+  formatPace,
+  useUnits,
+} from "@/hooks/useUnits";
+import {
   Alert,
   Box,
   Button,
@@ -33,26 +39,12 @@ type Props = {
   onNext: (updates: Partial<WizardState>) => void;
 };
 
-function formatDistance(meters: number): string {
-  return `${(meters / 1000).toFixed(2)} km`;
-}
-
 function formatDuration(seconds: number | null): string {
   if (seconds === null) return "—";
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
   return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
-}
-
-function formatPace(pace: number | null): string {
-  if (pace === null) return "—";
-  return `${pace.toFixed(2)} min/km`;
-}
-
-function formatElevation(m: number | null): string {
-  if (m === null) return "—";
-  return `${m.toFixed(0)} m`;
 }
 
 export default function RouteMetadataStep({ wizardState, onNext }: Props) {
@@ -65,6 +57,7 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
   const [notes, setNotes] = useState(wizardState.notes);
   const [submitted, setSubmitted] = useState(false);
 
+  const { units } = useUnits();
   const parseGpx = useParseGpx();
 
   const onDrop = useCallback(
@@ -198,7 +191,7 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
           />
           <TextField
             label="Distance"
-            value={formatDistance(parsed.distance_m)}
+            value={formatDistance(parsed.distance_m, units)}
             slotProps={{ input: { readOnly: true } }}
             size="small"
           />
@@ -210,13 +203,13 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
           />
           <TextField
             label="Avg Pace"
-            value={formatPace(parsed.avg_pace_decimal)}
+            value={formatPace(parsed.avg_pace_decimal, units)}
             slotProps={{ input: { readOnly: true } }}
             size="small"
           />
           <TextField
             label="Elevation Gain"
-            value={formatElevation(parsed.elevation_gain_m)}
+            value={formatElevation(parsed.elevation_gain_m, units)}
             slotProps={{ input: { readOnly: true } }}
             size="small"
           />

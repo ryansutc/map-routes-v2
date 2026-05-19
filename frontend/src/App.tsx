@@ -1,5 +1,11 @@
 import MainWrapper from "@/components/main/MainWrapper";
 import { ToastContainer } from "@/components/layout/ToastContainer";
+import {
+  UnitsContext,
+  getStoredUnits,
+  setStoredUnits,
+  type UnitSystem,
+} from "@/hooks/useUnits";
 
 import theme from "@/utils/muitheme";
 import { Container, ThemeProvider } from "@mui/material";
@@ -7,7 +13,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { routeTree } from "./routeTree.gen";
 
@@ -38,6 +44,13 @@ declare module "@tanstack/react-router" {
 }
 
 function App() {
+  const [units, setUnitsState] = useState<UnitSystem>(getStoredUnits);
+
+  const setUnits = (u: UnitSystem) => {
+    setStoredUnits(u);
+    setUnitsState(u);
+  };
+
   useEffect(() => {
     // In production, navigate to the initial path from the server
     if (
@@ -51,6 +64,7 @@ function App() {
 
   return (
     <>
+      <UnitsContext.Provider value={{ units, setUnits }}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
@@ -73,6 +87,7 @@ function App() {
         <ToastContainer />
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
+      </UnitsContext.Provider>
     </>
   );
 }
