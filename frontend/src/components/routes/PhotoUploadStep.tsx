@@ -23,8 +23,8 @@ import {
   Divider,
   List,
   ListItem,
-  ListItemText,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
@@ -41,6 +41,7 @@ type QueueItem = {
   file: File;
   previewUrl: string;
   status: PhotoStatus;
+  title: string;
   lat?: number;
   lng?: number;
   errorMsg?: string;
@@ -53,9 +54,10 @@ type Props = {
 
 const MAX_PHOTOS = 20;
 
-async function uploadPhotoFile(routeId: number, file: File): Promise<PhotoDto> {
+async function uploadPhotoFile(routeId: number, file: File, title?: string): Promise<PhotoDto> {
   const formData = new FormData();
   formData.append("file", file);
+  if (title) formData.append("title", title);
   const res = await axiosInstance.post<PhotoDto>(
     `/api/route/${routeId}/photos/`,
     formData,
@@ -107,6 +109,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
         file,
         previewUrl: URL.createObjectURL(file),
         status: "pending" as PhotoStatus,
+        title: "",
       }));
       return [...prev, ...toAdd];
     });
@@ -149,7 +152,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
       prev.map((q) => (q.id === id ? { ...q, status: "uploading", errorMsg: undefined } : q)),
     );
     try {
-      const photo = await uploadPhotoFile(createdRouteId, item.file);
+      const photo = await uploadPhotoFile(createdRouteId, item.file, item.title || undefined);
       const hasGps = photo.has_gps;
       setQueue((prev) =>
         prev.map((q) =>
@@ -180,6 +183,10 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
     });
   };
 
+  const setItemTitle = (id: string, title: string) => {
+    setQueue((prev) => prev.map((q) => (q.id === id ? { ...q, title } : q)));
+  };
+
   const handlePublish = async () => {
     if (!wizardState.parsed) return;
     setPublishError(null);
@@ -202,7 +209,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
         prev.map((q) => (q.id === item.id ? { ...q, status: "uploading" } : q)),
       );
       try {
-        const photo = await uploadPhotoFile(routeId, item.file);
+        const photo = await uploadPhotoFile(routeId, item.file, item.title || undefined);
         const hasGps = photo.has_gps;
         setQueue((prev) =>
           prev.map((q) =>
@@ -382,12 +389,21 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
                       flexShrink: 0,
                     }}
                   />
-                  <ListItemText
-                    primary={item.file.name}
-                    primaryTypographyProps={{ noWrap: true, variant: "body2" }}
-                    secondary={statusChip(item)}
-                    secondaryTypographyProps={{ component: "div" }}
-                  />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" noWrap>{item.file.name}</Typography>
+                    {item.status === "pending" && !isPublishing && (
+                      <TextField
+                        size="small"
+                        variant="standard"
+                        placeholder="Add a title…"
+                        value={item.title}
+                        onChange={(e) => setItemTitle(item.id, e.target.value)}
+                        slotProps={{ input: { maxLength: 255 } }}
+                        sx={{ width: "100%", mt: 0.25 }}
+                      />
+                    )}
+                    <Box sx={{ mt: 0.25 }}>{statusChip(item)}</Box>
+                  </Box>
                 </ListItem>
               ))}
             </List>
