@@ -1,6 +1,8 @@
 import { schemas } from "@/generatedtypes/django_generated";
 import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
 import { formatDate } from "@/utils/datetimeHelpers";
+import { formatDistance } from "@/utils/units";
+import { useStore } from "@/state/store";
 import {
   Box,
   Card,
@@ -29,6 +31,7 @@ function thumbnailFor(route: Route): string {
 
 function RouteCard({ route }: { route: Route }) {
   const navigate = useNavigate();
+  const { units } = useStore();
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <CardActionArea
@@ -91,7 +94,7 @@ function RouteCard({ route }: { route: Route }) {
             {formatDate(route.activity_date, "mmm-dd-yyyy")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {route.distance.toFixed(1)} km
+            {formatDistance(route.distance, units)}
           </Typography>
         </CardContent>
       </CardActionArea>

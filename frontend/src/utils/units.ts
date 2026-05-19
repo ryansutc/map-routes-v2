@@ -1,42 +1,5 @@
-import { createContext, useContext } from "react";
-
 export type UnitSystem = "metric" | "imperial";
 
-const STORAGE_KEY = "map-routes-units";
-
-export function getStoredUnits(): UnitSystem {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "imperial" || v === "metric") return v;
-  } catch {
-    // ignore
-  }
-  return "metric";
-}
-
-export function setStoredUnits(units: UnitSystem): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, units);
-  } catch {
-    // ignore
-  }
-}
-
-export type UnitsContextValue = {
-  units: UnitSystem;
-  setUnits: (u: UnitSystem) => void;
-};
-
-export const UnitsContext = createContext<UnitsContextValue>({
-  units: "metric",
-  setUnits: () => {},
-});
-
-export function useUnits(): UnitsContextValue {
-  return useContext(UnitsContext);
-}
-
-// Display helpers
 export function formatDistance(meters: number, units: UnitSystem): string {
   if (units === "imperial") {
     return `${(meters / 1609.344).toFixed(2)} mi`;

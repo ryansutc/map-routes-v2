@@ -54,9 +54,13 @@ All new fields are nullable to avoid breaking existing routes.
 
 ### Units
 
-- All values stored in **metric internally** (GPX is metric): meters, meters, min/km
+- All values stored in **metric internally** (GPX is metric): meters, min/km
 - Display units default to **metric** (km, m, min/km) but can be toggled to **imperial** (miles, feet, min/mile)
-- Conversion happens at the frontend display layer, not at storage or serialization
+- Conversion happens at the frontend display layer only — storage and serialization are always metric
+- Unit preference is global (not per-route): stored in **Zustand**, persisted to `localStorage` via `partialize`
+- The toggle renders in the **nav header** (`AppShell`), visible to all users (authenticated and not)
+- The wizard displays units matching the user's global preference; there is no per-wizard override
+- The toggle applies everywhere route stats are displayed: wizard, route list, route detail
 
 ### Backend — New Endpoints
 

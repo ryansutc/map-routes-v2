@@ -1,5 +1,7 @@
 import { formatDate } from "@/utils/datetimeHelpers";
 import { schemas } from "@/generatedtypes/django_generated";
+import { formatDistance } from "@/utils/units";
+import { useStore } from "@/state/store";
 import {
   Box,
   Chip,
@@ -34,6 +36,7 @@ export function RouteInfoSkeleton() {
 
 export default function RouteInfoContainer({ routeItem }: { routeItem: Route }) {
   const [copied, setCopied] = useState(false);
+  const { units } = useStore();
 
   const handleCopyLink = () => {
     void navigator.clipboard.writeText(window.location.href).then(() => {
@@ -76,7 +79,7 @@ export default function RouteInfoContainer({ routeItem }: { routeItem: Route }) 
         {formatDate(routeItem.activity_date, "mmm-dd-yyyy")}
       </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        {routeItem.distance.toFixed(1)} km
+        {formatDistance(routeItem.distance, units)}
       </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
         by {routeItem.owner}

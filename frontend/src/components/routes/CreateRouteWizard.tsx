@@ -1,12 +1,9 @@
-import { useUnits } from "@/hooks/useUnits";
 import { useState } from "react";
 import {
   Box,
   Step,
   StepLabel,
   Stepper,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import RouteMetadataStep from "./RouteMetadataStep";
@@ -32,7 +29,6 @@ export type WizardState = {
 const STEPS = ["Route Details", "Photos & Publish"];
 
 export default function CreateRouteWizard() {
-  const { units, setUnits } = useUnits();
   const [step, setStep] = useState<0 | 1>(0);
   const [wizardState, setWizardState] = useState<WizardState>({
     parsed: null,
@@ -53,19 +49,10 @@ export default function CreateRouteWizard() {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth, mx: "auto" }}>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 2 }}>
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6">
           Create Route
         </Typography>
-        <ToggleButtonGroup
-          value={units}
-          exclusive
-          onChange={(_, v) => { if (v) setUnits(v); }}
-          size="small"
-        >
-          <ToggleButton value="metric">km</ToggleButton>
-          <ToggleButton value="imperial">mi</ToggleButton>
-        </ToggleButtonGroup>
       </Box>
       <Stepper activeStep={step} sx={{ mb: 4 }}>
         {STEPS.map((label) => (
