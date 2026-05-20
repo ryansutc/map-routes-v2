@@ -38,7 +38,10 @@ def parse_gpx(file_bytes: bytes) -> dict:
     else:
         avg_pace_decimal = 0.0
 
-    coordinates = [[pt.longitude, pt.latitude] for pt in all_points]
+    coordinates = [
+        [pt.longitude, pt.latitude, pt.elevation if pt.elevation is not None else 0.0]
+        for pt in all_points
+    ]
     geojson = {
         "type": "FeatureCollection",
         "features": [
