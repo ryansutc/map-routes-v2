@@ -38,6 +38,8 @@ function LayerController({
             id: layer, // TODO convert all items to geoJSON and see if that messes up planned animation process
           },
           renderer: renderer,
+          // Drape on terrain in 3D SceneView regardless of Z coordinates in GeoJSON
+          elevationInfo: { mode: "on-the-ground" },
         });
 
         map.add(featureLayer);
