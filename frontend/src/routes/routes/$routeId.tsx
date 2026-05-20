@@ -1,3 +1,4 @@
+import ElevationProfile from "@/components/map/ElevationProfile";
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
 import PhotoController from "@/components/map/PhotoController";
@@ -6,7 +7,9 @@ import RouteInfoContainer, {
 } from "@/components/map/RouteInfoContainer";
 import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery from "@/components/routes/PhotoGallery";
+import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useRoute } from "@/hooks/useRoute.tsx";
+import type { FeatureCollection } from "geojson";
 import theme from "@/utils/muitheme";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
@@ -53,6 +56,12 @@ function RouteDetail() {
   const handleFail = (err: string) => {
     console.error(err);
   };
+
+  const { profilePoints, hasElevation, onHover, onHoverEnd } =
+    useElevationProfile(
+      routeItem?.geojson as FeatureCollection | null | undefined,
+      view
+    );
 
   const handleMapClick = (e: __esri.ViewClickEvent) => {
     const coords = `${
@@ -130,8 +139,16 @@ function RouteDetail() {
         {routeItem && (
           <>
             <RouteInfoContainer routeItem={routeItem} />
-            <Box sx={{ px: 2, pb: 2 }}>
+            <Box sx={{ px: 2, pb: 1, overflowY: "auto", maxHeight: 320 }}>
               <PhotoGallery photos={routeItem.photos} />
+            </Box>
+            <Box sx={{ px: 2, pb: 2 }}>
+              <ElevationProfile
+                profilePoints={profilePoints}
+                hasElevation={hasElevation}
+                onHover={onHover}
+                onHoverEnd={onHoverEnd}
+              />
             </Box>
           </>
         )}
