@@ -360,7 +360,8 @@
       "latitude": 49.3017,
       "longitude": -123.1411,
       "route": 100,
-      "created_at": "2026-04-12T20:30:00Z"
+      "uploaded_at": "2026-04-12T20:30:00Z",
+      "taken_at": null
     }
   },
   {
@@ -372,7 +373,8 @@
       "latitude": 49.3234167,
       "longitude": -122.7287528,
       "route": 100,
-      "created_at": "2026-04-12T20:30:00Z"
+      "uploaded_at": "2026-04-12T20:30:00Z",
+      "taken_at": null
     }
   },
   {
@@ -384,7 +386,8 @@
       "latitude": 49.3804,
       "longitude": -123.0782,
       "route": 101,
-      "created_at": "2026-04-05T16:45:00Z"
+      "uploaded_at": "2026-04-05T16:45:00Z",
+      "taken_at": null
     }
   },
   {
@@ -396,7 +399,8 @@
       "latitude": 50.3692,
       "longitude": -122.4979,
       "route": 102,
-      "created_at": "2025-09-22T22:00:00Z"
+      "uploaded_at": "2025-09-22T22:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -408,7 +412,8 @@
       "latitude": 50.3651,
       "longitude": -122.5012,
       "route": 102,
-      "created_at": "2025-09-22T22:00:00Z"
+      "uploaded_at": "2025-09-22T22:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -420,7 +425,8 @@
       "latitude": 49.2785,
       "longitude": -122.9148,
       "route": 104,
-      "created_at": "2026-02-08T15:00:00Z"
+      "uploaded_at": "2026-02-08T15:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -432,7 +438,8 @@
       "latitude": 49.2734,
       "longitude": -123.1038,
       "route": 105,
-      "created_at": "2026-04-20T14:00:00Z"
+      "uploaded_at": "2026-04-20T14:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -444,7 +451,8 @@
       "latitude": 49.9461,
       "longitude": -123.0227,
       "route": 106,
-      "created_at": "2025-08-15T03:30:00Z"
+      "uploaded_at": "2025-08-15T03:30:00Z",
+      "taken_at": null
     }
   },
   {
@@ -456,7 +464,8 @@
       "latitude": 49.9697,
       "longitude": -123.0411,
       "route": 106,
-      "created_at": "2025-08-15T03:30:00Z"
+      "uploaded_at": "2025-08-15T03:30:00Z",
+      "taken_at": null
     }
   },
   {
@@ -468,7 +477,8 @@
       "latitude": 49.2715,
       "longitude": -123.134,
       "route": 107,
-      "created_at": "2025-07-19T22:00:00Z"
+      "uploaded_at": "2025-07-19T22:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -480,7 +490,8 @@
       "latitude": 50.0596,
       "longitude": -122.9486,
       "route": 108,
-      "created_at": "2026-01-30T22:30:00Z"
+      "uploaded_at": "2026-01-30T22:30:00Z",
+      "taken_at": null
     }
   },
   {
@@ -492,7 +503,8 @@
       "latitude": 49.3978,
       "longitude": -123.2043,
       "route": 109,
-      "created_at": "2026-02-22T18:00:00Z"
+      "uploaded_at": "2026-02-22T18:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -504,7 +516,8 @@
       "latitude": 49.3631,
       "longitude": -123.0481,
       "route": 111,
-      "created_at": "2025-10-11T22:00:00Z"
+      "uploaded_at": "2025-10-11T22:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -516,7 +529,8 @@
       "latitude": 49.7016,
       "longitude": -123.1558,
       "route": 112,
-      "created_at": "2025-06-07T20:00:00Z"
+      "uploaded_at": "2025-06-07T20:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -528,7 +542,8 @@
       "latitude": 49.3458,
       "longitude": -122.8658,
       "route": 113,
-      "created_at": "2025-11-02T17:00:00Z"
+      "uploaded_at": "2025-11-02T17:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -540,7 +555,8 @@
       "latitude": 49.4211,
       "longitude": -122.9472,
       "route": 114,
-      "created_at": "2025-07-26T16:30:00Z"
+      "uploaded_at": "2025-07-26T16:30:00Z",
+      "taken_at": null
     }
   },
   {
@@ -552,7 +568,8 @@
       "latitude": 49.4847,
       "longitude": -122.8703,
       "route": 116,
-      "created_at": "2025-08-30T22:00:00Z"
+      "uploaded_at": "2025-08-30T22:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -564,7 +581,8 @@
       "latitude": 49.3517,
       "longitude": -123.1051,
       "route": 117,
-      "created_at": "2026-03-08T19:00:00Z"
+      "uploaded_at": "2026-03-08T19:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -576,7 +594,8 @@
       "latitude": 49.3777,
       "longitude": -123.0825,
       "route": 118,
-      "created_at": "2025-09-07T15:00:00Z"
+      "uploaded_at": "2025-09-07T15:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -588,7 +607,8 @@
       "latitude": 49.6203,
       "longitude": -123.2067,
       "route": 119,
-      "created_at": "2025-05-25T18:00:00Z"
+      "uploaded_at": "2025-05-25T18:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -600,7 +620,8 @@
       "latitude": 49.0653,
       "longitude": -120.7822,
       "route": 120,
-      "created_at": "2026-01-12T19:00:00Z"
+      "uploaded_at": "2026-01-12T19:00:00Z",
+      "taken_at": null
     }
   },
   {
@@ -612,7 +633,8 @@
       "latitude": 49.3303,
       "longitude": -123.2647,
       "route": 121,
-      "created_at": "2025-12-21T23:00:00Z"
+      "uploaded_at": "2025-12-21T23:00:00Z",
+      "taken_at": null
     }
   }
 ]
