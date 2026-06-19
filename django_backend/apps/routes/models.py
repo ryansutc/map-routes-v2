@@ -50,6 +50,7 @@ class Photo(models.Model):
     url = models.CharField(max_length=1000)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
+    taken_at = models.DateTimeField(null=True, blank=True)
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="photos")
     created_at = models.DateTimeField(auto_now_add=True)
 

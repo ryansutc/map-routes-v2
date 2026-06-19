@@ -1,5 +1,6 @@
 """View for uploading photos to a route."""
 
+from datetime import datetime
 from typing import Any
 
 from PIL import Image
@@ -18,16 +19,20 @@ from .models import Photo, Route
 MAX_PHOTOS_PER_ROUTE = 20
 
 
-def _extract_gps(image: Image.Image) -> tuple[float | None, float | None]:
-    """Return (latitude, longitude) from image EXIF, or (None, None) if absent."""
-    try:
-        exif_data = image._getexif()
-    except (AttributeError, Exception):
-        return None, None
+def _extract_taken_at(exif_data: dict) -> datetime | None:
+    """Return the datetime a photo was taken from EXIF, or None if absent."""
+    for tag_id, value in exif_data.items():
+        tag = TAGS.get(tag_id, tag_id)
+        if tag in ("DateTimeOriginal", "DateTime"):
+            try:
+                return datetime.strptime(value, "%Y:%m:%d %H:%M:%S")
+            except (ValueError, TypeError):
+                return None
+    return None
 
-    if not exif_data:
-        return None, None
 
+def _extract_gps(exif_data: dict) -> tuple[float | None, float | None]:
+    """Return (latitude, longitude) from EXIF data, or (None, None) if absent."""
     gps_info: dict[str, Any] = {}
     for tag_id, value in exif_data.items():
         tag = TAGS.get(tag_id, tag_id)
@@ -86,11 +91,13 @@ class RoutePhotoView(APIView):
 
         try:
             image = Image.open(uploaded_file)
-            lat, lng = _extract_gps(image)
+            exif_data = image._getexif() or {}
+            lat, lng = _extract_gps(exif_data)
             lat = round(lat, 6) if lat is not None else None
             lng = round(lng, 6) if lng is not None else None
+            taken_at = _extract_taken_at(exif_data)
         except Exception:
-            lat, lng = None, None
+            lat, lng, taken_at = None, None, None
 
         try:
             secure_url = upload_photo(file_bytes, uploaded_file.name)
@@ -107,6 +114,7 @@ class RoutePhotoView(APIView):
             url=secure_url,
             latitude=lat,
             longitude=lng,
+            taken_at=taken_at,
             title=title,
         )
 
@@ -117,6 +125,7 @@ class RoutePhotoView(APIView):
                 "title": photo.title,
                 "latitude": photo.latitude,
                 "longitude": photo.longitude,
+                "taken_at": photo.taken_at,
                 "has_gps": lat is not None and lng is not None,
             },
             status=201,
