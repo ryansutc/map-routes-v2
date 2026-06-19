@@ -33,6 +33,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-dropzone": "^15.0.0",
+    "recharts": "^3.8.1",
     "zod": "^3.25.67",
     "zustand": "^5.0.6"
   },
@@ -41,6 +42,7 @@
     "@tanstack/eslint-plugin-router": "^1.129.7",
     "@tanstack/react-query-devtools": "^5.83.0",
     "@tanstack/router-plugin": "^1.130.2",
+    "@types/geojson": "^7946.0.16",
     "@types/node": "^24.0.15",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
