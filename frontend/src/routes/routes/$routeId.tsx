@@ -1,3 +1,4 @@
+import AnimationSettingsPopover from "@/components/AnimationSettingsPopover";
 import ElevationProfile from "@/components/map/ElevationProfile";
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
@@ -52,12 +53,23 @@ function RouteDetail() {
 
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
+  const [pointsPerSecond, setPointsPerSecond] = useState(50);
 
-  const { isPlaying, progress, play, stop } = useRouteAnimation(
+  const { isPlaying, progress, pointCount, play, stop } = useRouteAnimation(
     map,
     view,
     routeItem?.arcgis_item_id,
+    { pointsPerSecond },
   );
+
+  const handleSpeedChange = (pps: number) => {
+    setPointsPerSecond(pps);
+    if (isPlaying) {
+      stop();
+      // Small timeout so stop() state clears before restarting
+      setTimeout(() => play(progress), 0);
+    }
+  };
 
   const viewDiv = React.useRef<HTMLDivElement>(
     null,
@@ -161,7 +173,7 @@ function RouteDetail() {
                 <Tooltip title={isPlaying ? "Stop" : "Replay route"}>
                   <IconButton
                     size="small"
-                    onClick={isPlaying ? stop : play}
+                    onClick={isPlaying ? stop : () => play()}
                     sx={{ color: "white" }}
                   >
                     {isPlaying ? <StopIcon /> : <PlayArrowIcon />}
@@ -171,6 +183,12 @@ function RouteDetail() {
                   variant="determinate"
                   value={progress * 100}
                   sx={{ flex: 1, borderRadius: 1, height: 6 }}
+                />
+                <AnimationSettingsPopover
+                  pointsPerSecond={pointsPerSecond}
+                  pointCount={pointCount}
+                  activityDurationSec={routeItem?.duration ?? null}
+                  onSpeedChange={handleSpeedChange}
                 />
               </Box>
             )}

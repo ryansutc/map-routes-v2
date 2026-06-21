@@ -41,6 +41,7 @@ class RouteSerializer(serializers.ModelSerializer):
             "avg_pace",
             "elevation_gain",
             "arcgis_item_id",
+            "track_point_count",
             "geojson",
             "notes",
             "route_link",
@@ -68,6 +69,7 @@ class ParseGpxResponseSerializer(serializers.Serializer):
     duration_s = serializers.FloatField(allow_null=True)
     avg_pace_decimal = serializers.FloatField(allow_null=True)
     elevation_gain_m = serializers.FloatField(allow_null=True)
+    track_point_count = serializers.IntegerField(allow_null=True)
 
 
 class RouteWriteSerializer(serializers.ModelSerializer):
@@ -89,6 +91,7 @@ class RouteWriteSerializer(serializers.ModelSerializer):
             "avg_pace",
             "elevation_gain",
             "arcgis_item_id",
+            "track_point_count",
             "geojson",
             "notes",
             "route_link",
