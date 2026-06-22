@@ -51,18 +51,39 @@ function flattenGeoJSONCoords(
   return coords;
 }
 
-function interpolatePath(coords: number[][], targetPoints: number): number[][] {
+/**
+ * Resamples coords to exactly targetPoints by walking cumulative arc length.
+ * Handles both sparse (densify) and dense (downsample) routes.
+ */
+function resamplePath(coords: number[][], targetPoints: number): number[][] {
   if (coords.length < 2) return coords;
-  const segCount = coords.length - 1;
-  const stepsPerSeg = Math.max(1, Math.ceil(targetPoints / segCount));
-  const result: number[][] = [coords[0]!];
-  for (let i = 0; i < segCount; i++) {
-    const [x0, y0] = coords[i] as [number, number];
-    const [x1, y1] = coords[i + 1] as [number, number];
-    for (let s = 1; s <= stepsPerSeg; s++) {
-      const t = s / stepsPerSeg;
-      result.push([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]);
-    }
+  if (coords.length <= targetPoints) {
+    // Dense enough already — no need to densify
+    // But if way over target, downsample via uniform stride
+    if (coords.length <= targetPoints * 1.5) return coords;
+  }
+
+  // Compute cumulative distances
+  const dists: number[] = [0];
+  for (let i = 1; i < coords.length; i++) {
+    const [x0, y0] = coords[i - 1] as [number, number];
+    const [x1, y1] = coords[i] as [number, number];
+    const dx = x1 - x0, dy = y1 - y0;
+    dists.push(dists[i - 1]! + Math.sqrt(dx * dx + dy * dy));
+  }
+  const totalDist = dists[dists.length - 1]!;
+
+  const result: number[][] = [];
+  let srcIdx = 0;
+  for (let t = 0; t < targetPoints; t++) {
+    const targetDist = (t / (targetPoints - 1)) * totalDist;
+    while (srcIdx < dists.length - 2 && dists[srcIdx + 1]! < targetDist) srcIdx++;
+    const d0 = dists[srcIdx]!, d1 = dists[srcIdx + 1] ?? d0;
+    const segLen = d1 - d0;
+    const frac = segLen > 0 ? (targetDist - d0) / segLen : 0;
+    const [x0, y0] = coords[srcIdx] as [number, number];
+    const [x1, y1] = (coords[srcIdx + 1] ?? coords[srcIdx]) as [number, number];
+    result.push([x0 + (x1 - x0) * frac, y0 + (y1 - y0) * frac]);
   }
   return result;
 }
@@ -79,7 +100,7 @@ export function useRouteAnimation(
     lineWidth = 3,
     markerColor = [255, 50, 50, 255],
     markerSize = 10,
-    targetPoints = 600,
+    targetPoints = 1000,
   } = options;
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -91,6 +112,11 @@ export function useRouteAnimation(
   const layerRef = useRef<GraphicsLayer | null>(null);
   const lineGraphicRef = useRef<Graphic | null>(null);
   const markerGraphicRef = useRef<Graphic | null>(null);
+  // Tracks the growing path array so we only push new points each frame (no slice)
+  const animPathRef = useRef<number[][]>([]);
+  const animPointIdxRef = useRef(0);
+  const lastGeomFrameRef = useRef<number>(0);
+  const lastProgressFrameRef = useRef<number>(0);
 
   // Fetch and cache coordinates when itemId or map changes
   useEffect(() => {
@@ -103,9 +129,9 @@ export function useRouteAnimation(
       .then((r) => r.json())
       .then((geojson: GeoJSON.FeatureCollection | GeoJSON.Feature) => {
         const raw = flattenGeoJSONCoords(geojson);
-        const interpolated = interpolatePath(raw, targetPoints);
-        coordsRef.current = interpolated;
-        setPointCount(interpolated.length);
+        const resampled = resamplePath(raw, targetPoints);
+        coordsRef.current = resampled;
+        setPointCount(resampled.length);
       })
       .catch((err) =>
         console.error("useRouteAnimation: failed to fetch GeoJSON", err),
@@ -164,6 +190,8 @@ export function useRouteAnimation(
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    animPathRef.current = [];
+    animPointIdxRef.current = 0;
     setIsPlaying(false);
     setProgress(0);
     lineGraphicRef.current?.set(
@@ -188,6 +216,18 @@ export function useRouteAnimation(
       const offsetMs = startProgress * durationMs;
       let startTime: number | null = null;
 
+      // Reset incremental path tracking
+      const startIdx = Math.max(0, Math.floor(startProgress * total));
+      animPathRef.current = coords.slice(0, Math.max(2, startIdx));
+      animPointIdxRef.current = animPathRef.current.length;
+      lastGeomFrameRef.current = 0;
+      lastProgressFrameRef.current = 0;
+
+      // Geometry throttle: update at most pointsPerSecond times/sec
+      const geomIntervalMs = 1000 / pointsPerSecond;
+      // Progress bar throttle: update React state at ~10fps to avoid stutter
+      const progressIntervalMs = 100;
+
       markerGraphicRef.current?.set("visible", true);
       setIsPlaying(true);
       setProgress(startProgress);
@@ -197,28 +237,47 @@ export function useRouteAnimation(
         const elapsed = timestamp - startTime;
         const pct = Math.min(elapsed / durationMs, 1);
 
-        const pointCount = Math.max(2, Math.floor(pct * total));
-        const slice = coords!.slice(0, pointCount);
-        const last = slice[slice.length - 1] as [number, number];
+        const sinceGeom = timestamp - lastGeomFrameRef.current;
+        if (sinceGeom >= geomIntervalMs) {
+          lastGeomFrameRef.current = timestamp;
 
-        lineGraphicRef.current?.set(
-          "geometry",
-          new Polyline({ paths: [slice], spatialReference: { wkid: 4326 } }),
-        );
-        markerGraphicRef.current?.set(
-          "geometry",
-          new Point({
-            longitude: last[0],
-            latitude: last[1],
-            spatialReference: { wkid: 4326 },
-          }),
-        );
+          const newIdx = Math.max(2, Math.floor(pct * total));
+          const prevIdx = animPointIdxRef.current;
 
-        setProgress(pct);
+          if (newIdx > prevIdx) {
+            // Push only the newly revealed points — no full slice allocation
+            for (let i = prevIdx; i < newIdx; i++) {
+              animPathRef.current.push(coords![i]!);
+            }
+            animPointIdxRef.current = newIdx;
+          }
+
+          const last = animPathRef.current[animPathRef.current.length - 1] as [number, number];
+
+          lineGraphicRef.current?.set(
+            "geometry",
+            new Polyline({ paths: [animPathRef.current], spatialReference: { wkid: 4326 } }),
+          );
+          markerGraphicRef.current?.set(
+            "geometry",
+            new Point({
+              longitude: last[0],
+              latitude: last[1],
+              spatialReference: { wkid: 4326 },
+            }),
+          );
+        }
+
+        // Decouple React state updates from geometry updates to avoid stutter
+        if (timestamp - lastProgressFrameRef.current >= progressIntervalMs) {
+          lastProgressFrameRef.current = timestamp;
+          setProgress(pct);
+        }
 
         if (pct < 1) {
           rafRef.current = requestAnimationFrame(frame);
         } else {
+          setProgress(1);
           rafRef.current = null;
           setIsPlaying(false);
         }
