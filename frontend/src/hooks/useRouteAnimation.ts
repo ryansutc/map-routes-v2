@@ -110,12 +110,8 @@ export function useRouteAnimation(
   const rafRef = useRef<number | null>(null);
   const coordsRef = useRef<number[][] | null>(null);
   const layerRef = useRef<GraphicsLayer | null>(null);
-  const lineGraphicRef = useRef<Graphic | null>(null);
+  const staticLineGraphicRef = useRef<Graphic | null>(null);
   const markerGraphicRef = useRef<Graphic | null>(null);
-  // Tracks the growing path array so we only push new points each frame (no slice)
-  const animPathRef = useRef<number[][]>([]);
-  const animPointIdxRef = useRef(0);
-  const lastGeomFrameRef = useRef<number>(0);
   const lastProgressFrameRef = useRef<number>(0);
 
   // Fetch and cache coordinates when itemId or map changes
@@ -158,7 +154,7 @@ export function useRouteAnimation(
       outline: { color: [255, 255, 255, 200], width: 1.5 },
     });
 
-    const lineGraphic = new Graphic({
+    const staticLineGraphic = new Graphic({
       geometry: new Polyline({ paths: [[]], spatialReference: { wkid: 4326 } }),
       symbol: lineSym,
     });
@@ -169,17 +165,18 @@ export function useRouteAnimation(
         spatialReference: { wkid: 4326 },
       }),
       symbol: markerSym,
+      visible: false,
     });
 
-    layer.addMany([lineGraphic, markerGraphic]);
-    lineGraphicRef.current = lineGraphic;
+    layer.addMany([staticLineGraphic, markerGraphic]);
+    staticLineGraphicRef.current = staticLineGraphic;
     markerGraphicRef.current = markerGraphic;
 
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       map.remove(layer);
       layerRef.current = null;
-      lineGraphicRef.current = null;
+      staticLineGraphicRef.current = null;
       markerGraphicRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,14 +187,8 @@ export function useRouteAnimation(
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    animPathRef.current = [];
-    animPointIdxRef.current = 0;
     setIsPlaying(false);
     setProgress(0);
-    lineGraphicRef.current?.set(
-      "geometry",
-      new Polyline({ paths: [[]], spatialReference: { wkid: 4326 } }),
-    );
     markerGraphicRef.current?.set("visible", false);
   }, []);
 
@@ -212,21 +203,16 @@ export function useRouteAnimation(
 
       const total = coords.length;
       const durationMs = (total / pointsPerSecond) * 1000;
-      // elapsed time equivalent to startProgress so animation resumes mid-route
       const offsetMs = startProgress * durationMs;
       let startTime: number | null = null;
 
-      // Reset incremental path tracking
-      const startIdx = Math.max(0, Math.floor(startProgress * total));
-      animPathRef.current = coords.slice(0, Math.max(2, startIdx));
-      animPointIdxRef.current = animPathRef.current.length;
-      lastGeomFrameRef.current = 0;
       lastProgressFrameRef.current = 0;
 
-      // Geometry throttle: update at most pointsPerSecond times/sec
-      const geomIntervalMs = 1000 / pointsPerSecond;
-      // Progress bar throttle: update React state at ~10fps to avoid stutter
-      const progressIntervalMs = 100;
+      // Draw the full route as a static line once
+      staticLineGraphicRef.current?.set(
+        "geometry",
+        new Polyline({ paths: [coords], spatialReference: { wkid: 4326 } }),
+      );
 
       markerGraphicRef.current?.set("visible", true);
       setIsPlaying(true);
@@ -237,39 +223,20 @@ export function useRouteAnimation(
         const elapsed = timestamp - startTime;
         const pct = Math.min(elapsed / durationMs, 1);
 
-        const sinceGeom = timestamp - lastGeomFrameRef.current;
-        if (sinceGeom >= geomIntervalMs) {
-          lastGeomFrameRef.current = timestamp;
+        const pointIdx = Math.max(0, Math.floor(pct * (total - 1)));
+        const [lng, lat] = coords![pointIdx] as [number, number];
 
-          const newIdx = Math.max(2, Math.floor(pct * total));
-          const prevIdx = animPointIdxRef.current;
+        markerGraphicRef.current?.set(
+          "geometry",
+          new Point({
+            longitude: lng,
+            latitude: lat,
+            spatialReference: { wkid: 4326 },
+          }),
+        );
 
-          if (newIdx > prevIdx) {
-            // Push only the newly revealed points — no full slice allocation
-            for (let i = prevIdx; i < newIdx; i++) {
-              animPathRef.current.push(coords![i]!);
-            }
-            animPointIdxRef.current = newIdx;
-          }
-
-          const last = animPathRef.current[animPathRef.current.length - 1] as [number, number];
-
-          lineGraphicRef.current?.set(
-            "geometry",
-            new Polyline({ paths: [animPathRef.current], spatialReference: { wkid: 4326 } }),
-          );
-          markerGraphicRef.current?.set(
-            "geometry",
-            new Point({
-              longitude: last[0],
-              latitude: last[1],
-              spatialReference: { wkid: 4326 },
-            }),
-          );
-        }
-
-        // Decouple React state updates from geometry updates to avoid stutter
-        if (timestamp - lastProgressFrameRef.current >= progressIntervalMs) {
+        // Update React state at ~10fps to avoid stutter
+        if (timestamp - lastProgressFrameRef.current >= 100) {
           lastProgressFrameRef.current = timestamp;
           setProgress(pct);
         }
