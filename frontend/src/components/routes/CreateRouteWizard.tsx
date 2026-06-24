@@ -1,14 +1,8 @@
-import { useState } from "react";
-import {
-  Box,
-  Step,
-  StepLabel,
-  Stepper,
-  Typography,
-} from "@mui/material";
-import RouteMetadataStep from "./RouteMetadataStep";
-import PhotoUploadStep from "./PhotoUploadStep";
 import type { ParseGpxResponse } from "@/types/api";
+import { Box, Step, StepLabel, Stepper, Typography } from "@mui/material";
+import { useState } from "react";
+import PhotoUploadStep from "./PhotoUploadStep";
+import RouteMetadataStep from "./RouteMetadataStep";
 
 export type ActivityType =
   | "Hiking"
@@ -28,7 +22,7 @@ export type WizardState = {
 
 const STEPS = ["Route Details", "Photos & Publish"];
 
-export default function CreateRouteWizard() {
+export default function ACreateRouteWizard() {
   const [step, setStep] = useState<0 | 1>(0);
   const [wizardState, setWizardState] = useState<WizardState>({
     parsed: null,
@@ -50,9 +44,7 @@ export default function CreateRouteWizard() {
   return (
     <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth, mx: "auto" }}>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h6">
-          Create Route
-        </Typography>
+        <Typography variant="h6">Create Route</Typography>
       </Box>
       <Stepper activeStep={step} sx={{ mb: 4 }}>
         {STEPS.map((label) => (
@@ -63,10 +55,7 @@ export default function CreateRouteWizard() {
       </Stepper>
 
       {step === 0 && (
-        <RouteMetadataStep
-          wizardState={wizardState}
-          onNext={handleNext}
-        />
+        <RouteMetadataStep wizardState={wizardState} onNext={handleNext} />
       )}
       {step === 1 && (
         <PhotoUploadStep wizardState={wizardState} onBack={handleBack} />
