@@ -14,6 +14,12 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
     async function checkStatus() {
       try {
         const userInfo = await zodiosAPI.auth_status_retrieve();
+        // The OAuth callback page may have set auth state directly (from the
+        // redirect token) while this request was in flight. Don't let a
+        // stale response that predates the token clobber that newer state.
+        if (useStore.getState().userIsAuthenticated !== undefined) {
+          return;
+        }
         if (userInfo && userInfo.is_authenticated) {
           setUser(userInfo.user_name!);
           setUserIsAuthenticated(userInfo.is_authenticated);
@@ -23,7 +29,6 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
       } catch (e) {
         console.error("Failed to get user info: ", e);
         setError(e);
-        localStorage.clear?.();
         return;
       }
     }
