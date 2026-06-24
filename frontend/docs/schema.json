@@ -1,984 +1,1076 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "Map Routes API",
-    "version": "1.0.0"
-  },
-  "paths": {
-    "/api/auth/google/": {
-      "get": {
-        "operationId": "auth_google_retrieve",
-        "description": "Redirect to the Google OAuth2 login URL.",
-        "tags": ["auth"],
-        "security": [
-          {
-            "jwtAuth": []
-          },
-          {}
-        ],
-        "responses": {
-          "302": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Redirect to Google OAuth login"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      }
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Map Routes API",
+        "version": "1.0.0"
     },
-    "/api/auth/login-jwt/": {
-      "post": {
-        "operationId": "auth_login_jwt_create",
-        "description": "Authenticate with email and password and return a JWT access token.",
-        "tags": ["auth"],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
+    "paths": {
+        "/api/auth/google/": {
+            "get": {
+                "operationId": "auth_google_retrieve",
+                "description": "Redirect to the Google OAuth2 login URL.",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "302": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "Redirect to Google OAuth login"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
             }
-          },
-          "required": true
         },
-        "security": [
-          {
-            "jwtAuth": []
-          },
-          {}
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JwtAuthResponse"
+        "/api/auth/login-jwt/": {
+            "post": {
+                "operationId": "auth_login_jwt_create",
+                "description": "Authenticate with email and password and return a JWT access token.",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/JwtAuthResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
                 }
-              }
-            },
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/auth/logout/": {
-      "post": {
-        "operationId": "auth_logout_create",
-        "description": "Return a logout confirmation response.",
-        "tags": ["auth"],
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Logout successful"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/auth/register-jwt/": {
-      "post": {
-        "operationId": "auth_register_jwt_create",
-        "description": "Register a new user account and return a JWT access token.",
-        "tags": ["auth"],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
             }
-          },
-          "required": true
         },
-        "security": [
-          {
-            "jwtAuth": []
-          },
-          {}
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JwtAuthResponse"
+        "/api/auth/logout/": {
+            "post": {
+                "operationId": "auth_logout_create",
+                "description": "Return a logout confirmation response.",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "Logout successful"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
                 }
-              }
-            },
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/auth/status/": {
-      "get": {
-        "operationId": "auth_status_retrieve",
-        "description": "Return authentication status and email for the current user.",
-        "tags": ["auth"],
-        "security": [
-          {
-            "jwtAuth": []
-          },
-          {}
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthStatus"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/route/": {
-      "get": {
-        "operationId": "route_list",
-        "description": "API view to list routes visible to the user or create a new route.",
-        "tags": ["route"],
-        "security": [
-          {
-            "jwtAuth": []
-          },
-          {}
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Route"
-                  }
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      },
-      "post": {
-        "operationId": "route_create",
-        "description": "API view to list routes visible to the user or create a new route.",
-        "tags": ["route"],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RouteWriteRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/RouteWriteRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/RouteWriteRequest"
-              }
             }
-          },
-          "required": true
         },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RouteWrite"
+        "/api/auth/register-jwt/": {
+            "post": {
+                "operationId": "auth_register_jwt_create",
+                "description": "Register a new user account and return a JWT access token.",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/JwtAuthResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
                 }
-              }
-            },
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/route/{id}/": {
-      "get": {
-        "operationId": "route_retrieve",
-        "description": "API view to retrieve, update, or delete a single route.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "required": true
-          }
-        ],
-        "tags": ["route"],
-        "security": [
-          {
-            "jwtAuth": []
-          },
-          {}
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Route"
-                }
-              }
-            },
-            "description": ""
-          }
-        }
-      },
-      "put": {
-        "operationId": "route_update",
-        "description": "API view to retrieve, update, or delete a single route.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "required": true
-          }
-        ],
-        "tags": ["route"],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RouteWriteRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/RouteWriteRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/RouteWriteRequest"
-              }
             }
-          },
-          "required": true
         },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RouteWrite"
+        "/api/auth/status/": {
+            "get": {
+                "operationId": "auth_status_retrieve",
+                "description": "Return authentication status and email for the current user.",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
                 }
-              }
-            },
-            "description": ""
-          }
-        }
-      },
-      "patch": {
-        "operationId": "route_partial_update",
-        "description": "API view to retrieve, update, or delete a single route.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "required": true
-          }
-        ],
-        "tags": ["route"],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedRouteWriteRequest"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedRouteWriteRequest"
-              }
-            },
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedRouteWriteRequest"
-              }
             }
-          }
         },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RouteWrite"
+        "/api/route/": {
+            "get": {
+                "operationId": "route_list",
+                "description": "API view to list routes visible to the user or create a new route.",
+                "tags": [
+                    "route"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Route"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
                 }
-              }
             },
-            "description": ""
-          }
-        }
-      },
-      "delete": {
-        "operationId": "route_destroy",
-        "description": "API view to retrieve, update, or delete a single route.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "required": true
-          }
-        ],
-        "tags": ["route"],
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No response body"
-          }
-        }
-      }
-    },
-    "/api/route/{id}/photos/": {
-      "post": {
-        "operationId": "route_photos_create",
-        "description": "Accept an image file, extract GPS EXIF, upload to Cloudinary, save Photo record.",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "required": true
-          }
-        ],
-        "tags": ["route"],
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "No response body"
-          }
-        }
-      }
-    },
-    "/api/route/parse-gpx/": {
-      "post": {
-        "operationId": "route_parse_gpx_create",
-        "description": "Accept a GPX file, parse it, upload to ArcGIS, and return metadata.",
-        "tags": ["route"],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/ParseGpxRequestRequest"
-              }
+            "post": {
+                "operationId": "route_create",
+                "description": "API view to list routes visible to the user or create a new route.",
+                "tags": [
+                    "route"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteWriteRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteWriteRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteWriteRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteWrite"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
             }
-          },
-          "required": true
         },
-        "security": [
-          {
-            "jwtAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ParseGpxResponse"
+        "/api/route/{id}/": {
+            "get": {
+                "operationId": "route_retrieve",
+                "description": "API view to retrieve, update, or delete a single route.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "route"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Route"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
                 }
-              }
             },
-            "description": ""
-          }
+            "put": {
+                "operationId": "route_update",
+                "description": "API view to retrieve, update, or delete a single route.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "route"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteWriteRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteWriteRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteWriteRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteWrite"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "route_partial_update",
+                "description": "API view to retrieve, update, or delete a single route.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "route"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedRouteWriteRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedRouteWriteRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedRouteWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteWrite"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "route_destroy",
+                "description": "API view to retrieve, update, or delete a single route.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "route"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/route/{id}/photos/": {
+            "post": {
+                "operationId": "route_photos_create",
+                "description": "Accept an image file, extract GPS EXIF, upload to Cloudinary, save Photo record.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "route"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/route/parse-gpx/": {
+            "post": {
+                "operationId": "route_parse_gpx_create",
+                "description": "Accept a GPX file, parse it, upload to ArcGIS, and return metadata.",
+                "tags": [
+                    "route"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParseGpxRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ParseGpxResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
         }
-      }
+    },
+    "components": {
+        "schemas": {
+            "ActivityTypeEnum": {
+                "enum": [
+                    "Hiking",
+                    "Running",
+                    "Cycling",
+                    "Backpacking",
+                    "Skiing",
+                    "Other"
+                ],
+                "type": "string",
+                "description": "* `Hiking` - Hiking\n* `Running` - Running\n* `Cycling` - Cycling\n* `Backpacking` - Backpacking\n* `Skiing` - Skiing\n* `Other` - Other"
+            },
+            "AuthStatus": {
+                "type": "object",
+                "description": "Serializer for the current authentication status response.",
+                "properties": {
+                    "is_authenticated": {
+                        "type": "boolean"
+                    },
+                    "user_name": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "is_authenticated",
+                    "user_name"
+                ]
+            },
+            "BlankEnum": {
+                "enum": [
+                    ""
+                ]
+            },
+            "JwtAuthResponse": {
+                "type": "object",
+                "description": "Serializer for a successful JWT authentication response.",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "token": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    }
+                },
+                "required": [
+                    "email",
+                    "message",
+                    "token",
+                    "user_id"
+                ]
+            },
+            "LoginRequest": {
+                "type": "object",
+                "description": "Serializer for JWT login credentials.",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "email",
+                    "password"
+                ]
+            },
+            "NullEnum": {
+                "enum": [
+                    null
+                ]
+            },
+            "ParseGpxRequestRequest": {
+                "type": "object",
+                "description": "Serializer for the multipart file upload accepted by ParseGpxView.",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary"
+                    }
+                },
+                "required": [
+                    "file"
+                ]
+            },
+            "ParseGpxResponse": {
+                "type": "object",
+                "description": "Serializer for the response returned by ParseGpxView.",
+                "properties": {
+                    "arcgis_item_id": {
+                        "type": "string"
+                    },
+                    "geojson": {},
+                    "date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "distance_m": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "duration_s": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "avg_pace_decimal": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "elevation_gain_m": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "track_point_count": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "arcgis_item_id",
+                    "avg_pace_decimal",
+                    "date",
+                    "distance_m",
+                    "duration_s",
+                    "elevation_gain_m",
+                    "geojson",
+                    "track_point_count"
+                ]
+            },
+            "PatchedRouteWriteRequest": {
+                "type": "object",
+                "description": "Serializer for creating and updating Route instances.",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "activity_date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "activity_type": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActivityTypeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "distance": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "avg_pace": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "elevation_gain": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "arcgis_item_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 32
+                    },
+                    "track_point_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "geojson": {
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "route_link": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 500
+                    },
+                    "is_public": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Photo": {
+                "type": "object",
+                "description": "Serializer for the Photo model.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "url": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "latitude": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "longitude": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "route_id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "has_gps": {
+                        "type": "boolean",
+                        "description": "Return True if the photo has GPS coordinates.",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "has_gps",
+                    "id",
+                    "route_id",
+                    "url"
+                ]
+            },
+            "RegisterRequest": {
+                "type": "object",
+                "description": "Serializer for new user registration data.",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 6
+                    },
+                    "confirm_password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "confirm_password",
+                    "email",
+                    "password"
+                ]
+            },
+            "Route": {
+                "type": "object",
+                "description": "Serializer for reading Route instances, including nested photos.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "activity_date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "activity_type": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActivityTypeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "distance": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "avg_pace": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "elevation_gain": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "arcgis_item_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 32
+                    },
+                    "track_point_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "geojson": {
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "route_link": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 500
+                    },
+                    "owner": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true
+                    },
+                    "is_public": {
+                        "type": "boolean"
+                    },
+                    "photos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Photo"
+                        },
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "activity_date",
+                    "created_at",
+                    "distance",
+                    "id",
+                    "owner",
+                    "photos"
+                ]
+            },
+            "RouteWrite": {
+                "type": "object",
+                "description": "Serializer for creating and updating Route instances.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "activity_date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "activity_type": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActivityTypeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "distance": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "avg_pace": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "elevation_gain": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "arcgis_item_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 32
+                    },
+                    "track_point_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "geojson": {
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "route_link": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 500
+                    },
+                    "is_public": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "activity_date",
+                    "distance",
+                    "id"
+                ]
+            },
+            "RouteWriteRequest": {
+                "type": "object",
+                "description": "Serializer for creating and updating Route instances.",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "activity_date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "activity_type": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActivityTypeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "distance": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "avg_pace": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "elevation_gain": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "arcgis_item_id": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 32
+                    },
+                    "track_point_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "geojson": {
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "route_link": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 500
+                    },
+                    "is_public": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "activity_date",
+                    "distance"
+                ]
+            }
+        },
+        "securitySchemes": {
+            "jwtAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
     }
-  },
-  "components": {
-    "schemas": {
-      "ActivityTypeEnum": {
-        "enum": [
-          "Hiking",
-          "Running",
-          "Cycling",
-          "Backpacking",
-          "Skiing",
-          "Other"
-        ],
-        "type": "string",
-        "description": "* `Hiking` - Hiking\n* `Running` - Running\n* `Cycling` - Cycling\n* `Backpacking` - Backpacking\n* `Skiing` - Skiing\n* `Other` - Other"
-      },
-      "AuthStatus": {
-        "type": "object",
-        "description": "Serializer for the current authentication status response.",
-        "properties": {
-          "is_authenticated": {
-            "type": "boolean"
-          },
-          "user_name": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": ["is_authenticated", "user_name"]
-      },
-      "BlankEnum": {
-        "enum": [""]
-      },
-      "JwtAuthResponse": {
-        "type": "object",
-        "description": "Serializer for a successful JWT authentication response.",
-        "properties": {
-          "message": {
-            "type": "string"
-          },
-          "token": {
-            "type": "string"
-          },
-          "user_id": {
-            "type": "integer"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
-          }
-        },
-        "required": ["email", "message", "token", "user_id"]
-      },
-      "LoginRequest": {
-        "type": "object",
-        "description": "Serializer for JWT login credentials.",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "minLength": 1
-          },
-          "password": {
-            "type": "string",
-            "writeOnly": true,
-            "minLength": 1
-          }
-        },
-        "required": ["email", "password"]
-      },
-      "NullEnum": {
-        "enum": [null]
-      },
-      "ParseGpxRequestRequest": {
-        "type": "object",
-        "description": "Serializer for the multipart file upload accepted by ParseGpxView.",
-        "properties": {
-          "file": {
-            "type": "string",
-            "format": "binary"
-          }
-        },
-        "required": ["file"]
-      },
-      "ParseGpxResponse": {
-        "type": "object",
-        "description": "Serializer for the response returned by ParseGpxView.",
-        "properties": {
-          "arcgis_item_id": {
-            "type": "string"
-          },
-          "geojson": {},
-          "date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "distance_m": {
-            "type": "number",
-            "format": "double"
-          },
-          "duration_s": {
-            "type": "number",
-            "format": "double",
-            "nullable": true
-          },
-          "avg_pace_decimal": {
-            "type": "number",
-            "format": "double",
-            "nullable": true
-          },
-          "elevation_gain_m": {
-            "type": "number",
-            "format": "double",
-            "nullable": true
-          }
-        },
-        "required": [
-          "arcgis_item_id",
-          "avg_pace_decimal",
-          "date",
-          "distance_m",
-          "duration_s",
-          "elevation_gain_m",
-          "geojson"
-        ]
-      },
-      "PatchedRouteWriteRequest": {
-        "type": "object",
-        "description": "Serializer for creating and updating Route instances.",
-        "properties": {
-          "title": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 255
-          },
-          "activity_date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "activity_type": {
-            "nullable": true,
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ActivityTypeEnum"
-              },
-              {
-                "$ref": "#/components/schemas/BlankEnum"
-              },
-              {
-                "$ref": "#/components/schemas/NullEnum"
-              }
-            ]
-          },
-          "distance": {
-            "type": "number",
-            "format": "double"
-          },
-          "duration": {
-            "type": "integer",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
-            "format": "int64",
-            "nullable": true
-          },
-          "avg_pace": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
-            "nullable": true
-          },
-          "elevation_gain": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
-            "nullable": true
-          },
-          "arcgis_item_id": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 32
-          },
-          "geojson": {
-            "nullable": true
-          },
-          "notes": {
-            "type": "string",
-            "nullable": true
-          },
-          "route_link": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 500
-          },
-          "is_public": {
-            "type": "boolean"
-          }
-        }
-      },
-      "Photo": {
-        "type": "object",
-        "description": "Serializer for the Photo model.",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "readOnly": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 255
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 1000
-          },
-          "latitude": {
-            "type": "number",
-            "format": "double",
-            "nullable": true
-          },
-          "longitude": {
-            "type": "number",
-            "format": "double",
-            "nullable": true
-          },
-          "route_id": {
-            "type": "integer",
-            "readOnly": true
-          },
-          "has_gps": {
-            "type": "boolean",
-            "description": "Return True if the photo has GPS coordinates.",
-            "readOnly": true
-          }
-        },
-        "required": ["has_gps", "id", "route_id", "url"]
-      },
-      "RegisterRequest": {
-        "type": "object",
-        "description": "Serializer for new user registration data.",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "minLength": 1
-          },
-          "password": {
-            "type": "string",
-            "writeOnly": true,
-            "minLength": 6
-          },
-          "confirm_password": {
-            "type": "string",
-            "writeOnly": true,
-            "minLength": 1
-          }
-        },
-        "required": ["confirm_password", "email", "password"]
-      },
-      "Route": {
-        "type": "object",
-        "description": "Serializer for reading Route instances, including nested photos.",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "readOnly": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 255
-          },
-          "activity_date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "activity_type": {
-            "nullable": true,
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ActivityTypeEnum"
-              },
-              {
-                "$ref": "#/components/schemas/BlankEnum"
-              },
-              {
-                "$ref": "#/components/schemas/NullEnum"
-              }
-            ]
-          },
-          "distance": {
-            "type": "number",
-            "format": "double"
-          },
-          "duration": {
-            "type": "integer",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
-            "format": "int64",
-            "nullable": true
-          },
-          "avg_pace": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
-            "nullable": true
-          },
-          "elevation_gain": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
-            "nullable": true
-          },
-          "arcgis_item_id": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 32
-          },
-          "geojson": {
-            "nullable": true
-          },
-          "notes": {
-            "type": "string",
-            "nullable": true
-          },
-          "route_link": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 500
-          },
-          "owner": {
-            "type": "string",
-            "format": "email",
-            "readOnly": true
-          },
-          "is_public": {
-            "type": "boolean"
-          },
-          "photos": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Photo"
-            },
-            "readOnly": true
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          }
-        },
-        "required": [
-          "activity_date",
-          "created_at",
-          "distance",
-          "id",
-          "owner",
-          "photos"
-        ]
-      },
-      "RouteWrite": {
-        "type": "object",
-        "description": "Serializer for creating and updating Route instances.",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "readOnly": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 255
-          },
-          "activity_date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "activity_type": {
-            "nullable": true,
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ActivityTypeEnum"
-              },
-              {
-                "$ref": "#/components/schemas/BlankEnum"
-              },
-              {
-                "$ref": "#/components/schemas/NullEnum"
-              }
-            ]
-          },
-          "distance": {
-            "type": "number",
-            "format": "double"
-          },
-          "duration": {
-            "type": "integer",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
-            "format": "int64",
-            "nullable": true
-          },
-          "avg_pace": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
-            "nullable": true
-          },
-          "elevation_gain": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
-            "nullable": true
-          },
-          "arcgis_item_id": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 32
-          },
-          "geojson": {
-            "nullable": true
-          },
-          "notes": {
-            "type": "string",
-            "nullable": true
-          },
-          "route_link": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 500
-          },
-          "is_public": {
-            "type": "boolean"
-          }
-        },
-        "required": ["activity_date", "distance", "id"]
-      },
-      "RouteWriteRequest": {
-        "type": "object",
-        "description": "Serializer for creating and updating Route instances.",
-        "properties": {
-          "title": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 255
-          },
-          "activity_date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "activity_type": {
-            "nullable": true,
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ActivityTypeEnum"
-              },
-              {
-                "$ref": "#/components/schemas/BlankEnum"
-              },
-              {
-                "$ref": "#/components/schemas/NullEnum"
-              }
-            ]
-          },
-          "distance": {
-            "type": "number",
-            "format": "double"
-          },
-          "duration": {
-            "type": "integer",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
-            "format": "int64",
-            "nullable": true
-          },
-          "avg_pace": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
-            "nullable": true
-          },
-          "elevation_gain": {
-            "type": "string",
-            "format": "decimal",
-            "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
-            "nullable": true
-          },
-          "arcgis_item_id": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 32
-          },
-          "geojson": {
-            "nullable": true
-          },
-          "notes": {
-            "type": "string",
-            "nullable": true
-          },
-          "route_link": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 500
-          },
-          "is_public": {
-            "type": "boolean"
-          }
-        },
-        "required": ["activity_date", "distance"]
-      }
-    },
-    "securitySchemes": {
-      "jwtAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    }
-  }
 }

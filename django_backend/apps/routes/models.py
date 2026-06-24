@@ -25,6 +25,7 @@ class Route(models.Model):
     avg_pace = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     elevation_gain = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     arcgis_item_id = models.CharField(max_length=32, null=True, blank=True)
+    track_point_count = models.IntegerField(null=True, blank=True)
     geojson = models.JSONField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     route_link = models.CharField(max_length=500, null=True, blank=True)

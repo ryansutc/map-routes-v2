@@ -124,6 +124,8 @@ class ParseGpxView(APIView):
             print_debug_error()
             return Response({"detail": f"ArcGIS error: {exc}"}, status=502)
 
+        track_point_count = _count_geojson_coords(parsed["geojson"])
+
         return Response(
             {
                 "arcgis_item_id": item_id,
@@ -133,5 +135,20 @@ class ParseGpxView(APIView):
                 "duration_s": parsed["duration_s"],
                 "avg_pace_decimal": parsed["avg_pace_decimal"],
                 "elevation_gain_m": parsed["elevation_gain_m"],
+                "track_point_count": track_point_count,
             }
         )
+
+
+def _count_geojson_coords(geojson: dict) -> int:
+    """Return the total number of coordinate points across all LineString/MultiLineString features."""
+    count = 0
+    features = geojson.get("features", [geojson]) if geojson.get("type") == "FeatureCollection" else [geojson]
+    for feature in features:
+        geom = feature.get("geometry") or {}
+        if geom.get("type") == "LineString":
+            count += len(geom.get("coordinates", []))
+        elif geom.get("type") == "MultiLineString":
+            for segment in geom.get("coordinates", []):
+                count += len(segment)
+    return count
