@@ -12,6 +12,8 @@ const ANIMATION_LAYER_ID = "routeAnimationLayer";
 const PORTAL_GEOJSON_URL =
   "https://www.arcgis.com/sharing/rest/content/items/{itemId}/data";
 
+type AnimationPlaybackMode = "indexed" | "distance";
+
 interface AnimationOptions {
   pointsPerSecond?: number;
   lineColor?: [number, number, number, number];
@@ -20,6 +22,8 @@ interface AnimationOptions {
   markerSize?: number;
   /** Densify sparse routes to this many points for smooth playback */
   targetPoints?: number;
+  /** Choose how the animation advances along the route */
+  playbackMode?: AnimationPlaybackMode;
 }
 
 interface UseRouteAnimationReturn {
@@ -88,6 +92,36 @@ function resamplePath(coords: number[][], targetPoints: number): number[][] {
   return result;
 }
 
+function buildCumulativeDistances(coords: number[][]): number[] {
+  const distances: number[] = [0];
+  for (let i = 1; i < coords.length; i++) {
+    const [x0, y0] = coords[i - 1] as [number, number];
+    const [x1, y1] = coords[i] as [number, number];
+    const dx = x1 - x0, dy = y1 - y0;
+    distances.push(distances[i - 1]! + Math.sqrt(dx * dx + dy * dy));
+  }
+  return distances;
+}
+
+function interpolatePointAtDistance(
+  coords: number[][],
+  distances: number[],
+  targetDistance: number,
+): [number, number] {
+  if (coords.length === 0) return [0, 0];
+  const lastDist = distances[distances.length - 1]!;
+  if (targetDistance <= 0) return coords[0] as [number, number];
+  if (targetDistance >= lastDist) return coords[coords.length - 1] as [number, number];
+
+  let idx = 0;
+  while (idx < distances.length - 2 && distances[idx + 1]! < targetDistance) idx++;
+  const d0 = distances[idx]!, d1 = distances[idx + 1]!;
+  const frac = d1 > d0 ? (targetDistance - d0) / (d1 - d0) : 0;
+  const [x0, y0] = coords[idx] as [number, number];
+  const [x1, y1] = coords[idx + 1] as [number, number];
+  return [x0 + (x1 - x0) * frac, y0 + (y1 - y0) * frac];
+}
+
 export function useRouteAnimation(
   map: __esri.Map | null,
   _view: MapView | SceneView | null,
@@ -101,6 +135,7 @@ export function useRouteAnimation(
     markerColor = [255, 50, 50, 255],
     markerSize = 10,
     targetPoints = 1000,
+    playbackMode = "indexed",
   } = options;
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -109,6 +144,7 @@ export function useRouteAnimation(
 
   const rafRef = useRef<number | null>(null);
   const coordsRef = useRef<number[][] | null>(null);
+  const distanceLookupRef = useRef<number[] | null>(null);
   const layerRef = useRef<GraphicsLayer | null>(null);
   const staticLineGraphicRef = useRef<Graphic | null>(null);
   const markerGraphicRef = useRef<Graphic | null>(null);
@@ -118,6 +154,7 @@ export function useRouteAnimation(
   useEffect(() => {
     if (!arcgisItemId) return;
     coordsRef.current = null;
+    distanceLookupRef.current = null;
     setPointCount(null);
 
     const url = PORTAL_GEOJSON_URL.replace("{itemId}", arcgisItemId);
@@ -127,6 +164,7 @@ export function useRouteAnimation(
         const raw = flattenGeoJSONCoords(geojson);
         const resampled = resamplePath(raw, targetPoints);
         coordsRef.current = resampled;
+        distanceLookupRef.current = buildCumulativeDistances(resampled);
         setPointCount(resampled.length);
       })
       .catch((err) =>
@@ -223,9 +261,25 @@ export function useRouteAnimation(
         const elapsed = timestamp - startTime;
         const pct = Math.min(elapsed / durationMs, 1);
 
-        const pointIdx = Math.max(0, Math.floor(pct * (total - 1)));
-        const [lng, lat] = coords![pointIdx] as [number, number];
-
+        let position: [number, number];
+        if (
+          playbackMode === "distance" &&
+          distanceLookupRef.current &&
+          distanceLookupRef.current.length === total
+        ) {
+          const totalDistance = distanceLookupRef.current[total - 1]!;
+          const targetDistance = pct * totalDistance;
+          position = interpolatePointAtDistance(
+            coords,
+            distanceLookupRef.current,
+            targetDistance,
+          );
+        } else {
+          const pointIdx = Math.max(0, Math.floor(pct * (total - 1)));
+          position = coords![pointIdx] as [number, number];
+        }
+        const [lng, lat] = position;
+ 
         markerGraphicRef.current?.set(
           "geometry",
           new Point({
@@ -252,7 +306,7 @@ export function useRouteAnimation(
 
       rafRef.current = requestAnimationFrame(frame);
     },
-    [pointsPerSecond],
+    [pointsPerSecond, playbackMode],
   );
 
   // Stop animation on unmount

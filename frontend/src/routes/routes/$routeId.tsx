@@ -54,19 +54,29 @@ function RouteDetail() {
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
   const [pointsPerSecond, setPointsPerSecond] = useState(50);
+  const [playbackMode, setPlaybackMode] = useState<"indexed" | "distance">(
+    "indexed",
+  );
 
   const { isPlaying, progress, pointCount, play, stop } = useRouteAnimation(
     map,
     view,
     routeItem?.arcgis_item_id,
-    { pointsPerSecond },
+    { pointsPerSecond, playbackMode },
   );
 
   const handleSpeedChange = (pps: number) => {
     setPointsPerSecond(pps);
     if (isPlaying) {
       stop();
-      // Small timeout so stop() state clears before restarting
+      setTimeout(() => play(progress), 0);
+    }
+  };
+
+  const handlePlaybackModeChange = (mode: "indexed" | "distance") => {
+    setPlaybackMode(mode);
+    if (isPlaying) {
+      stop();
       setTimeout(() => play(progress), 0);
     }
   };
@@ -187,8 +197,10 @@ function RouteDetail() {
                 <AnimationSettingsPopover
                   pointsPerSecond={pointsPerSecond}
                   pointCount={pointCount}
+                  playbackMode={playbackMode}
                   activityDurationSec={routeItem?.duration ?? null}
                   onSpeedChange={handleSpeedChange}
+                  onPlaybackModeChange={handlePlaybackModeChange}
                 />
               </Box>
             )}
