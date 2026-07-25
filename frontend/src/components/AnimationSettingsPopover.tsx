@@ -14,12 +14,16 @@ import { useState } from "react";
 
 const SPEED_OPTIONS = [10, 50, 100, 200, 500] as const;
 
+type AnimationPlaybackMode = "indexed" | "distance";
+
 interface Props {
   pointsPerSecond: number;
   pointCount: number | null;
+  playbackMode: AnimationPlaybackMode;
   /** Activity duration in seconds from the route record */
   activityDurationSec: number | null | undefined;
   onSpeedChange: (pps: number) => void;
+  onPlaybackModeChange: (mode: AnimationPlaybackMode) => void;
 }
 
 function formatDuration(totalSeconds: number): string {
@@ -32,8 +36,10 @@ function formatDuration(totalSeconds: number): string {
 export default function AnimationSettingsPopover({
   pointsPerSecond,
   pointCount,
+  playbackMode,
   activityDurationSec,
   onSpeedChange,
+  onPlaybackModeChange,
 }: Props) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
 
@@ -74,9 +80,22 @@ export default function AnimationSettingsPopover({
               ))}
             </Select>
           </FormControl>
+          <FormControl size="small" fullWidth>
+            <InputLabel id="playback-mode-label">Mode</InputLabel>
+            <Select
+              labelId="playback-mode-label"
+              label="Mode"
+              value={playbackMode}
+              onChange={(e) =>
+                onPlaybackModeChange(e.target.value as AnimationPlaybackMode)
+              }
+            >
+              <MenuItem value="indexed">By GPS points</MenuItem>
+              <MenuItem value="distance">Constant speed</MenuItem>
+            </Select>
+          </FormControl>
           <Typography variant="caption" color="text.secondary">
-            Playback:{" "}
-            {estimatedSec != null ? `~${estimatedSec}s` : "calculating…"}
+            Playback: {estimatedSec != null ? `~${estimatedSec}s` : "calculating…"}
           </Typography>
           {activityDurationSec != null && (
             <Typography variant="caption" color="text.secondary">

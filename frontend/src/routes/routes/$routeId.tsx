@@ -1,4 +1,3 @@
-import AnimationSettingsPopover from "@/components/AnimationSettingsPopover";
 import ElevationProfile from "@/components/map/ElevationProfile";
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
@@ -8,24 +7,14 @@ import RouteInfoContainer, {
 } from "@/components/map/RouteInfoContainer";
 import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery from "@/components/routes/PhotoGallery";
+import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
 import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useRoute } from "@/hooks/useRoute.tsx";
-import { useRouteAnimation } from "@/hooks/useRouteAnimation";
 import theme from "@/utils/muitheme";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import StopIcon from "@mui/icons-material/Stop";
-import {
-  Box,
-  Grid,
-  IconButton,
-  LinearProgress,
-  Tooltip,
-  Typography,
-  useMediaQuery,
-} from "@mui/material";
+import { Box, Grid, Typography, useMediaQuery } from "@mui/material";
 import type { FeatureCollection } from "geojson";
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -53,23 +42,6 @@ function RouteDetail() {
 
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
-  const [pointsPerSecond, setPointsPerSecond] = useState(50);
-
-  const { isPlaying, progress, pointCount, play, stop } = useRouteAnimation(
-    map,
-    view,
-    routeItem?.arcgis_item_id,
-    { pointsPerSecond },
-  );
-
-  const handleSpeedChange = (pps: number) => {
-    setPointsPerSecond(pps);
-    if (isPlaying) {
-      stop();
-      // Small timeout so stop() state clears before restarting
-      setTimeout(() => play(progress), 0);
-    }
-  };
 
   const viewDiv = React.useRef<HTMLDivElement>(
     null,
@@ -151,46 +123,13 @@ function RouteDetail() {
                   <Toggle3d />
                 </>
               )}
-            {/* Animation controls */}
-            {routeItem?.arcgis_item_id && (
-              <Box
-                sx={{
-                  position: "absolute",
-                  bottom: 24,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  bgcolor: "rgba(0,0,0,0.65)",
-                  borderRadius: 3,
-                  px: 2,
-                  py: 0.5,
-                  zIndex: 10,
-                  minWidth: 200,
-                }}
-              >
-                <Tooltip title={isPlaying ? "Stop" : "Replay route"}>
-                  <IconButton
-                    size="small"
-                    onClick={isPlaying ? stop : () => play()}
-                    sx={{ color: "white" }}
-                  >
-                    {isPlaying ? <StopIcon /> : <PlayArrowIcon />}
-                  </IconButton>
-                </Tooltip>
-                <LinearProgress
-                  variant="determinate"
-                  value={progress * 100}
-                  sx={{ flex: 1, borderRadius: 1, height: 6 }}
-                />
-                <AnimationSettingsPopover
-                  pointsPerSecond={pointsPerSecond}
-                  pointCount={pointCount}
-                  activityDurationSec={routeItem?.duration ?? null}
-                  onSpeedChange={handleSpeedChange}
-                />
-              </Box>
+            {map && view && (
+              <RouteAnimationController
+                map={map}
+                view={view}
+                arcgisItemId={routeItem?.arcgis_item_id}
+                activityDurationSec={routeItem?.duration ?? null}
+              />
             )}
           </MapContainer>
         </div>

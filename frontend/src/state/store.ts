@@ -3,8 +3,9 @@ import type {} from "@redux-devtools/extension"; // required for devtools typing
 
 import { combine, devtools, persist } from "zustand/middleware";
 
-import type { UnitSystem } from "@/utils/units";
+import type { AnimationPlaybackMode } from "@/hooks/useRouteAnimation";
 import type { PageType } from "@/types/state_types";
+import type { UnitSystem } from "@/utils/units";
 import type { ExtractState } from "zustand";
 import { create } from "zustand";
 
@@ -28,6 +29,12 @@ type MapRouteState = {
   setListView: (view: ListView) => void;
   units: UnitSystem;
   setUnits: (units: UnitSystem) => void;
+  animationSpeed: number;
+  setAnimationSpeed: (animationSpeed: number) => void;
+  animationPlaybackMode: AnimationPlaybackMode;
+  setAnimationPlaybackMode: (
+    animationPlaybackMode: AnimationPlaybackMode,
+  ) => void;
 };
 
 export const useStore = create<MapRouteState>()(
@@ -41,6 +48,8 @@ export const useStore = create<MapRouteState>()(
           viewMode: "2d" as "2d" | "3d",
           listView: "cards" as ListView,
           units: "metric" as UnitSystem,
+          animationSpeed: 50,
+          animationPlaybackMode: "indexed" as AnimationPlaybackMode,
         } as MapRouteState,
         (set) => ({
           setPage: (page: PageType) => set({ page }, undefined, "page/setPage"),
@@ -51,7 +60,7 @@ export const useStore = create<MapRouteState>()(
             set(
               { userIsAuthenticated: isAuthenticated },
               undefined,
-              "user/setIsAuthenticated"
+              "user/setIsAuthenticated",
             );
           },
           setViewMode: (viewMode: "2d" | "3d") => {
@@ -63,12 +72,29 @@ export const useStore = create<MapRouteState>()(
           setUnits: (units: UnitSystem) => {
             set({ units }, undefined, "units/setUnits");
           },
-        })
+          setAnimationSpeed: (animationSpeed: number) => {
+            set({ animationSpeed }, undefined, "animation/setAnimationSpeed");
+          },
+          setAnimationPlaybackMode: (
+            animationPlaybackMode: AnimationPlaybackMode,
+          ) => {
+            set(
+              { animationPlaybackMode },
+              undefined,
+              "animation/setAnimationPlaybackMode",
+            );
+          },
+        }),
       ),
       {
         name: "map-routes-store",
-        partialize: (state) => ({ listView: state.listView, units: state.units }),
-      }
-    )
-  )
+        partialize: (state) => ({
+          listView: state.listView,
+          units: state.units,
+          animationSpeed: state.animationSpeed,
+          animationPlaybackMode: state.animationPlaybackMode,
+        }),
+      },
+    ),
+  ),
 );
