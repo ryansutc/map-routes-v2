@@ -7,10 +7,13 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { shouldUpdateProgress } from "./useRouteAnimationUtils";
 
 const ANIMATION_LAYER_ID = "routeAnimationLayer";
 const PORTAL_GEOJSON_URL =
   "https://www.arcgis.com/sharing/rest/content/items/{itemId}/data";
+
+type AnimationPlaybackMode = "indexed" | "distance";
 
 interface AnimationOptions {
   pointsPerSecond?: number;
@@ -20,6 +23,8 @@ interface AnimationOptions {
   markerSize?: number;
   /** Densify sparse routes to this many points for smooth playback */
   targetPoints?: number;
+  /** Choose how the animation advances along the route */
+  playbackMode?: AnimationPlaybackMode;
 }
 
 interface UseRouteAnimationReturn {
@@ -68,7 +73,8 @@ function resamplePath(coords: number[][], targetPoints: number): number[][] {
   for (let i = 1; i < coords.length; i++) {
     const [x0, y0] = coords[i - 1] as [number, number];
     const [x1, y1] = coords[i] as [number, number];
-    const dx = x1 - x0, dy = y1 - y0;
+    const dx = x1 - x0,
+      dy = y1 - y0;
     dists.push(dists[i - 1]! + Math.sqrt(dx * dx + dy * dy));
   }
   const totalDist = dists[dists.length - 1]!;
@@ -77,8 +83,10 @@ function resamplePath(coords: number[][], targetPoints: number): number[][] {
   let srcIdx = 0;
   for (let t = 0; t < targetPoints; t++) {
     const targetDist = (t / (targetPoints - 1)) * totalDist;
-    while (srcIdx < dists.length - 2 && dists[srcIdx + 1]! < targetDist) srcIdx++;
-    const d0 = dists[srcIdx]!, d1 = dists[srcIdx + 1] ?? d0;
+    while (srcIdx < dists.length - 2 && dists[srcIdx + 1]! < targetDist)
+      srcIdx++;
+    const d0 = dists[srcIdx]!,
+      d1 = dists[srcIdx + 1] ?? d0;
     const segLen = d1 - d0;
     const frac = segLen > 0 ? (targetDist - d0) / segLen : 0;
     const [x0, y0] = coords[srcIdx] as [number, number];
@@ -86,6 +94,40 @@ function resamplePath(coords: number[][], targetPoints: number): number[][] {
     result.push([x0 + (x1 - x0) * frac, y0 + (y1 - y0) * frac]);
   }
   return result;
+}
+
+function buildCumulativeDistances(coords: number[][]): number[] {
+  const distances: number[] = [0];
+  for (let i = 1; i < coords.length; i++) {
+    const [x0, y0] = coords[i - 1] as [number, number];
+    const [x1, y1] = coords[i] as [number, number];
+    const dx = x1 - x0,
+      dy = y1 - y0;
+    distances.push(distances[i - 1]! + Math.sqrt(dx * dx + dy * dy));
+  }
+  return distances;
+}
+
+function interpolatePointAtDistance(
+  coords: number[][],
+  distances: number[],
+  targetDistance: number,
+): [number, number] {
+  if (coords.length === 0) return [0, 0];
+  const lastDist = distances[distances.length - 1]!;
+  if (targetDistance <= 0) return coords[0] as [number, number];
+  if (targetDistance >= lastDist)
+    return coords[coords.length - 1] as [number, number];
+
+  let idx = 0;
+  while (idx < distances.length - 2 && distances[idx + 1]! < targetDistance)
+    idx++;
+  const d0 = distances[idx]!,
+    d1 = distances[idx + 1]!;
+  const frac = d1 > d0 ? (targetDistance - d0) / (d1 - d0) : 0;
+  const [x0, y0] = coords[idx] as [number, number];
+  const [x1, y1] = coords[idx + 1] as [number, number];
+  return [x0 + (x1 - x0) * frac, y0 + (y1 - y0) * frac];
 }
 
 export function useRouteAnimation(
@@ -101,6 +143,7 @@ export function useRouteAnimation(
     markerColor = [255, 50, 50, 255],
     markerSize = 10,
     targetPoints = 1000,
+    playbackMode = "indexed",
   } = options;
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -109,15 +152,19 @@ export function useRouteAnimation(
 
   const rafRef = useRef<number | null>(null);
   const coordsRef = useRef<number[][] | null>(null);
+  const distanceLookupRef = useRef<number[] | null>(null);
   const layerRef = useRef<GraphicsLayer | null>(null);
   const staticLineGraphicRef = useRef<Graphic | null>(null);
   const markerGraphicRef = useRef<Graphic | null>(null);
   const lastProgressFrameRef = useRef<number>(0);
+  const lastProgressValueRef = useRef<number>(0);
+  const lastMarkerFrameRef = useRef<number>(0);
 
   // Fetch and cache coordinates when itemId or map changes
   useEffect(() => {
     if (!arcgisItemId) return;
     coordsRef.current = null;
+    distanceLookupRef.current = null;
     setPointCount(null);
 
     const url = PORTAL_GEOJSON_URL.replace("{itemId}", arcgisItemId);
@@ -127,6 +174,7 @@ export function useRouteAnimation(
         const raw = flattenGeoJSONCoords(geojson);
         const resampled = resamplePath(raw, targetPoints);
         coordsRef.current = resampled;
+        distanceLookupRef.current = buildCumulativeDistances(resampled);
         setPointCount(resampled.length);
       })
       .catch((err) =>
@@ -189,6 +237,7 @@ export function useRouteAnimation(
     }
     setIsPlaying(false);
     setProgress(0);
+    lastProgressValueRef.current = 0;
     markerGraphicRef.current?.set("visible", false);
   }, []);
 
@@ -201,17 +250,23 @@ export function useRouteAnimation(
       }
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
 
-      const total = coords.length;
+      const routeCoords = coords;
+      const total = routeCoords.length;
       const durationMs = (total / pointsPerSecond) * 1000;
       const offsetMs = startProgress * durationMs;
       let startTime: number | null = null;
 
       lastProgressFrameRef.current = 0;
+      lastProgressValueRef.current = startProgress;
+      lastMarkerFrameRef.current = 0;
 
       // Draw the full route as a static line once
       staticLineGraphicRef.current?.set(
         "geometry",
-        new Polyline({ paths: [coords], spatialReference: { wkid: 4326 } }),
+        new Polyline({
+          paths: [routeCoords],
+          spatialReference: { wkid: 4326 },
+        }),
       );
 
       markerGraphicRef.current?.set("visible", true);
@@ -223,27 +278,59 @@ export function useRouteAnimation(
         const elapsed = timestamp - startTime;
         const pct = Math.min(elapsed / durationMs, 1);
 
-        const pointIdx = Math.max(0, Math.floor(pct * (total - 1)));
-        const [lng, lat] = coords![pointIdx] as [number, number];
+        let position: [number, number];
+        if (
+          playbackMode === "distance" &&
+          distanceLookupRef.current &&
+          distanceLookupRef.current.length === total
+        ) {
+          const totalDistance = distanceLookupRef.current[total - 1]!;
+          const targetDistance = pct * totalDistance;
+          position = interpolatePointAtDistance(
+            routeCoords,
+            distanceLookupRef.current,
+            targetDistance,
+          );
+        } else {
+          const pointIdx = Math.max(0, Math.floor(pct * (total - 1)));
+          position = routeCoords[pointIdx] as [number, number];
+        }
+        const [lng, lat] = position;
 
-        markerGraphicRef.current?.set(
-          "geometry",
-          new Point({
-            longitude: lng,
-            latitude: lat,
-            spatialReference: { wkid: 4326 },
-          }),
-        );
+        const markerShouldUpdate = timestamp - lastMarkerFrameRef.current >= 33;
 
-        // Update React state at ~10fps to avoid stutter
-        if (timestamp - lastProgressFrameRef.current >= 100) {
+        if (markerShouldUpdate) {
+          lastMarkerFrameRef.current = timestamp;
+          markerGraphicRef.current?.set(
+            "geometry",
+            new Point({
+              longitude: lng,
+              latitude: lat,
+              spatialReference: { wkid: 4326 },
+            }),
+          );
+        }
+
+        const shouldUpdate = shouldUpdateProgress({
+          now: timestamp,
+          lastUpdateTime: lastProgressFrameRef.current,
+          lastProgress: lastProgressValueRef.current,
+          nextProgress: pct,
+          intervalMs: 100,
+          threshold: 0.01,
+        });
+
+        if (shouldUpdate) {
           lastProgressFrameRef.current = timestamp;
+          lastProgressValueRef.current = pct;
           setProgress(pct);
         }
 
         if (pct < 1) {
           rafRef.current = requestAnimationFrame(frame);
         } else {
+          lastProgressFrameRef.current = timestamp;
+          lastProgressValueRef.current = 1;
           setProgress(1);
           rafRef.current = null;
           setIsPlaying(false);
@@ -252,8 +339,25 @@ export function useRouteAnimation(
 
       rafRef.current = requestAnimationFrame(frame);
     },
-    [pointsPerSecond],
+    [pointsPerSecond, playbackMode],
   );
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   // Stop animation on unmount
   useEffect(
