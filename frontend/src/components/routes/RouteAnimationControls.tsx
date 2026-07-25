@@ -1,7 +1,13 @@
 import AnimationSettingsPopover from "@/components/AnimationSettingsPopover";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
-import { Box, IconButton, LinearProgress, Tooltip } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  LinearProgress,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 
 interface RouteAnimationControlsProps {
   arcgisItemId?: string | null;
@@ -64,14 +70,22 @@ export function RouteAnimationControls({
         value={progress * 100}
         sx={{ flex: 1, borderRadius: 1, height: 6 }}
       />
-      <AnimationSettingsPopover
-        pointsPerSecond={pointsPerSecond}
-        pointCount={pointCount}
-        playbackMode={playbackMode}
-        activityDurationSec={activityDurationSec}
-        onSpeedChange={onSpeedChange}
-        onPlaybackModeChange={onPlaybackModeChange}
-      />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: "white", fontWeight: 600, whiteSpace: "nowrap" }}
+        >
+          {pointsPerSecond}/s
+        </Typography>
+        <AnimationSettingsPopover
+          pointsPerSecond={pointsPerSecond}
+          pointCount={pointCount}
+          playbackMode={playbackMode}
+          activityDurationSec={activityDurationSec}
+          onSpeedChange={onSpeedChange}
+          onPlaybackModeChange={onPlaybackModeChange}
+        />
+      </Box>
     </Box>
   );
 }
