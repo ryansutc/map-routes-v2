@@ -64,7 +64,7 @@ export default function AnimationSettingsPopover({
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
         transformOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Stack sx={{ p: 2, minWidth: 200 }} spacing={1.5}>
+        <Stack sx={{ p: 2, minWidth: "calc('100vW' / 2)" }} spacing={1.5}>
           <FormControl size="small" fullWidth>
             <InputLabel id="speed-label">Speed</InputLabel>
             <Select
@@ -95,7 +95,8 @@ export default function AnimationSettingsPopover({
             </Select>
           </FormControl>
           <Typography variant="caption" color="text.secondary">
-            Playback: {estimatedSec != null ? `~${estimatedSec}s` : "calculating…"}
+            Playback:{" "}
+            {estimatedSec != null ? `~${estimatedSec}s` : "calculating…"}
           </Typography>
           {activityDurationSec != null && (
             <Typography variant="caption" color="text.secondary">
