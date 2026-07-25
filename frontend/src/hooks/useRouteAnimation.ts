@@ -13,7 +13,7 @@ const ANIMATION_LAYER_ID = "routeAnimationLayer";
 const PORTAL_GEOJSON_URL =
   "https://www.arcgis.com/sharing/rest/content/items/{itemId}/data";
 
-type AnimationPlaybackMode = "indexed" | "distance";
+export type AnimationPlaybackMode = "indexed" | "distance";
 
 interface AnimationOptions {
   pointsPerSecond?: number;

@@ -1,9 +1,13 @@
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
-import { useRouteAnimation } from "@/hooks/useRouteAnimation";
+import {
+  useRouteAnimation,
+  type AnimationPlaybackMode,
+} from "@/hooks/useRouteAnimation";
+import { useStore } from "@/state/store";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 interface RouteAnimationControllerProps {
   map: Map | null;
@@ -18,10 +22,10 @@ export function RouteAnimationController({
   arcgisItemId,
   activityDurationSec,
 }: RouteAnimationControllerProps) {
-  const [pointsPerSecond, setPointsPerSecond] = useState(50);
-  const [playbackMode, setPlaybackMode] = useState<"indexed" | "distance">(
-    "indexed",
-  );
+  const pointsPerSecond = useStore((state) => state.animationSpeed);
+  const playbackMode = useStore((state) => state.animationPlaybackMode);
+  const setPointsPerSecond = useStore((state) => state.setAnimationSpeed);
+  const setPlaybackMode = useStore((state) => state.setAnimationPlaybackMode);
 
   const { isPlaying, progress, pointCount, play, stop } = useRouteAnimation(
     map,
@@ -44,7 +48,7 @@ export function RouteAnimationController({
     }
   };
 
-  const handlePlaybackModeChange = (mode: "indexed" | "distance") => {
+  const handlePlaybackModeChange = (mode: AnimationPlaybackMode) => {
     setPlaybackMode(mode);
     if (isPlaying) {
       stop();
