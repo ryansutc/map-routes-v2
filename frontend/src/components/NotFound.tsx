@@ -1,5 +1,5 @@
 import { Box, Button, Typography } from "@mui/material";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
 export function NotFound() {
   return (
@@ -16,7 +16,3 @@ export function NotFound() {
     </Box>
   );
 }
-
-export const Route = createFileRoute("/__not-found")({
-  component: NotFound,
-});
