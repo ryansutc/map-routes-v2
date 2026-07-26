@@ -74,19 +74,23 @@ export function useElevationProfile(
     }
 
     const coords = feature.geometry.coordinates as [number, number, number?][];
+    // Built with an explicit loop rather than map() + an outer accumulator:
+    // the running total makes the callback impure, which React Compiler flags.
+    const points: ProfilePoint[] = [];
     let cumDist = 0;
-    const points: ProfilePoint[] = coords.map((coord, i) => {
+    for (let i = 0; i < coords.length; i++) {
+      const coord = coords[i]!;
       if (i > 0) {
         const prev = coords[i - 1]!;
         cumDist += haversineMeters(prev[1], prev[0], coord[1], coord[0]);
       }
-      return {
+      points.push({
         distance: cumDist,
         elevation: coord[2] ?? 0,
         lon: coord[0],
         lat: coord[1],
-      };
-    });
+      });
+    }
 
     const hasElev =
       points.length > 0 && points.some((p) => p.elevation !== 0);

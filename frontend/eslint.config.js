@@ -26,11 +26,6 @@ export default tseslint.config([
     },
 
     rules: {
-      // eslint-plugin-react-hooks v7 enables the React Compiler rule set.
-      // These flag genuine pre-existing patterns rather than upgrade fallout,
-      // so keep them visible as warnings and address them separately.
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/immutability": "warn",
       complexity: [
         "warn",
         {
