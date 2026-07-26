@@ -1,0 +1,10 @@
+allowBuilds:
+  '@vaadin/vaadin-usage-statistics': false
+  esbuild: false
+
+overrides:
+  # @tanstack/eslint-plugin-router still pins @typescript-eslint/utils 8.38,
+  # which predates ESLint 10 and throws "Class extends value undefined" on
+  # load. Every other consumer already resolves to 8.65, so force the dedupe.
+  # Remove once the plugin ships a release supporting ESLint 10.
+  '@typescript-eslint/utils': ^8.65.0
