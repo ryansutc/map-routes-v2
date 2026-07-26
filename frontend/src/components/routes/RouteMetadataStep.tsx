@@ -57,7 +57,7 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
   const [notes, setNotes] = useState(wizardState.notes);
   const [submitted, setSubmitted] = useState(false);
 
-  const { units } = useStore();
+  const units = useStore((s) => s.units);
   const parseGpx = useParseGpx();
 
   const onDrop = useCallback(

@@ -215,6 +215,7 @@ function RouteDetail() {
       hasElevation={hasElevation}
       onHover={onHover}
       onHoverEnd={onHoverEnd}
+      isAnimating={isAnimating}
     />
   ) : null;
 

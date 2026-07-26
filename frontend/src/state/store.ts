@@ -35,6 +35,12 @@ type MapRouteState = {
   setAnimationPlaybackMode: (
     animationPlaybackMode: AnimationPlaybackMode,
   ) => void;
+  /**
+   * Live route-animation progress (0–1). Transient: updated ~20x/sec while
+   * playback runs and never persisted. Always subscribe with a selector.
+   */
+  animationProgress: number;
+  setAnimationProgress: (animationProgress: number) => void;
 };
 
 export const useStore = create<MapRouteState>()(
@@ -50,6 +56,7 @@ export const useStore = create<MapRouteState>()(
           units: "metric" as UnitSystem,
           animationSpeed: 50,
           animationPlaybackMode: "indexed" as AnimationPlaybackMode,
+          animationProgress: 0,
         } as MapRouteState,
         (set) => ({
           setPage: (page: PageType) => set({ page }, undefined, "page/setPage"),
@@ -82,6 +89,13 @@ export const useStore = create<MapRouteState>()(
               { animationPlaybackMode },
               undefined,
               "animation/setAnimationPlaybackMode",
+            );
+          },
+          setAnimationProgress: (animationProgress: number) => {
+            set(
+              { animationProgress },
+              undefined,
+              "animation/setAnimationProgress",
             );
           },
         }),
