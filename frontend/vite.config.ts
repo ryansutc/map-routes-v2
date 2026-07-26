@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    outDir: "../Backend/wwwroot/react",
+    outDir: "build",
     emptyOutDir: true,
     chunkSizeWarningLimit: 3000, // Increase limit to reduce warnings
     manifest: true, // Generate manifest.json for asset mapping

@@ -1,5 +1,3 @@
-import { useState } from "react";
-import type { MouseEvent, PropsWithChildren } from "react";
 import {
   AppBar,
   Avatar,
@@ -14,8 +12,10 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import type { MouseEvent, PropsWithChildren } from "react";
+import { useState } from "react";
 
 import { zodiosAPI } from "@/api/axiosClient";
 import { useStore } from "@/state/store";
@@ -87,15 +87,29 @@ export default function AppShell({ children }: PropsWithChildren) {
           <ToggleButtonGroup
             value={units}
             exclusive
-            onChange={(_, v) => { if (v) setUnits(v); }}
+            onChange={(_, v) => {
+              if (v) setUnits(v);
+            }}
             size="small"
             sx={{ mr: 1 }}
           >
             <Tooltip title={units === "metric" ? "" : "Switch to metric (km)"}>
-              <ToggleButton value="metric" sx={{ color: "inherit", borderColor: TOGGLE_BORDER_COLOR }}>km</ToggleButton>
+              <ToggleButton
+                value="metric"
+                sx={{ color: "inherit", borderColor: TOGGLE_BORDER_COLOR }}
+              >
+                km
+              </ToggleButton>
             </Tooltip>
-            <Tooltip title={units === "imperial" ? "" : "Switch to imperial (mi)"}>
-              <ToggleButton value="imperial" sx={{ color: "inherit", borderColor: TOGGLE_BORDER_COLOR }}>mi</ToggleButton>
+            <Tooltip
+              title={units === "imperial" ? "" : "Switch to imperial (mi)"}
+            >
+              <ToggleButton
+                value="imperial"
+                sx={{ color: "inherit", borderColor: TOGGLE_BORDER_COLOR }}
+              >
+                mi
+              </ToggleButton>
             </Tooltip>
           </ToggleButtonGroup>
 
@@ -134,7 +148,7 @@ export default function AppShell({ children }: PropsWithChildren) {
               href={GOOGLE_LOGIN_URL}
               sx={{ textTransform: "none" }}
             >
-              Sign in with Google
+              Sign in
             </Button>
           )}
         </Toolbar>
