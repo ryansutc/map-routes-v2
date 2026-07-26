@@ -13,7 +13,9 @@ export default tseslint.config([
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
-      reactHooks.configs["recommended-latest"],
+      // v7 moved the flat configs under `configs.flat.*`; the top-level keys
+      // are now the eslintrc-format ones and are rejected by ESLint 10.
+      reactHooks.configs.flat["recommended-latest"],
       reactRefresh.configs.vite,
       reactDom.configs.recommended,
       pluginRouter.configs["flat/recommended"],
@@ -53,6 +55,17 @@ export default tseslint.config([
           ],
         },
       ],
+    },
+  },
+  {
+    // TanStack Router file routes export a `Route` const built by
+    // createFileRoute() next to the components it references. That is the
+    // framework's prescribed shape, and react-refresh v0.5's `localComponents`
+    // check flags it in every route module, so scope the rule out here while
+    // leaving it enforced for ordinary components.
+    files: ["src/routes/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
     },
   },
 ]);

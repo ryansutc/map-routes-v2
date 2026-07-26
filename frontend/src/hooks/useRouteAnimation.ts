@@ -148,7 +148,19 @@ export function useRouteAnimation(
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [pointCount, setPointCount] = useState<number | null>(null);
+  // Tagged with the request that produced it, so the count can be derived
+  // during render instead of being reset from inside the fetch effect.
+  const [fetchedPoints, setFetchedPoints] = useState<{
+    itemId: string;
+    targetPoints: number;
+    count: number;
+  } | null>(null);
+
+  const pointCount =
+    fetchedPoints?.itemId === arcgisItemId &&
+    fetchedPoints?.targetPoints === targetPoints
+      ? fetchedPoints.count
+      : null;
 
   const rafRef = useRef<number | null>(null);
   const coordsRef = useRef<number[][] | null>(null);
@@ -165,21 +177,34 @@ export function useRouteAnimation(
     if (!arcgisItemId) return;
     coordsRef.current = null;
     distanceLookupRef.current = null;
-    setPointCount(null);
+
+    // Guards against a slow response for a previous route landing after the
+    // user has already navigated to a different one.
+    let cancelled = false;
 
     const url = PORTAL_GEOJSON_URL.replace("{itemId}", arcgisItemId);
     fetch(url)
       .then((r) => r.json())
       .then((geojson: GeoJSON.FeatureCollection | GeoJSON.Feature) => {
+        if (cancelled) return;
         const raw = flattenGeoJSONCoords(geojson);
         const resampled = resamplePath(raw, targetPoints);
         coordsRef.current = resampled;
         distanceLookupRef.current = buildCumulativeDistances(resampled);
-        setPointCount(resampled.length);
+        setFetchedPoints({
+          itemId: arcgisItemId,
+          targetPoints,
+          count: resampled.length,
+        });
       })
-      .catch((err) =>
-        console.error("useRouteAnimation: failed to fetch GeoJSON", err),
-      );
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("useRouteAnimation: failed to fetch GeoJSON", err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [arcgisItemId, targetPoints]);
 
   // Set up (or tear down) the GraphicsLayer on the map

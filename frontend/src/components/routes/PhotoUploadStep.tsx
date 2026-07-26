@@ -398,7 +398,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
                         placeholder="Add a title…"
                         value={item.title}
                         onChange={(e) => setItemTitle(item.id, e.target.value)}
-                        slotProps={{ input: { maxLength: 255 } }}
+                        slotProps={{ htmlInput: { maxLength: 255 } }}
                         sx={{ width: "100%", mt: 0.25 }}
                       />
                     )}

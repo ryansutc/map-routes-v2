@@ -20,7 +20,7 @@ import { Box, IconButton, Typography, useMediaQuery } from "@mui/material";
 import type { FeatureCollection } from "geojson";
 
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 /** Below this width the page becomes details-first with a tappable map preview. */
@@ -111,7 +111,7 @@ function RouteDetail() {
 
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
-  const [isFullscreenMap, setIsFullscreenMap] = useState(false);
+  const [fullscreenRequested, setFullscreenRequested] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   // The map preview and the fullscreen map are different places in the tree,
@@ -135,10 +135,10 @@ function RouteDetail() {
     [mapHost],
   );
 
-  // Leaving mobile widths while fullscreen would otherwise strand the header.
-  useEffect(() => {
-    if (!isMobile) setIsFullscreenMap(false);
-  }, [isMobile]);
+  // Fullscreen only exists at mobile widths -- leaving them would otherwise
+  // strand the header. Derived rather than reset from an effect so that
+  // crossing the breakpoint doesn't trigger a cascading render.
+  const isFullscreenMap = isMobile && fullscreenRequested;
 
   const isPreview = isMobile && !isFullscreenMap;
   useMapInteractionLock(view, isPreview || isAnimating);
@@ -260,7 +260,7 @@ function RouteDetail() {
           >
             <IconButton
               aria-label="Back to route details"
-              onClick={() => setIsFullscreenMap(false)}
+              onClick={() => setFullscreenRequested(false)}
               size="small"
             >
               <ArrowBackIcon />
@@ -281,7 +281,7 @@ function RouteDetail() {
               component="button"
               type="button"
               aria-label="Open fullscreen map"
-              onClick={() => setIsFullscreenMap(true)}
+              onClick={() => setFullscreenRequested(true)}
               sx={{
                 position: "relative",
                 display: "block",
