@@ -97,12 +97,17 @@ const MapContainer = (props: MapContainerProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode]);
 
+  // The inner div belongs to ESRI alone — it appends `.esri-view-root` there
+  // and mutates it outside React's knowledge. Overlay children are rendered as
+  // siblings (absolutely positioned against this wrapper) so React never has
+  // to reconcile a subtree ESRI is editing.
   return (
-    <div
-      style={{ height: "100%", width: "100%" }}
-      ref={mapDiv}
-      id={props.attachToId}
-    >
+    <div style={{ height: "100%", width: "100%", position: "relative" }}>
+      <div
+        style={{ height: "100%", width: "100%" }}
+        ref={mapDiv}
+        id={attachToId}
+      />
       {children ? children : null}
     </div>
   );

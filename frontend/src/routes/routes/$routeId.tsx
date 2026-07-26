@@ -9,16 +9,24 @@ import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery from "@/components/routes/PhotoGallery";
 import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
 import { useElevationProfile } from "@/hooks/useElevationProfile";
+import { useMapInteractionLock } from "@/hooks/useMapInteractionLock";
 import { useRoute } from "@/hooks/useRoute.tsx";
-import theme from "@/utils/muitheme";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
-import { Box, Grid, Typography, useMediaQuery } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import MapIcon from "@mui/icons-material/Map";
+import { Box, IconButton, Typography, useMediaQuery } from "@mui/material";
 import type { FeatureCollection } from "geojson";
 
 import { createFileRoute } from "@tanstack/react-router";
-import React, { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+
+/** Below this width the page becomes details-first with a tappable map preview. */
+const MOBILE_MAX_WIDTH = 860;
+const HEADER_HEIGHT = 64;
+const PAGE_HEIGHT = `calc(100vh - ${HEADER_HEIGHT}px)`;
 
 export const Route = createFileRoute("/routes/$routeId")({
   parseParams: ({ routeId }) => {
@@ -34,18 +42,106 @@ export const Route = createFileRoute("/routes/$routeId")({
   notFoundComponent: RouteNotFound,
 });
 
+type RouteItem = NonNullable<ReturnType<typeof useRoute>["data"]>;
+
+interface RouteMapOverlaysProps {
+  map: Map | null;
+  view: MapView | SceneView | null;
+  routeItem: RouteItem | undefined;
+  error: Error | null;
+  isLoading: boolean;
+  isPreview: boolean;
+  isAnimating: boolean;
+  onPlayingChange: (isPlaying: boolean) => void;
+}
+
+/** Everything layered on top of the ESRI view for the route detail page. */
+function RouteMapOverlays({
+  map,
+  view,
+  routeItem,
+  error,
+  isLoading,
+  isPreview,
+  isAnimating,
+  onPlayingChange,
+}: RouteMapOverlaysProps) {
+  const ready = map && view && !error && !isLoading && routeItem;
+
+  return (
+    <>
+      {error && <div>Error loading route: {error.message}</div>}
+      {isLoading && <div>Loading route...</div>}
+      {ready && (
+        <>
+          <LayerController
+            map={map}
+            // @ts-expect-error value can be undefined
+            layers={
+              (routeItem.arcgis_item_id && [routeItem.arcgis_item_id]) ?? []
+            }
+            view={view}
+          />
+          <PhotoController map={map} photos={routeItem.photos || []} view={view} />
+        </>
+      )}
+      {/* Kept mounted across preview/fullscreen toggles — unmounting would
+          drop the animation layer and refetch the route GeoJSON. */}
+      <Box sx={{ display: isPreview ? "none" : "contents" }}>
+        {ready && <Toggle3d disabled={isAnimating} />}
+        {map && view && (
+          <RouteAnimationController
+            map={map}
+            view={view}
+            arcgisItemId={routeItem?.arcgis_item_id}
+            activityDurationSec={routeItem?.duration ?? null}
+            onPlayingChange={onPlayingChange}
+          />
+        )}
+      </Box>
+    </>
+  );
+}
+
 function RouteDetail() {
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(`(max-width:${MOBILE_MAX_WIDTH - 0.05}px)`);
   const { routeId } = Route.useParams();
 
   const { data: routeItem, isLoading, error, isError } = useRoute(routeId);
 
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
+  const [isFullscreenMap, setIsFullscreenMap] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
-  const viewDiv = React.useRef<HTMLDivElement>(
-    null,
-  ) as React.RefObject<HTMLDivElement>;
+  // The map preview and the fullscreen map are different places in the tree,
+  // but they must share one ESRI view — recreating it on every toggle is slow.
+  // So the map lives in a detached host div that gets re-parented into
+  // whichever slot is currently rendered.
+  const mapHost = useMemo(() => {
+    const host = document.createElement("div");
+    host.style.width = "100%";
+    host.style.height = "100%";
+    host.style.position = "relative";
+    return host;
+  }, []);
+
+  const attachMapSlot = useCallback(
+    (slot: HTMLDivElement | null) => {
+      if (slot && mapHost.parentElement !== slot) {
+        slot.appendChild(mapHost);
+      }
+    },
+    [mapHost],
+  );
+
+  // Leaving mobile widths while fullscreen would otherwise strand the header.
+  useEffect(() => {
+    if (!isMobile) setIsFullscreenMap(false);
+  }, [isMobile]);
+
+  const isPreview = isMobile && !isFullscreenMap;
+  useMapInteractionLock(view, isPreview || isAnimating);
 
   const handleMapLoad = (map: Map, view: MapView | SceneView) => {
     setMap(map);
@@ -72,97 +168,199 @@ function RouteDetail() {
     console.log(`Coordinates: ${coords} (${e.x},${e.y})`);
   };
 
-  return (
-    <Grid container sx={{ height: "calc(100vh - 64px)", width: "100%", px: 0 }}>
-      <Grid size={{ xs: 12, sm: 8 }} sx={{ paddingRight: !isMobile ? 2 : 0 }}>
-        <div
-          id="viewDiv"
-          style={{ width: "100%", height: "100%", position: "relative" }}
-          ref={viewDiv}
-        >
-          <MapContainer
-            attachToId="viewDiv"
-            mapProperties={{
-              basemap: "satellite",
-            }}
-            viewProperties={{
-              center: [-122.55, 49.3],
-              zoom: 6,
-            }}
-            onClick={handleMapClick}
-            onFail={handleFail}
-            onLoad={handleMapLoad}
-            onReady={handleMapReady}
-            onUnload={handleMapUnload}
-          >
-            {isError && <div>Error loading route: {error.message}</div>}
-            {isLoading && <div>Loading route...</div>}
-            {map &&
-              view &&
-              viewDiv?.current &&
-              !isError &&
-              !isLoading &&
-              routeItem && (
-                <>
-                  <LayerController
-                    map={map}
-                    // @ts-expect-error value can be undefined
-                    layers={
-                      (routeItem?.arcgis_item_id && [
-                        routeItem?.arcgis_item_id,
-                      ]) ??
-                      []
-                    }
-                    view={view}
-                  />
-                  <PhotoController
-                    map={map}
-                    photos={routeItem?.photos || []}
-                    view={view}
-                  />
-                  <Toggle3d />
-                </>
-              )}
-            {map && view && (
-              <RouteAnimationController
-                map={map}
-                view={view}
-                arcgisItemId={routeItem?.arcgis_item_id}
-                activityDurationSec={routeItem?.duration ?? null}
-              />
-            )}
-          </MapContainer>
-        </div>
-      </Grid>
+  const mapTree = (
+    <MapContainer
+      attachToId="viewDiv"
+      mapProperties={{
+        basemap: "satellite",
+      }}
+      viewProperties={{
+        center: [-122.55, 49.3],
+        zoom: 6,
+      }}
+      onClick={handleMapClick}
+      onFail={handleFail}
+      onLoad={handleMapLoad}
+      onReady={handleMapReady}
+      onUnload={handleMapUnload}
+    >
+      <RouteMapOverlays
+        map={map}
+        view={view}
+        routeItem={routeItem}
+        error={isError ? error : null}
+        isLoading={isLoading}
+        isPreview={isPreview}
+        isAnimating={isAnimating}
+        onPlayingChange={setIsAnimating}
+      />
+    </MapContainer>
+  );
 
-      <Grid
-        size={{ xs: 12, sm: 4 }}
-        sx={{
-          px: isMobile ? 4 : 0,
-          paddingLeft: !isMobile ? 2 : 0,
-          overflowY: "auto",
-          height: isMobile ? "auto" : "calc(100vh - 64px)",
-        }}
-      >
-        {isLoading && <RouteInfoSkeleton />}
-        {routeItem && (
-          <>
-            <RouteInfoContainer routeItem={routeItem} />
-            <Box sx={{ px: 2, pb: 1, overflowY: "auto", maxHeight: 320 }}>
-              <PhotoGallery photos={routeItem.photos} />
+  // While the animation plays the map is fully locked: gray out the ESRI
+  // widgets, but leave our own overlays (the animation controls) live.
+  const lockedMapSx = isAnimating
+    ? { "& .esri-ui": { opacity: 0.45, pointerEvents: "none" } }
+    : undefined;
+
+  const mapSlot = (
+    <Box sx={{ width: "100%", height: "100%", ...lockedMapSx }}>
+      <div ref={attachMapSlot} style={{ width: "100%", height: "100%" }} />
+    </Box>
+  );
+
+  const elevationSection = routeItem ? (
+    <ElevationProfile
+      profilePoints={profilePoints}
+      hasElevation={hasElevation}
+      onHover={onHover}
+      onHoverEnd={onHoverEnd}
+    />
+  ) : null;
+
+  const detailContent = (
+    <>
+      {isLoading && <RouteInfoSkeleton />}
+      {routeItem && (
+        <>
+          <RouteInfoContainer routeItem={routeItem} />
+          <Box sx={{ px: 2, pb: 1 }}>
+            <PhotoGallery photos={routeItem.photos} />
+          </Box>
+        </>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {createPortal(mapTree, mapHost)}
+
+      {isMobile && isFullscreenMap && (
+        <Box
+          sx={{
+            height: PAGE_HEIGHT,
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 1,
+              py: 0.5,
+              borderBottom: 1,
+              borderColor: "divider",
+              flexShrink: 0,
+            }}
+          >
+            <IconButton
+              aria-label="Back to route details"
+              onClick={() => setIsFullscreenMap(false)}
+              size="small"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="subtitle1" noWrap sx={{ fontWeight: 600 }}>
+              {routeItem?.title ?? "Route"}
+            </Typography>
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0 }}>{mapSlot}</Box>
+        </Box>
+      )}
+
+      {isMobile && !isFullscreenMap && (
+        <Box sx={{ width: "100%", height: PAGE_HEIGHT, overflowY: "auto" }}>
+          {detailContent}
+          <Box sx={{ px: 2, pb: 2 }}>
+            <Box
+              component="button"
+              type="button"
+              aria-label="Open fullscreen map"
+              onClick={() => setIsFullscreenMap(true)}
+              sx={{
+                position: "relative",
+                display: "block",
+                width: "100%",
+                height: 220,
+                p: 0,
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 2,
+                overflow: "hidden",
+                cursor: "pointer",
+                bgcolor: "background.paper",
+              }}
+            >
+              {mapSlot}
+              {/* Swallows every pointer event so the preview reads as a
+                  thumbnail rather than a live map. */}
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 20,
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "flex-end",
+                  p: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    bgcolor: "rgba(0,0,0,0.65)",
+                    color: "white",
+                    borderRadius: 2,
+                    px: 1,
+                    py: 0.25,
+                  }}
+                >
+                  <MapIcon fontSize="small" />
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                    View map
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
-            <Box sx={{ px: 2, pb: 2 }}>
-              <ElevationProfile
-                profilePoints={profilePoints}
-                hasElevation={hasElevation}
-                onHover={onHover}
-                onHoverEnd={onHoverEnd}
-              />
-            </Box>
-          </>
-        )}
-      </Grid>
-    </Grid>
+          </Box>
+          <Box sx={{ px: 2, pb: 2 }}>{elevationSection}</Box>
+        </Box>
+      )}
+
+      {!isMobile && (
+        <Box sx={{ display: "flex", height: PAGE_HEIGHT, width: "100%" }}>
+          <Box
+            sx={{
+              flex: "1 1 66%",
+              minWidth: 0,
+              pr: 2,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box sx={{ flex: 1, minHeight: 0 }}>{mapSlot}</Box>
+            <Box sx={{ flexShrink: 0, px: 2, py: 1 }}>{elevationSection}</Box>
+          </Box>
+          <Box
+            sx={{
+              flex: "0 0 34%",
+              minWidth: 0,
+              pl: 2,
+              overflowY: "auto",
+              height: PAGE_HEIGHT,
+            }}
+          >
+            {detailContent}
+          </Box>
+        </Box>
+      )}
+    </>
   );
 }
 

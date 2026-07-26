@@ -14,6 +14,8 @@ interface RouteAnimationControllerProps {
   view: MapView | SceneView | null;
   arcgisItemId?: string | null;
   activityDurationSec: number | null;
+  /** Notified when playback starts/stops so the page can lock map interaction. */
+  onPlayingChange?: (isPlaying: boolean) => void;
 }
 
 export function RouteAnimationController({
@@ -21,6 +23,7 @@ export function RouteAnimationController({
   view,
   arcgisItemId,
   activityDurationSec,
+  onPlayingChange,
 }: RouteAnimationControllerProps) {
   const pointsPerSecond = useStore((state) => state.animationSpeed);
   const playbackMode = useStore((state) => state.animationPlaybackMode);
@@ -39,6 +42,10 @@ export function RouteAnimationController({
   useEffect(() => {
     progressRef.current = progress;
   }, [progress]);
+
+  useEffect(() => {
+    onPlayingChange?.(isPlaying);
+  }, [isPlaying, onPlayingChange]);
 
   const handleSpeedChange = (pps: number) => {
     setPointsPerSecond(pps);

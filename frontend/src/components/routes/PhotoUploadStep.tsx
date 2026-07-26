@@ -442,25 +442,20 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
 
       {/* Right panel: map */}
       <Box sx={{ flex: 1, minHeight: 400, position: "relative" }}>
-        <div
-          id="wizardMapDiv"
-          style={{ width: "100%", height: "100%", minHeight: 400 }}
+        <MapContainer
+          attachToId="wizardMapDiv"
+          mapProperties={{ basemap: "satellite" }}
+          viewProperties={{ center: [-122.55, 49.3], zoom: 6 }}
+          onClick={() => {}}
+          onFail={(err) => console.error(err)}
+          onLoad={handleMapLoad}
+          onReady={() => {}}
+          onUnload={() => {}}
         >
-          <MapContainer
-            attachToId="wizardMapDiv"
-            mapProperties={{ basemap: "satellite" }}
-            viewProperties={{ center: [-122.55, 49.3], zoom: 6 }}
-            onClick={() => {}}
-            onFail={(err) => console.error(err)}
-            onLoad={handleMapLoad}
-            onReady={() => {}}
-            onUnload={() => {}}
-          >
-            {map && view && arcgisItemId && (
-              <LayerController map={map} view={view} layers={[arcgisItemId]} />
-            )}
-          </MapContainer>
-        </div>
+          {map && view && arcgisItemId && (
+            <LayerController map={map} view={view} layers={[arcgisItemId]} />
+          )}
+        </MapContainer>
       </Box>
     </Box>
   );
