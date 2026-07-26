@@ -316,8 +316,10 @@ export function useRouteAnimation(
           lastUpdateTime: lastProgressFrameRef.current,
           lastProgress: lastProgressValueRef.current,
           nextProgress: pct,
-          intervalMs: 100,
-          threshold: 0.01,
+          // ~20fps / 200 steps: smooth enough for the elevation-profile cursor
+          // to track the map marker without re-rendering subscribers per frame.
+          intervalMs: 50,
+          threshold: 0.005,
         });
 
         if (shouldUpdate) {

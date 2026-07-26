@@ -48,7 +48,7 @@ export default function RouteTableView({
   isLoading?: boolean;
 }) {
   const navigate = useNavigate();
-  const { units } = useStore();
+  const units = useStore((s) => s.units);
 
   if (!isLoading && !routes.length) {
     return (

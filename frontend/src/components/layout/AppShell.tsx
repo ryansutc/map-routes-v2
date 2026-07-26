@@ -26,8 +26,14 @@ const TOGGLE_BORDER_COLOR = "rgba(255,255,255,0.5)";
 export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, userIsAuthenticated, setUser, setUserIsAuthenticated, units, setUnits } =
-    useStore();
+  // Subscribe field-by-field: a bare useStore() would re-render the whole shell
+  // on every transient store change (e.g. animationProgress at ~20fps).
+  const user = useStore((s) => s.user);
+  const userIsAuthenticated = useStore((s) => s.userIsAuthenticated);
+  const setUser = useStore((s) => s.setUser);
+  const setUserIsAuthenticated = useStore((s) => s.setUserIsAuthenticated);
+  const units = useStore((s) => s.units);
+  const setUnits = useStore((s) => s.setUnits);
 
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [signOutError, setSignOutError] = useState<string | null>(null);

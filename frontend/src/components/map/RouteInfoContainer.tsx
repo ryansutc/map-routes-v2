@@ -36,7 +36,7 @@ export function RouteInfoSkeleton() {
 
 export default function RouteInfoContainer({ routeItem }: { routeItem: Route }) {
   const [copied, setCopied] = useState(false);
-  const { units } = useStore();
+  const units = useStore((s) => s.units);
 
   const handleCopyLink = () => {
     void navigator.clipboard.writeText(window.location.href).then(() => {

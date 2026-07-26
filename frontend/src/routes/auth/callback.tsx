@@ -8,7 +8,8 @@ export const Route = createFileRoute('/auth/callback')({
 });
 
 function AuthCallback() {
-  const { setUser, setUserIsAuthenticated } = useStore();
+  const setUser = useStore((s) => s.setUser);
+  const setUserIsAuthenticated = useStore((s) => s.setUserIsAuthenticated);
   const navigate = useNavigate();
 
   useEffect(() => {

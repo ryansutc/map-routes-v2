@@ -29,6 +29,7 @@ export function RouteAnimationController({
   const playbackMode = useStore((state) => state.animationPlaybackMode);
   const setPointsPerSecond = useStore((state) => state.setAnimationSpeed);
   const setPlaybackMode = useStore((state) => state.setAnimationPlaybackMode);
+  const setAnimationProgress = useStore((state) => state.setAnimationProgress);
 
   const { isPlaying, progress, pointCount, play, stop } = useRouteAnimation(
     map,
@@ -46,6 +47,20 @@ export function RouteAnimationController({
   useEffect(() => {
     onPlayingChange?.(isPlaying);
   }, [isPlaying, onPlayingChange]);
+
+  // Publish progress so sibling views (the elevation profile) can render a
+  // cursor in step with the map marker. Reset on unmount so navigating away
+  // mid-playback can't leave a stale cursor behind.
+  useEffect(() => {
+    setAnimationProgress(progress);
+  }, [progress, setAnimationProgress]);
+
+  useEffect(
+    () => () => {
+      setAnimationProgress(0);
+    },
+    [setAnimationProgress],
+  );
 
   const handleSpeedChange = (pps: number) => {
     setPointsPerSecond(pps);

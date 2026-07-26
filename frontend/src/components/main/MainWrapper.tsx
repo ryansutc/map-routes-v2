@@ -8,7 +8,9 @@ import { useEffect, useState } from "react";
 export default function MainWrapper({ children }: React.PropsWithChildren) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<unknown>(null);
-  const { userIsAuthenticated, setUserIsAuthenticated, setUser } = useStore();
+  const userIsAuthenticated = useStore((s) => s.userIsAuthenticated);
+  const setUserIsAuthenticated = useStore((s) => s.setUserIsAuthenticated);
+  const setUser = useStore((s) => s.setUser);
 
   useEffect(() => {
     async function checkStatus() {

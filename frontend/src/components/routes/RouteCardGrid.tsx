@@ -31,7 +31,7 @@ function thumbnailFor(route: Route): string {
 
 function RouteCard({ route }: { route: Route }) {
   const navigate = useNavigate();
-  const { units } = useStore();
+  const units = useStore((s) => s.units);
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <CardActionArea
