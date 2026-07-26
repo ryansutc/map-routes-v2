@@ -8,7 +8,12 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { ProfilePoint } from "@/hooks/useElevationProfile";
-import { formatDistance, formatElevation } from "@/utils/units";
+import {
+  distanceAxisTicks,
+  formatDistance,
+  formatDistanceTick,
+  formatElevation,
+} from "@/utils/units";
 import { useStore } from "@/state/store";
 
 type Props = {
@@ -44,6 +49,9 @@ export default function ElevationProfile({
     }
   };
 
+  const totalDistance = profilePoints.at(-1)?.distance ?? 0;
+  const { max: axisMax, ticks } = distanceAxisTicks(totalDistance, units);
+
   return (
     <ResponsiveContainer width="100%" height={180}>
       <LineChart
@@ -54,9 +62,13 @@ export default function ElevationProfile({
       >
         <XAxis
           dataKey="distance"
-          tickFormatter={(v: number) => formatDistance(v, units)}
+          type="number"
+          domain={[0, axisMax]}
+          ticks={ticks}
+          allowDataOverflow={false}
+          tickFormatter={(v: number) => formatDistanceTick(v, units)}
           tick={{ fontSize: 11 }}
-          minTickGap={40}
+          minTickGap={20}
         />
         <YAxis
           dataKey="elevation"
