@@ -51,6 +51,7 @@ interface RouteMapOverlaysProps {
   error: Error | null;
   isLoading: boolean;
   isPreview: boolean;
+  isAnimating: boolean;
   onPlayingChange: (isPlaying: boolean) => void;
 }
 
@@ -62,6 +63,7 @@ function RouteMapOverlays({
   error,
   isLoading,
   isPreview,
+  isAnimating,
   onPlayingChange,
 }: RouteMapOverlaysProps) {
   const ready = map && view && !error && !isLoading && routeItem;
@@ -86,7 +88,7 @@ function RouteMapOverlays({
       {/* Kept mounted across preview/fullscreen toggles — unmounting would
           drop the animation layer and refetch the route GeoJSON. */}
       <Box sx={{ display: isPreview ? "none" : "contents" }}>
-        {ready && <Toggle3d />}
+        {ready && <Toggle3d disabled={isAnimating} />}
         {map && view && (
           <RouteAnimationController
             map={map}
@@ -189,6 +191,7 @@ function RouteDetail() {
         error={isError ? error : null}
         isLoading={isLoading}
         isPreview={isPreview}
+        isAnimating={isAnimating}
         onPlayingChange={setIsAnimating}
       />
     </MapContainer>
