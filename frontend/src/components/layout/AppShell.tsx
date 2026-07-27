@@ -68,7 +68,14 @@ export default function AppShell({ children }: PropsWithChildren) {
   const avatarLetter = (user ?? "?").charAt(0).toUpperCase();
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        overflow: "hidden",
+      }}
+    >
       <AppBar position="sticky" color="primary" enableColorOnDark>
         <Toolbar>
           <Typography
@@ -76,7 +83,7 @@ export default function AppShell({ children }: PropsWithChildren) {
             component={Link}
             to="/routes"
             sx={{
-              flexGrow: 1,
+              mr: "auto",
               color: "inherit",
               textDecoration: "none",
             }}
@@ -166,7 +173,10 @@ export default function AppShell({ children }: PropsWithChildren) {
           {signOutError}
         </Box>
       )}
-      <Box component="main" sx={{ flexGrow: 1 }}>
+      <Box
+        component="main"
+        sx={{ flex: 1, minHeight: 0, overflowY: "auto", maxHeight: "98%" }}
+      >
         {children}
       </Box>
     </Box>

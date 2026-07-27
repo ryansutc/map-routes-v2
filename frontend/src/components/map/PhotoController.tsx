@@ -1,6 +1,5 @@
-import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
 import Graphic from "@arcgis/core/Graphic";
-import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 
 import type { PhotoDto } from "@/types/api";
 import MapView from "@arcgis/core/views/MapView";
@@ -11,47 +10,26 @@ function PhotoController({
   map,
   photos,
   view,
+  onPhotoClick,
 }: {
   map: __esri.Map | null;
   view: MapView | SceneView | null;
   photos: PhotoDto[];
+  onPhotoClick: (index: number) => void;
 }) {
   useEffect(() => {
-    if (map && view && view) {
-      photos.forEach((photo) => {
-        const template = {
-          title: photo.title || "No Photo Title Available",
-          content: [
-            {
-              type: "fields",
-              fieldInfos: [
-                {
-                  fieldName: "ObjectID",
-                  label: "Object ID",
-                  visible: false,
-                },
-              ],
-            },
-            {
-              type: "media",
-              //title: "this is some media",
-              mediaInfos: [
-                {
-                  type: "image",
-                  caption: photo.title,
-                  value: {
-                    sourceURL: dropboxShareUrlToDirectDownload(photo.url!),
-                    altText: photo.title,
-                  },
-                },
-              ],
-            },
-          ],
-        };
+    if (!map || !view || !photos.length) return;
 
-        // create graphics:
-        // Import Graphic from ArcGIS
-        const pointGraphic = new Graphic({
+    const graphics = photos.flatMap((photo, photoIndex) => {
+      if (
+        typeof photo.longitude !== "number" ||
+        typeof photo.latitude !== "number"
+      ) {
+        return [];
+      }
+
+      return [
+        new Graphic({
           geometry: {
             type: "point",
             longitude: photo.longitude,
@@ -59,57 +37,41 @@ function PhotoController({
           },
           attributes: {
             ObjectID: photo.id,
-            imgUrl: dropboxShareUrlToDirectDownload(
-              "https://www.dropbox.com/scl/fi/d4niv56474j71wmxm9syn/IMG_3966.JPG?rlkey=kotg5yywjqzus0dd2ywihiasw&st=uxxsbxnx&dl=0"
-            ),
+            photoIndex,
           },
-        });
-
-        // Add new Graphics Point Layer to the map:
-        const graphicsLayer = new FeatureLayer({
-          id: "graphicsLayer",
-          source: [pointGraphic],
-          fields: [
-            {
-              name: "ObjectID",
-              type: "oid",
-            },
-            {
-              name: "imgUrl",
-              type: "string",
-            },
-          ],
-          objectIdField: "ObjectID",
-          geometryType: "point",
-          popupTemplate: template,
-          renderer: {
-            type: "simple",
-            symbol: {
-              type: "simple-marker",
-              color: [40, 119, 226], // blue color
-              size: 8, // size as number, not string
-              outline: {
-                color: [255, 255, 255],
-                width: 1,
-              },
+          symbol: {
+            type: "simple-marker",
+            color: [40, 119, 226],
+            size: 8,
+            outline: {
+              color: [255, 255, 255],
+              width: 1,
             },
           },
-        });
+        }),
+      ];
+    });
 
-        map.add(graphicsLayer);
-      });
-    }
+    const graphicsLayer = new GraphicsLayer({
+      id: "photo-markers",
+      graphics,
+    });
+
+    map.add(graphicsLayer);
+
+    const clickHandle = view.on("click", async (event) => {
+      const response = await view.hitTest(event, { include: graphicsLayer });
+      const result = response.results.find((item) => item.type === "graphic");
+      if (!result || !("graphic" in result)) return;
+      const photoIndex = result.graphic.attributes?.photoIndex;
+      if (typeof photoIndex === "number") onPhotoClick(photoIndex);
+    });
 
     return () => {
-      if (map) {
-        // @ts-expect-error layer problem TODO
-        photos.forEach((layer) => map.remove(map.findLayerById(layer)));
-        const graphicsLayer = map.findLayerById("graphicsLayer");
-        if (graphicsLayer) map.remove(graphicsLayer);
-      }
+      clickHandle.remove();
+      map.remove(graphicsLayer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map]);
+  }, [map, onPhotoClick, photos, view]);
 
   return null;
 }

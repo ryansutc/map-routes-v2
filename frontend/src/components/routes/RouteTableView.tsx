@@ -23,6 +23,9 @@ type Route = z.infer<typeof schemas.Route>;
 
 const COLUMNS = ["Title", "Activity", "Date", "Distance", "Visibility"];
 const XL_COLUMNS = ["Uploaded"];
+const visibilityColumnSx = {
+  display: { xs: "none", sm: "table-cell" },
+};
 
 function SkeletonRows() {
   return (
@@ -30,7 +33,7 @@ function SkeletonRows() {
       {Array.from({ length: 6 }).map((_, i) => (
         <TableRow key={i}>
           {COLUMNS.map((c) => (
-            <TableCell key={c}>
+            <TableCell key={c} sx={c === "Visibility" ? visibilityColumnSx : undefined}>
               <Skeleton variant="text" />
             </TableCell>
           ))}
@@ -64,7 +67,12 @@ export default function RouteTableView({
         <TableHead>
           <TableRow>
             {COLUMNS.map((col) => (
-              <TableCell key={col}>{col}</TableCell>
+              <TableCell
+                key={col}
+                sx={col === "Visibility" ? visibilityColumnSx : undefined}
+              >
+                {col}
+              </TableCell>
             ))}
             {XL_COLUMNS.map((col) => (
               <TableCell key={col} sx={{ display: { xs: "none", xl: "table-cell" } }}>
@@ -112,7 +120,7 @@ export default function RouteTableView({
                     {formatDate(route.activity_date, "mmm-dd-yyyy")}
                   </TableCell>
                   <TableCell>{formatDistance(route.distance, units)}</TableCell>
-                  <TableCell>
+                  <TableCell sx={visibilityColumnSx}>
                     <Chip
                       label={route.is_public ? "Public" : "Private"}
                       size="small"

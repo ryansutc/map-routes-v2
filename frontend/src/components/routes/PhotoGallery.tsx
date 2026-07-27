@@ -9,7 +9,7 @@ import {
   ImageListItem,
   Typography,
 } from "@mui/material";
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import type { z } from "zod";
 
 type Photo = z.infer<typeof schemas.Photo>;
@@ -18,23 +18,29 @@ function resolveUrl(url: string): string {
   return dropboxShareUrlToDirectDownload(url) || url;
 }
 
-export default function PhotoGallery({ photos }: { photos: Photo[] }) {
-  const [open, setOpen] = useState(false);
-  const [index, setIndex] = useState(0);
-
-  const handleOpen = (i: number) => {
-    setIndex(i);
-    setOpen(true);
-  };
-  const handleClose = () => setOpen(false);
+export function PhotoLightbox({
+  photos,
+  index,
+  onIndexChange,
+  onClose,
+}: {
+  photos: Photo[];
+  index: number | null;
+  onIndexChange: (index: number) => void;
+  onClose: () => void;
+}) {
+  const open = index !== null && photos.length > 0;
 
   const prev = useCallback(
-    () => setIndex((i) => (i - 1 + photos.length) % photos.length),
-    [photos.length],
+    () =>
+      onIndexChange(
+        ((index ?? 0) - 1 + photos.length) % photos.length,
+      ),
+    [index, onIndexChange, photos.length],
   );
   const next = useCallback(
-    () => setIndex((i) => (i + 1) % photos.length),
-    [photos.length],
+    () => onIndexChange(((index ?? 0) + 1) % photos.length),
+    [index, onIndexChange, photos.length],
   );
 
   useEffect(() => {
@@ -42,45 +48,24 @@ export default function PhotoGallery({ photos }: { photos: Photo[] }) {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prev();
       else if (e.key === "ArrowRight") next();
-      else if (e.key === "Escape") handleClose();
+      else if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, prev, next]);
+  }, [next, onClose, open, prev]);
 
-  if (!photos.length) return null;
+  if (!open) return null;
 
   const current = photos[index]!;
 
   return (
-    <Box sx={{ mt: 2 }}>
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-        Photos ({photos.length})
-      </Typography>
-      <ImageList cols={3} gap={4} sx={{ m: 0 }}>
-        {photos.map((photo, i) => (
-          <ImageListItem
-            key={photo.id}
-            sx={{ cursor: "pointer", overflow: "hidden", borderRadius: 1 }}
-            onClick={() => handleOpen(i)}
-          >
-            <img
-              src={resolveUrl(photo.url)}
-              alt={photo.title ?? `Photo ${i + 1}`}
-              loading="lazy"
-              style={{ width: "100%", height: 80, objectFit: "cover", display: "block" }}
-            />
-          </ImageListItem>
-        ))}
-      </ImageList>
-
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        maxWidth="lg"
-        fullWidth
-        aria-label="Photo lightbox"
-      >
+    <Dialog
+      open
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      aria-label="Photo lightbox"
+    >
         <DialogContent
           sx={{
             position: "relative",
@@ -93,7 +78,7 @@ export default function PhotoGallery({ photos }: { photos: Photo[] }) {
           }}
         >
           <IconButton
-            onClick={handleClose}
+            onClick={onClose}
             size="small"
             sx={{ position: "absolute", top: 8, right: 8, color: "white", zIndex: 1, fontSize: 18 }}
             aria-label="Close"
@@ -136,7 +121,45 @@ export default function PhotoGallery({ photos }: { photos: Photo[] }) {
             </Typography>
           </Box>
         </DialogContent>
-      </Dialog>
+    </Dialog>
+  );
+}
+
+export default function PhotoGallery({
+  photos,
+  onPhotoClick,
+}: {
+  photos: Photo[];
+  onPhotoClick: (index: number) => void;
+}) {
+  if (!photos.length) return null;
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+        Photos ({photos.length})
+      </Typography>
+      <ImageList cols={3} gap={4} sx={{ m: 0 }}>
+        {photos.map((photo, i) => (
+          <ImageListItem
+            key={photo.id}
+            sx={{ cursor: "pointer", overflow: "hidden", borderRadius: 1 }}
+            onClick={() => onPhotoClick(i)}
+          >
+            <img
+              src={resolveUrl(photo.url)}
+              alt={photo.title ?? `Photo ${i + 1}`}
+              loading="lazy"
+              style={{
+                width: "100%",
+                height: 80,
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          </ImageListItem>
+        ))}
+      </ImageList>
     </Box>
   );
 }

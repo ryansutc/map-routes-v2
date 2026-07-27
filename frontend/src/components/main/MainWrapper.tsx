@@ -63,6 +63,7 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
         "& > *": {
           width: "100%",
         },
+        height: "100vH",
       }}
     >
       {children}

@@ -6,7 +6,9 @@ import RouteInfoContainer, {
   RouteInfoSkeleton,
 } from "@/components/map/RouteInfoContainer";
 import Toggle3d from "@/components/map/Toggle3d";
-import PhotoGallery from "@/components/routes/PhotoGallery";
+import PhotoGallery, {
+  PhotoLightbox,
+} from "@/components/routes/PhotoGallery";
 import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
 import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useMapInteractionLock } from "@/hooks/useMapInteractionLock";
@@ -25,8 +27,7 @@ import { createPortal } from "react-dom";
 
 /** Below this width the page becomes details-first with a tappable map preview. */
 const MOBILE_MAX_WIDTH = 860;
-const HEADER_HEIGHT = 64;
-const PAGE_HEIGHT = `calc(100vh - ${HEADER_HEIGHT}px)`;
+const PAGE_HEIGHT = "100%";
 
 export const Route = createFileRoute("/routes/$routeId")({
   parseParams: ({ routeId }) => {
@@ -52,6 +53,7 @@ interface RouteMapOverlaysProps {
   isLoading: boolean;
   isPreview: boolean;
   isAnimating: boolean;
+  onPhotoClick: (index: number) => void;
   onPlayingChange: (isPlaying: boolean) => void;
 }
 
@@ -64,6 +66,7 @@ function RouteMapOverlays({
   isLoading,
   isPreview,
   isAnimating,
+  onPhotoClick,
   onPlayingChange,
 }: RouteMapOverlaysProps) {
   const ready = map && view && !error && !isLoading && routeItem;
@@ -82,7 +85,12 @@ function RouteMapOverlays({
             }
             view={view}
           />
-          <PhotoController map={map} photos={routeItem.photos || []} view={view} />
+          <PhotoController
+            map={map}
+            photos={routeItem.photos || []}
+            view={view}
+            onPhotoClick={onPhotoClick}
+          />
         </>
       )}
       {/* Kept mounted across preview/fullscreen toggles — unmounting would
@@ -113,6 +121,9 @@ function RouteDetail() {
   const [view, setView] = useState<MapView | SceneView | null>(null);
   const [fullscreenRequested, setFullscreenRequested] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
+    null,
+  );
 
   // The map preview and the fullscreen map are different places in the tree,
   // but they must share one ESRI view — recreating it on every toggle is slow.
@@ -192,6 +203,7 @@ function RouteDetail() {
         isLoading={isLoading}
         isPreview={isPreview}
         isAnimating={isAnimating}
+        onPhotoClick={setSelectedPhotoIndex}
         onPlayingChange={setIsAnimating}
       />
     </MapContainer>
@@ -226,7 +238,10 @@ function RouteDetail() {
         <>
           <RouteInfoContainer routeItem={routeItem} />
           <Box sx={{ px: 2, pb: 1 }}>
-            <PhotoGallery photos={routeItem.photos} />
+            <PhotoGallery
+              photos={routeItem.photos}
+              onPhotoClick={setSelectedPhotoIndex}
+            />
           </Box>
         </>
       )}
@@ -236,6 +251,12 @@ function RouteDetail() {
   return (
     <>
       {createPortal(mapTree, mapHost)}
+      <PhotoLightbox
+        photos={routeItem?.photos ?? []}
+        index={selectedPhotoIndex}
+        onIndexChange={setSelectedPhotoIndex}
+        onClose={() => setSelectedPhotoIndex(null)}
+      />
 
       {isMobile && isFullscreenMap && (
         <Box
