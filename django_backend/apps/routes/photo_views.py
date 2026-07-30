@@ -1,20 +1,23 @@
 """View for uploading photos to a route."""
 
+import io
 from datetime import datetime
 from typing import Any
 
+from drf_spectacular.utils import extend_schema
 from PIL import Image
 from PIL.ExifTags import GPSTAGS, TAGS
-from rest_framework import permissions
-from rest_framework.parsers import MultiPartParser
+from rest_framework import permissions, status
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.shared_utils.error_utils import print_debug_error
 
-from .cloudinary_utils import upload_photo
+from .cloudinary_utils import delete_photo, upload_photo
 from .models import Photo, Route
+from .serializers import PhotoSerializer, PhotoTitleUpdateSerializer
 
 MAX_PHOTOS_PER_ROUTE = 20
 
@@ -67,6 +70,7 @@ class RoutePhotoView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser]
 
+    @extend_schema(responses={201: PhotoSerializer})
     def post(self, request: Request, pk: int) -> Response:
         """Accept an image file, extract GPS EXIF, upload to Cloudinary, save Photo record."""
         try:
@@ -86,11 +90,17 @@ class RoutePhotoView(APIView):
         if "file" not in request.FILES:
             return Response({"detail": "No file provided."}, status=400)
 
+        title_serializer = PhotoTitleUpdateSerializer(
+            data={"title": str(request.data.get("title") or "")}
+        )
+        title_serializer.is_valid(raise_exception=True)
+        title = title_serializer.validated_data["title"]
+
         uploaded_file = request.FILES["file"]
         file_bytes = uploaded_file.read()
 
         try:
-            image = Image.open(uploaded_file)
+            image = Image.open(io.BytesIO(file_bytes))
             exif_data = image._getexif() or {}
             lat, lng = _extract_gps(exif_data)
             lat = round(lat, 6) if lat is not None else None
@@ -100,18 +110,17 @@ class RoutePhotoView(APIView):
             lat, lng, taken_at = None, None, None
 
         try:
-            secure_url = upload_photo(file_bytes, uploaded_file.name)
+            secure_url, public_id = upload_photo(file_bytes, uploaded_file.name)
         except RuntimeError as exc:
             return Response({"detail": str(exc)}, status=502)
         except Exception:
             print_debug_error()
             return Response({"detail": "Photo upload to Cloudinary failed."}, status=502)
 
-        title = request.data.get("title") or None
-
         photo = Photo.objects.create(
             route=route,
             url=secure_url,
+            cloudinary_public_id=public_id,
             latitude=lat,
             longitude=lng,
             taken_at=taken_at,
@@ -130,3 +139,55 @@ class RoutePhotoView(APIView):
             },
             status=201,
         )
+
+
+class RoutePhotoDetailView(APIView):
+    """Rename or delete one photo belonging to an owned route."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser]
+
+    def _get_owned_photo(self, request: Request, pk: int, photo_pk: int) -> Photo | Response:
+        try:
+            route = Route.objects.get(pk=pk)
+        except Route.DoesNotExist:
+            return Response({"detail": "Route not found."}, status=status.HTTP_404_NOT_FOUND)
+        if route.owner != request.user.email:
+            return Response(
+                {"detail": "You do not own this route."}, status=status.HTTP_403_FORBIDDEN
+            )
+        try:
+            return route.photos.get(pk=photo_pk)
+        except Photo.DoesNotExist:
+            return Response({"detail": "Photo not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    @extend_schema(request=PhotoTitleUpdateSerializer, responses={200: PhotoSerializer})
+    def patch(self, request: Request, pk: int, photo_pk: int) -> Response:
+        """Change only the optional title of a photo."""
+        photo = self._get_owned_photo(request, pk, photo_pk)
+        if isinstance(photo, Response):
+            return photo
+        serializer = PhotoTitleUpdateSerializer(photo, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(PhotoSerializer(photo).data)
+
+    @extend_schema(responses={204: None})
+    def delete(self, request: Request, pk: int, photo_pk: int) -> Response:
+        """Delete the hosted image first, then its database record."""
+        photo = self._get_owned_photo(request, pk, photo_pk)
+        if isinstance(photo, Response):
+            return photo
+        if photo.cloudinary_public_id:
+            try:
+                delete_photo(photo.cloudinary_public_id)
+            except RuntimeError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+            except Exception:
+                print_debug_error()
+                return Response(
+                    {"detail": "Photo deletion from Cloudinary failed."},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+        photo.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -5,7 +5,7 @@ from typing import Any
 
 from django.conf import settings
 from django.db.models import Q, QuerySet
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics, permissions
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
@@ -21,8 +21,9 @@ from .models import Route
 from .serializers import (
     ParseGpxRequestSerializer,
     ParseGpxResponseSerializer,
+    RouteCreateSerializer,
     RouteSerializer,
-    RouteWriteSerializer,
+    RouteUpdateSerializer,
 )
 
 
@@ -44,7 +45,7 @@ class RouteListCreateView(generics.ListCreateAPIView):
     def get_serializer_class(self) -> type[Serializer]:
         """Return the write serializer for POST, read serializer otherwise."""
         if self.request.method == "POST":
-            return RouteWriteSerializer
+            return RouteCreateSerializer
         return RouteSerializer
 
     def get_queryset(self) -> QuerySet[Route]:
@@ -62,22 +63,35 @@ class RouteListCreateView(generics.ListCreateAPIView):
             .order_by("-activity_date")
         )
 
-    def perform_create(self, serializer: RouteWriteSerializer) -> None:
+    def perform_create(self, serializer: RouteCreateSerializer) -> None:
         """Save the new route with the requesting user as owner."""
         serializer.save(owner=self.request.user.email)
 
 
+@extend_schema_view(
+    patch=extend_schema(request=RouteUpdateSerializer, responses=RouteSerializer),
+)
 class RouteDetailView(generics.RetrieveUpdateDestroyAPIView):
     """API view to retrieve, update, or delete a single route."""
 
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
     queryset = Route.objects.prefetch_related("photos").all()
+    http_method_names = ["get", "patch", "delete", "head", "options"]
 
     def get_serializer_class(self) -> type[Serializer]:
         """Return the write serializer for mutating methods, read serializer otherwise."""
-        if self.request.method in ("PUT", "PATCH"):
-            return RouteWriteSerializer
+        if self.request.method == "PATCH":
+            return RouteUpdateSerializer
         return RouteSerializer
+
+    def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Patch owner-managed fields and return the complete route representation."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        instance = self.get_queryset().get(pk=instance.pk)
+        return Response(RouteSerializer(instance, context=self.get_serializer_context()).data)
 
     def get_queryset(self) -> QuerySet[Route]:
         """Return routes visible to the requesting user."""

@@ -1,5 +1,5 @@
-import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
 import { schemas } from "@/generatedtypes/django_generated";
+import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
 import {
   Box,
   Dialog,
@@ -32,10 +32,7 @@ export function PhotoLightbox({
   const open = index !== null && photos.length > 0;
 
   const prev = useCallback(
-    () =>
-      onIndexChange(
-        ((index ?? 0) - 1 + photos.length) % photos.length,
-      ),
+    () => onIndexChange(((index ?? 0) - 1 + photos.length) % photos.length),
     [index, onIndexChange, photos.length],
   );
   const next = useCallback(
@@ -54,9 +51,9 @@ export function PhotoLightbox({
     return () => window.removeEventListener("keydown", handler);
   }, [next, onClose, open, prev]);
 
-  if (!open) return null;
-
-  const current = photos[index]!;
+  if (!open || index === null) return null;
+  const current = photos[index];
+  if (!current) return null;
 
   return (
     <Dialog
@@ -66,61 +63,87 @@ export function PhotoLightbox({
       fullWidth
       aria-label="Photo lightbox"
     >
-        <DialogContent
+      <DialogContent
+        sx={{
+          position: "relative",
+          p: 0,
+          bgcolor: "black",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 400,
+        }}
+      >
+        <IconButton
+          onClick={onClose}
+          size="small"
           sx={{
-            position: "relative",
-            p: 0,
-            bgcolor: "black",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 400,
+            position: "absolute",
+            top: 8,
+            right: 8,
+            color: "white",
+            zIndex: 1,
+            fontSize: 18,
           }}
+          aria-label="Close"
         >
-          <IconButton
-            onClick={onClose}
-            size="small"
-            sx={{ position: "absolute", top: 8, right: 8, color: "white", zIndex: 1, fontSize: 18 }}
-            aria-label="Close"
-          >
-            ✕
-          </IconButton>
+          ✕
+        </IconButton>
 
-          {photos.length > 1 && (
-            <>
-              <IconButton
-                onClick={prev}
-                sx={{ position: "absolute", left: 8, color: "white", zIndex: 1, fontSize: 20 }}
-                aria-label="Previous photo"
-              >
-                ‹
-              </IconButton>
-              <IconButton
-                onClick={next}
-                sx={{ position: "absolute", right: 48, color: "white", zIndex: 1, fontSize: 20 }}
-                aria-label="Next photo"
-              >
-                ›
-              </IconButton>
-            </>
-          )}
+        {photos.length > 1 && (
+          <>
+            <IconButton
+              onClick={prev}
+              sx={{
+                position: "absolute",
+                left: 8,
+                color: "white",
+                zIndex: 1,
+                fontSize: 20,
+              }}
+              aria-label="Previous photo"
+            >
+              ‹
+            </IconButton>
+            <IconButton
+              onClick={next}
+              sx={{
+                position: "absolute",
+                right: 48,
+                color: "white",
+                zIndex: 1,
+                fontSize: 20,
+              }}
+              aria-label="Next photo"
+            >
+              ›
+            </IconButton>
+          </>
+        )}
 
-          <Box sx={{ width: "100%", textAlign: "center", p: 1 }}>
-            <img
-              src={resolveUrl(current.url)}
-              alt={current.title ?? `Photo ${index + 1}`}
-              style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }}
-            />
-            {current.title && (
-              <Typography variant="caption" sx={{ color: "grey.400", display: "block", mt: 1 }}>
-                {current.title}
-              </Typography>
-            )}
-            <Typography variant="caption" sx={{ color: "grey.600" }}>
-              {index + 1} / {photos.length}
+        <Box sx={{ width: "100%", textAlign: "center", p: 1 }}>
+          <img
+            src={resolveUrl(current.url)}
+            alt={current.title ?? `Photo ${index + 1}`}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+            }}
+          />
+          {current.title && (
+            <Typography
+              variant="caption"
+              sx={{ color: "grey.400", display: "block", mt: 1 }}
+            >
+              {current.title}
             </Typography>
-          </Box>
-        </DialogContent>
+          )}
+          <Typography variant="caption" sx={{ color: "grey.600" }}>
+            {index + 1} / {photos.length}
+          </Typography>
+        </Box>
+      </DialogContent>
     </Dialog>
   );
 }

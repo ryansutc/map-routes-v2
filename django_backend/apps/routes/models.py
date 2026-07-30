@@ -17,18 +17,18 @@ class ActivityType(models.TextChoices):
 class Route(models.Model):
     """A map route with activity metadata and optional photos."""
 
-    title = models.CharField(max_length=255, null=True, blank=True)
+    title = models.CharField(max_length=255, blank=True)
     activity_date = models.DateTimeField()
-    activity_type = models.CharField(max_length=20, choices=ActivityType, null=True, blank=True)
+    activity_type = models.CharField(max_length=20, choices=ActivityType, blank=True)
     distance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     duration = models.IntegerField(null=True, blank=True)
     avg_pace = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     elevation_gain = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    arcgis_item_id = models.CharField(max_length=32, null=True, blank=True)
+    arcgis_item_id = models.CharField(max_length=32, blank=True)
     track_point_count = models.IntegerField(null=True, blank=True)
     geojson = models.JSONField(null=True, blank=True)
-    notes = models.TextField(null=True, blank=True)
-    route_link = models.CharField(max_length=500, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    route_link = models.CharField(max_length=500, blank=True)
     owner = models.EmailField()
     is_public = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -47,8 +47,9 @@ class Route(models.Model):
 class Photo(models.Model):
     """A photo associated with a route, including geolocation."""
 
-    title = models.CharField(max_length=255, null=True, blank=True)
+    title = models.CharField(max_length=255, blank=True)
     url = models.CharField(max_length=1000)
+    cloudinary_public_id = models.CharField(max_length=255, blank=True, default="")
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     # time the photo was taken, derived from the photo metadata
