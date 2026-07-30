@@ -5,7 +5,7 @@ const primaryBase = "#273E72";
 const secondaryBase = "#AB812E";
 
 const primary = {
-  main: alpha(primaryBase, 0.7),
+  main: primaryBase,
   light: alpha(primaryBase, 0.5),
   dark: alpha(primaryBase, 0.9),
   contrastText: "#fff",
