@@ -6,22 +6,27 @@ import RouteInfoContainer, {
   RouteInfoSkeleton,
 } from "@/components/map/RouteInfoContainer";
 import Toggle3d from "@/components/map/Toggle3d";
-import PhotoGallery, {
-  PhotoLightbox,
-} from "@/components/routes/PhotoGallery";
+import PhotoGallery, { PhotoLightbox } from "@/components/routes/PhotoGallery";
 import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
 import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useMapInteractionLock } from "@/hooks/useMapInteractionLock";
 import { useRoute } from "@/hooks/useRoute.tsx";
+import { useStore } from "@/state/store";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import EditIcon from "@mui/icons-material/Edit";
 import MapIcon from "@mui/icons-material/Map";
-import { Box, IconButton, Typography, useMediaQuery } from "@mui/material";
+import {
+  Box,
+  Button,
+  IconButton,
+  Typography,
+  useMediaQuery,
+} from "@mui/material";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { FeatureCollection } from "geojson";
-
-import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -116,6 +121,8 @@ function RouteDetail() {
   const { routeId } = Route.useParams();
 
   const { data: routeItem, isLoading, error, isError } = useRoute(routeId);
+  const user = useStore((state) => state.user);
+  const isOwner = routeItem?.owner === user;
 
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
@@ -124,6 +131,7 @@ function RouteDetail() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
     null,
   );
+  const navigate = useNavigate();
 
   // The map preview and the fullscreen map are different places in the tree,
   // but they must share one ESRI view — recreating it on every toggle is slow.
@@ -236,12 +244,26 @@ function RouteDetail() {
       {isLoading && <RouteInfoSkeleton />}
       {routeItem && (
         <>
-          <RouteInfoContainer routeItem={routeItem} />
+          <RouteInfoContainer routeItem={routeItem} isOwner={isOwner} />
           <Box sx={{ px: 2, pb: 1 }}>
             <PhotoGallery
               photos={routeItem.photos}
               onPhotoClick={setSelectedPhotoIndex}
             />
+            {isOwner && (
+              <Button
+                onClick={() =>
+                  void navigate({
+                    to: "/routes/$routeId/photos/edit",
+                    params: { routeId },
+                  })
+                }
+                size="small"
+                startIcon={<EditIcon />}
+              >
+                Edit photos
+              </Button>
+            )}
           </Box>
         </>
       )}

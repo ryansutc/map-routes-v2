@@ -2,6 +2,8 @@ import { formatDate } from "@/utils/datetimeHelpers";
 import { schemas } from "@/generatedtypes/django_generated";
 import { formatDistance } from "@/utils/units";
 import { useStore } from "@/state/store";
+import EditIcon from "@mui/icons-material/Edit";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Box,
   Chip,
@@ -12,7 +14,6 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
 import type { z } from "zod";
 
 type Route = z.infer<typeof schemas.Route>;
@@ -34,16 +35,15 @@ export function RouteInfoSkeleton() {
   );
 }
 
-export default function RouteInfoContainer({ routeItem }: { routeItem: Route }) {
-  const [copied, setCopied] = useState(false);
+export default function RouteInfoContainer({
+  routeItem,
+  isOwner = false,
+}: {
+  routeItem: Route;
+  isOwner?: boolean;
+}) {
   const units = useStore((s) => s.units);
-
-  const handleCopyLink = () => {
-    void navigator.clipboard.writeText(window.location.href).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  const navigate = useNavigate();
 
   return (
     <Box sx={{ p: 2 }}>
@@ -51,10 +51,20 @@ export default function RouteInfoContainer({ routeItem }: { routeItem: Route }) 
         <Typography variant="h4" component="h1" gutterBottom sx={{ flex: 1, mr: 1 }}>
           {routeItem.title ?? "Untitled route"}
         </Typography>
-        {routeItem.is_public && (
-          <Tooltip title={copied ? "Copied!" : "Copy link"}>
-            <IconButton onClick={handleCopyLink} size="small" sx={{ mt: 0.5, fontSize: 14 }}>
-              ⎘
+        {isOwner && (
+          <Tooltip title="Edit route">
+            <IconButton
+              onClick={() =>
+                void navigate({
+                  to: "/routes/$routeId/edit",
+                  params: { routeId: routeItem.id },
+                })
+              }
+              size="small"
+              aria-label="Edit route"
+              sx={{ mt: 0.5 }}
+            >
+              <EditIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
@@ -89,6 +99,14 @@ export default function RouteInfoContainer({ routeItem }: { routeItem: Route }) 
           uploaded {formatDate(routeItem.created_at, "mmm-dd-yyyy")}
         </Typography>
       )}
+      {routeItem.updated_at &&
+        new Date(routeItem.updated_at).getTime() -
+          new Date(routeItem.created_at).getTime() >
+          1000 && (
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            updated {formatDate(routeItem.updated_at, "mmm-dd-yyyy")}
+          </Typography>
+        )}
 
       {routeItem.notes && (
         <>

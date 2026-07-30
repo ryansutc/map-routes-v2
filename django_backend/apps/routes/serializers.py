@@ -49,8 +49,9 @@ class RouteSerializer(serializers.ModelSerializer):
             "is_public",
             "photos",
             "created_at",
+            "updated_at",
         ]
-        read_only_fields = ["owner", "created_at"]
+        read_only_fields = ["owner", "created_at", "updated_at"]
 
 
 class ParseGpxRequestSerializer(serializers.Serializer):
@@ -72,8 +73,8 @@ class ParseGpxResponseSerializer(serializers.Serializer):
     track_point_count = serializers.IntegerField(allow_null=True)
 
 
-class RouteWriteSerializer(serializers.ModelSerializer):
-    """Serializer for creating and updating Route instances."""
+class RouteCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating Route instances from parsed GPX data."""
 
     distance = serializers.FloatField()
 
@@ -97,3 +98,76 @@ class RouteWriteSerializer(serializers.ModelSerializer):
             "route_link",
             "is_public",
         ]
+
+
+class RouteUpdateSerializer(serializers.ModelSerializer):
+    """Serializer restricted to owner-managed route information."""
+
+    class Meta:
+        """Meta options for RouteUpdateSerializer."""
+
+        model = Route
+        fields = ["title", "activity_type", "notes", "is_public"]
+        extra_kwargs = {
+            "title": {"allow_blank": False, "required": False},
+            "activity_type": {"allow_blank": False, "required": False},
+            "notes": {"allow_blank": True, "required": False},
+            "is_public": {"required": False},
+        }
+
+    def to_internal_value(self, data):
+        """Reject immutable and unexpected fields rather than ignoring them."""
+        unexpected = sorted(set(data.keys()) - set(self.fields))
+        if unexpected:
+            raise serializers.ValidationError(
+                {field: "This field cannot be changed." for field in unexpected}
+            )
+        return super().to_internal_value(data)
+
+    def validate_title(self, value: str) -> str:
+        """Require a non-empty title after trimming whitespace."""
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("This field may not be blank.")
+        return value
+
+    def validate_notes(self, value: str) -> str:
+        """Store notes without surrounding whitespace."""
+        return value.strip()
+
+    def update(self, instance: Route, validated_data: dict) -> Route:
+        """Avoid saving the Route, and its auto timestamp, for a no-op patch."""
+        changed_fields = [
+            field for field, value in validated_data.items() if getattr(instance, field) != value
+        ]
+        if not changed_fields:
+            return instance
+
+        for field in changed_fields:
+            setattr(instance, field, validated_data[field])
+        instance.save(update_fields=[*changed_fields, "updated_at"])
+        return instance
+
+
+class PhotoTitleUpdateSerializer(serializers.ModelSerializer):
+    """Serializer restricted to changing a photo's optional title."""
+
+    class Meta:
+        """Meta options for PhotoTitleUpdateSerializer."""
+
+        model = Photo
+        fields = ["title"]
+        extra_kwargs = {"title": {"allow_blank": True, "required": True}}
+
+    def to_internal_value(self, data):
+        """Reject any attempted photo mutation other than title."""
+        unexpected = sorted(set(data.keys()) - {"title"})
+        if unexpected:
+            raise serializers.ValidationError(
+                {field: "This field cannot be changed." for field in unexpected}
+            )
+        return super().to_internal_value(data)
+
+    def validate_title(self, value: str) -> str:
+        """Trim photo titles; an empty value clears the title."""
+        return value.strip()

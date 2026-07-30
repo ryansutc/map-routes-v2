@@ -82,7 +82,7 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
       return zodiosAPI.route_create({
         title: wizardState.title,
         activity_date: p.date,
-        activity_type: wizardState.activityType || null,
+        activity_type: wizardState.activityType || undefined,
         distance: p.distance_m,
         duration: p.duration_s ?? undefined,
         avg_pace:

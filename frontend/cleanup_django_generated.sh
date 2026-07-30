@@ -16,6 +16,7 @@ echo "Removing .strict() and .passthrough() from $FILE..."
 # Remove .strict() and .passthrough() using sed
 sed -i 's/\.strict()//g' "$FILE"
 sed -i 's/\.passthrough()//g' "$FILE"
+sed -i 's/import { makeApi, Zodios, type ZodiosOptions } from "@zodios\/core";/import { makeApi } from "@zodios\/core";/' "$FILE"
 echo "✅ Removed all .strict() and .passthrough() calls from $FILE"
 
 # Remove the export const api line and everything after it
@@ -29,5 +30,10 @@ echo "✅ Added export to const endpoints in $FILE"
 sed -i 's/const BlankEnum = z\.unknown();/const BlankEnum = z.literal("");/' "$FILE"
 sed -i 's/const NullEnum = z\.unknown();/const NullEnum = z.literal(null);/' "$FILE"
 echo "✅ Fixed BlankEnum and NullEnum (openapi-zod-client codegen bug workaround)"
+
+# openapi-zod-client emits unescaped backticks in multiline enum descriptions.
+perl -0pi -e 's/ActivityTypeEnum\.describe\(`.*?`\)/ActivityTypeEnum/sg' "$FILE"
+perl -0pi -e 's/\n+\z/\n/' "$FILE"
+echo "✅ Removed invalid ActivityTypeEnum descriptions"
 
 echo "Complete!"
