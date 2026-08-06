@@ -1,5 +1,8 @@
 # Route Editing Plan
 
+**Status:** Implemented
+**Last updated:** 2026-08-03
+
 ## Goal
 
 Allow the logged-in owner of a route to edit its user-managed information and photos without allowing changes to the original GPX file or any GPX-derived information.
