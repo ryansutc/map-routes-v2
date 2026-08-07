@@ -122,7 +122,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Route'
+                  $ref: '#/components/schemas/RouteList'
           description: ''
     post:
       operationId: route_create
@@ -503,7 +503,8 @@ components:
       - password
     Route:
       type: object
-      description: Serializer for reading Route instances, including nested photos.
+      description: Serializer for route detail, including canonical GeoJSON and nested
+        photos.
       properties:
         id:
           type: integer
@@ -547,8 +548,6 @@ components:
           minimum: -9223372036854775808
           format: int64
           nullable: true
-        geojson:
-          nullable: true
         notes:
           type: string
         route_link:
@@ -573,6 +572,8 @@ components:
           type: string
           format: date-time
           readOnly: true
+        geojson:
+          nullable: true
       required:
       - created_at
       - distance
@@ -692,6 +693,84 @@ components:
           type: boolean
       required:
       - distance
+    RouteList:
+      type: object
+      description: Serializer for route collections without the canonical GeoJSON
+        payload.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        activity_date:
+          type: string
+          format: date-time
+          nullable: true
+        activity_type:
+          oneOf:
+          - $ref: '#/components/schemas/ActivityTypeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        distance:
+          type: number
+          format: double
+        duration:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        avg_pace:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        elevation_gain:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+        arcgis_item_id:
+          type: string
+          maxLength: 32
+        track_point_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        notes:
+          type: string
+        route_link:
+          type: string
+          maxLength: 500
+        owner:
+          type: string
+          format: email
+          readOnly: true
+        is_public:
+          type: boolean
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Photo'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - distance
+      - id
+      - owner
+      - photos
+      - updated_at
   securitySchemes:
     jwtAuth:
       type: http

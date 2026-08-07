@@ -11,9 +11,10 @@ const AuthStatus = z.object({ is_authenticated: z.boolean(), user_name: z.string
 const ActivityTypeEnum = z.enum(["Hiking", "Running", "Cycling", "Backpacking", "Skiing", "Other"]);
 const BlankEnum = z.literal("");
 const Photo = z.object({ id: z.number().int(), title: z.string().max(255).optional(), url: z.string().max(1000), latitude: z.number().nullish(), longitude: z.number().nullish(), route_id: z.number().int(), has_gps: z.boolean().describe("Return True if the photo has GPS coordinates.") });
-const Route = z.object({ id: z.number().int(), title: z.string().max(255).optional(), activity_date: z.string().datetime({ offset: true }).nullish(), activity_type: z.union([ActivityTypeEnum, BlankEnum]).optional(), distance: z.number(), duration: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), avg_pace: z.string().regex(/^-?\d{0,4}(?:\.\d{0,2})?$/).nullish(), elevation_gain: z.string().regex(/^-?\d{0,6}(?:\.\d{0,2})?$/).nullish(), arcgis_item_id: z.string().max(32).optional(), track_point_count: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), geojson: z.unknown().nullish(), notes: z.string().optional(), route_link: z.string().max(500).optional(), owner: z.string().email(), is_public: z.boolean().optional(), photos: z.array(Photo), created_at: z.string().datetime({ offset: true }), updated_at: z.string().datetime({ offset: true }) });
+const RouteList = z.object({ id: z.number().int(), title: z.string().max(255).optional(), activity_date: z.string().datetime({ offset: true }).nullish(), activity_type: z.union([ActivityTypeEnum, BlankEnum]).optional(), distance: z.number(), duration: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), avg_pace: z.string().regex(/^-?\d{0,4}(?:\.\d{0,2})?$/).nullish(), elevation_gain: z.string().regex(/^-?\d{0,6}(?:\.\d{0,2})?$/).nullish(), arcgis_item_id: z.string().max(32).optional(), track_point_count: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), notes: z.string().optional(), route_link: z.string().max(500).optional(), owner: z.string().email(), is_public: z.boolean().optional(), photos: z.array(Photo), created_at: z.string().datetime({ offset: true }), updated_at: z.string().datetime({ offset: true }) });
 const RouteCreateRequest = z.object({ title: z.string().max(255).optional(), activity_date: z.string().datetime({ offset: true }).nullish(), activity_type: z.union([ActivityTypeEnum, BlankEnum]).optional(), distance: z.number(), duration: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), avg_pace: z.string().regex(/^-?\d{0,4}(?:\.\d{0,2})?$/).nullish(), elevation_gain: z.string().regex(/^-?\d{0,6}(?:\.\d{0,2})?$/).nullish(), arcgis_item_id: z.string().max(32).optional(), track_point_count: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), geojson: z.unknown().nullish(), notes: z.string().optional(), route_link: z.string().max(500).optional(), is_public: z.boolean().optional() });
 const RouteCreate = z.object({ id: z.number().int(), title: z.string().max(255).optional(), activity_date: z.string().datetime({ offset: true }).nullish(), activity_type: z.union([ActivityTypeEnum, BlankEnum]).optional(), distance: z.number(), duration: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), avg_pace: z.string().regex(/^-?\d{0,4}(?:\.\d{0,2})?$/).nullish(), elevation_gain: z.string().regex(/^-?\d{0,6}(?:\.\d{0,2})?$/).nullish(), arcgis_item_id: z.string().max(32).optional(), track_point_count: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), geojson: z.unknown().nullish(), notes: z.string().optional(), route_link: z.string().max(500).optional(), is_public: z.boolean().optional() });
+const Route = z.object({ id: z.number().int(), title: z.string().max(255).optional(), activity_date: z.string().datetime({ offset: true }).nullish(), activity_type: z.union([ActivityTypeEnum, BlankEnum]).optional(), distance: z.number(), duration: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), avg_pace: z.string().regex(/^-?\d{0,4}(?:\.\d{0,2})?$/).nullish(), elevation_gain: z.string().regex(/^-?\d{0,6}(?:\.\d{0,2})?$/).nullish(), arcgis_item_id: z.string().max(32).optional(), track_point_count: z.number().int().gte(-9223372036854776000).lte(9223372036854776000).nullish(), notes: z.string().optional(), route_link: z.string().max(500).optional(), owner: z.string().email(), is_public: z.boolean().optional(), photos: z.array(Photo), created_at: z.string().datetime({ offset: true }), updated_at: z.string().datetime({ offset: true }), geojson: z.unknown().nullish() });
 const PatchedRouteUpdateRequest = z.object({ title: z.string().min(1).max(255), activity_type: ActivityTypeEnum, notes: z.string(), is_public: z.boolean() }).partial();
 const PatchedPhotoTitleUpdateRequest = z.object({ title: z.string().max(255) }).partial();
 const ParseGpxRequestRequest = z.object({ file: z.instanceof(File) });
@@ -27,9 +28,10 @@ export const schemas = {
 	ActivityTypeEnum,
 	BlankEnum,
 	Photo,
-	Route,
+	RouteList,
 	RouteCreateRequest,
 	RouteCreate,
+	Route,
 	PatchedRouteUpdateRequest,
 	PatchedPhotoTitleUpdateRequest,
 	ParseGpxRequestRequest,
@@ -103,7 +105,7 @@ export const endpoints = makeApi([
 		alias: "route_list",
 		description: `API view to list routes visible to the user or create a new route.`,
 		requestFormat: "json",
-		response: z.array(Route),
+		response: z.array(RouteList),
 	},
 	{
 		method: "post",

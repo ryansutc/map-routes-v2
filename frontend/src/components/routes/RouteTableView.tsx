@@ -1,4 +1,4 @@
-import { schemas } from "@/generatedtypes/django_generated";
+import type { RouteListResponseDto } from "@/types/api";
 import { formatDate } from "@/utils/datetimeHelpers";
 import { formatDistance } from "@/utils/units";
 import { useStore } from "@/state/store";
@@ -17,9 +17,6 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
-import type { z } from "zod";
-
-type Route = z.infer<typeof schemas.Route>;
 
 const COLUMNS = ["Title", "Activity", "Date", "Distance", "Visibility"];
 const XL_COLUMNS = ["Uploaded"];
@@ -33,7 +30,10 @@ function SkeletonRows() {
       {Array.from({ length: 6 }).map((_, i) => (
         <TableRow key={i}>
           {COLUMNS.map((c) => (
-            <TableCell key={c} sx={c === "Visibility" ? visibilityColumnSx : undefined}>
+            <TableCell
+              key={c}
+              sx={c === "Visibility" ? visibilityColumnSx : undefined}
+            >
               <Skeleton variant="text" />
             </TableCell>
           ))}
@@ -47,7 +47,7 @@ export default function RouteTableView({
   routes,
   isLoading,
 }: {
-  routes: Route[];
+  routes: RouteListResponseDto[];
   isLoading?: boolean;
 }) {
   const navigate = useNavigate();
@@ -75,7 +75,10 @@ export default function RouteTableView({
               </TableCell>
             ))}
             {XL_COLUMNS.map((col) => (
-              <TableCell key={col} sx={{ display: { xs: "none", xl: "table-cell" } }}>
+              <TableCell
+                key={col}
+                sx={{ display: { xs: "none", xl: "table-cell" } }}
+              >
                 {col}
               </TableCell>
             ))}
