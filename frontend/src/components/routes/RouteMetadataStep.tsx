@@ -1,9 +1,6 @@
 import { useParseGpx } from "@/hooks/useParseGpx";
-import {
-  formatDistance,
-  formatElevation,
-  formatPace,
-} from "@/utils/units";
+import { formatDistance, formatElevation, formatPace } from "@/utils/units";
+import { formatDate } from "@/utils/datetimeHelpers";
 import { useStore } from "@/state/store";
 import {
   Alert,
@@ -185,7 +182,7 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
         >
           <TextField
             label="Date"
-            value={new Date(parsed.date).toLocaleDateString()}
+            value={formatDate(parsed.date, "mmm-dd-yyyy")}
             slotProps={{ input: { readOnly: true } }}
             size="small"
           />

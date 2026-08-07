@@ -65,7 +65,7 @@ class ParseGpxResponseSerializer(serializers.Serializer):
 
     arcgis_item_id = serializers.CharField()
     geojson = serializers.JSONField()
-    date = serializers.DateTimeField()
+    date = serializers.DateTimeField(allow_null=True)
     distance_m = serializers.FloatField()
     duration_s = serializers.FloatField(allow_null=True)
     avg_pace_decimal = serializers.FloatField(allow_null=True)

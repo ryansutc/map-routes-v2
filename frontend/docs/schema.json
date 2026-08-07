@@ -635,7 +635,8 @@
                     "geojson": {},
                     "date": {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "distance_m": {
                         "type": "number",
@@ -785,7 +786,8 @@
                     },
                     "activity_date": {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "activity_type": {
                         "oneOf": [
@@ -868,7 +870,6 @@
                     }
                 },
                 "required": [
-                    "activity_date",
                     "created_at",
                     "distance",
                     "id",
@@ -891,7 +892,8 @@
                     },
                     "activity_date": {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "activity_type": {
                         "oneOf": [
@@ -952,7 +954,6 @@
                     }
                 },
                 "required": [
-                    "activity_date",
                     "distance",
                     "id"
                 ]
@@ -967,7 +968,8 @@
                     },
                     "activity_date": {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "activity_type": {
                         "oneOf": [
@@ -1028,7 +1030,6 @@
                     }
                 },
                 "required": [
-                    "activity_date",
                     "distance"
                 ]
             }

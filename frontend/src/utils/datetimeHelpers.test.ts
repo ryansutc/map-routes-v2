@@ -1,5 +1,10 @@
 import { expect, test } from "vitest";
 import { formatDate } from "./datetimeHelpers";
+
+test("labels a missing GPX activity date", () => {
+  expect(formatDate(null)).toBe("Date unavailable");
+});
+
 test("formats ISO string as yyyy-mm-dd by default", () => {
   expect(formatDate("2007-04-25T07:00:00.000Z")).toBe("2007-04-25");
 });
