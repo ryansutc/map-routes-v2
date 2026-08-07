@@ -1,95 +1,90 @@
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
 import {
-  useRouteAnimation,
-  type AnimationPlaybackMode,
-} from "@/hooks/useRouteAnimation";
+  availablePlaybackModes,
+  isAnimationSessionActive,
+  resolvePlaybackMode,
+  type RoutePlaybackMode,
+  type TargetRouteDurationSec,
+} from "@/domain/routeAnimation";
+import type { RouteTrack } from "@/domain/timedTrack";
+import { useRouteAnimation } from "@/hooks/useRouteAnimation";
 import { useStore } from "@/state/store";
 import Map from "@arcgis/core/Map";
-import MapView from "@arcgis/core/views/MapView";
-import SceneView from "@arcgis/core/views/SceneView";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 interface RouteAnimationControllerProps {
   map: Map | null;
-  view: MapView | SceneView | null;
-  arcgisItemId?: string | null;
+  track: RouteTrack;
   activityDurationSec: number | null;
-  /** Notified when playback starts/stops so the page can lock map interaction. */
-  onPlayingChange?: (isPlaying: boolean) => void;
+  /** Notified for the full active session, including composed pauses. */
+  onSessionActiveChange?: (isActive: boolean) => void;
 }
 
 export function RouteAnimationController({
   map,
-  view,
-  arcgisItemId,
+  track,
   activityDurationSec,
-  onPlayingChange,
+  onSessionActiveChange,
 }: RouteAnimationControllerProps) {
-  const pointsPerSecond = useStore((state) => state.animationSpeed);
-  const playbackMode = useStore((state) => state.animationPlaybackMode);
-  const setPointsPerSecond = useStore((state) => state.setAnimationSpeed);
-  const setPlaybackMode = useStore((state) => state.setAnimationPlaybackMode);
-  const setAnimationProgress = useStore((state) => state.setAnimationProgress);
-
-  const { isPlaying, progress, pointCount, play, stop } = useRouteAnimation(
-    map,
-    view,
-    arcgisItemId,
-    { pointsPerSecond, playbackMode },
+  const targetDurationSec = useStore((state) => state.animationDurationSec);
+  const preferredPlaybackMode = useStore(
+    (state) => state.animationPlaybackMode,
   );
+  const setTargetDurationSec = useStore(
+    (state) => state.setAnimationDurationSec,
+  );
+  const setPreferredPlaybackMode = useStore(
+    (state) => state.setAnimationPlaybackMode,
+  );
+  const setAnimationDistanceProgress = useStore(
+    (state) => state.setAnimationDistanceProgress,
+  );
+  const playbackMode = resolvePlaybackMode(track, preferredPlaybackMode);
 
-  const progressRef = useRef(progress);
+  const { state, playbackProgress, distanceProgress, pointCount, play, stop } =
+    useRouteAnimation(map, track, {
+      targetDurationSec,
+      playbackMode,
+    });
+  const isSessionActive = isAnimationSessionActive(state);
 
   useEffect(() => {
-    progressRef.current = progress;
-  }, [progress]);
+    onSessionActiveChange?.(isSessionActive);
+  }, [isSessionActive, onSessionActiveChange]);
 
+  // Elevation is spatial, so publish marker distance rather than the selected
+  // playback timeline. Reset on unmount to avoid a stale cursor after routing.
   useEffect(() => {
-    onPlayingChange?.(isPlaying);
-  }, [isPlaying, onPlayingChange]);
-
-  // Publish progress so sibling views (the elevation profile) can render a
-  // cursor in step with the map marker. Reset on unmount so navigating away
-  // mid-playback can't leave a stale cursor behind.
-  useEffect(() => {
-    setAnimationProgress(progress);
-  }, [progress, setAnimationProgress]);
+    setAnimationDistanceProgress(distanceProgress);
+  }, [distanceProgress, setAnimationDistanceProgress]);
 
   useEffect(
     () => () => {
-      setAnimationProgress(0);
+      setAnimationDistanceProgress(0);
     },
-    [setAnimationProgress],
+    [setAnimationDistanceProgress],
   );
 
-  const handleSpeedChange = (pps: number) => {
-    setPointsPerSecond(pps);
-    if (isPlaying) {
-      stop();
-      window.setTimeout(() => play(progressRef.current), 0);
-    }
+  const handleDurationChange = (duration: TargetRouteDurationSec) => {
+    setTargetDurationSec(duration);
   };
 
-  const handlePlaybackModeChange = (mode: AnimationPlaybackMode) => {
-    setPlaybackMode(mode);
-    if (isPlaying) {
-      stop();
-      window.setTimeout(() => play(progressRef.current), 0);
-    }
+  const handlePlaybackModeChange = (mode: RoutePlaybackMode) => {
+    setPreferredPlaybackMode(mode);
   };
 
   return (
     <RouteAnimationControls
-      arcgisItemId={arcgisItemId}
-      isPlaying={isPlaying}
-      progress={progress}
+      state={state}
+      playbackProgress={playbackProgress}
       pointCount={pointCount}
-      pointsPerSecond={pointsPerSecond}
+      targetDurationSec={targetDurationSec}
       playbackMode={playbackMode}
+      availablePlaybackModes={availablePlaybackModes(track)}
       activityDurationSec={activityDurationSec}
-      onPlay={() => play()}
+      onPlay={play}
       onStop={stop}
-      onSpeedChange={handleSpeedChange}
+      onDurationChange={handleDurationChange}
       onPlaybackModeChange={handlePlaybackModeChange}
     />
   );

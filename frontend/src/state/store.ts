@@ -3,7 +3,13 @@ import type {} from "@redux-devtools/extension"; // required for devtools typing
 
 import { combine, devtools, persist } from "zustand/middleware";
 
-import type { AnimationPlaybackMode } from "@/hooks/useRouteAnimation";
+import {
+  DEFAULT_TARGET_ROUTE_DURATION_SEC,
+  isRoutePlaybackMode,
+  isTargetRouteDuration,
+  type RoutePlaybackMode,
+  type TargetRouteDurationSec,
+} from "@/domain/routeAnimation";
 import type { PageType } from "@/types/state_types";
 import type { UnitSystem } from "@/utils/units";
 import type { ExtractState } from "zustand";
@@ -29,19 +35,43 @@ type MapRouteState = {
   setListView: (view: ListView) => void;
   units: UnitSystem;
   setUnits: (units: UnitSystem) => void;
-  animationSpeed: number;
-  setAnimationSpeed: (animationSpeed: number) => void;
-  animationPlaybackMode: AnimationPlaybackMode;
-  setAnimationPlaybackMode: (
-    animationPlaybackMode: AnimationPlaybackMode,
+  animationDurationSec: TargetRouteDurationSec;
+  setAnimationDurationSec: (
+    animationDurationSec: TargetRouteDurationSec,
   ) => void;
+  animationPlaybackMode: RoutePlaybackMode;
+  setAnimationPlaybackMode: (animationPlaybackMode: RoutePlaybackMode) => void;
   /**
    * Live route-animation progress (0–1). Transient: updated ~20x/sec while
    * playback runs and never persisted. Always subscribe with a selector.
    */
-  animationProgress: number;
-  setAnimationProgress: (animationProgress: number) => void;
+  animationDistanceProgress: number;
+  setAnimationDistanceProgress: (animationDistanceProgress: number) => void;
 };
+
+type PersistedAnimationState = {
+  animationDurationSec?: unknown;
+  animationPlaybackMode?: unknown;
+  animationSpeed?: unknown;
+};
+
+export function migratePersistedAnimationState(persistedState: unknown) {
+  const persisted =
+    typeof persistedState === "object" && persistedState !== null
+      ? (persistedState as PersistedAnimationState & Record<string, unknown>)
+      : {};
+  const persistedPreferences = { ...persisted };
+  delete persistedPreferences.animationSpeed;
+  return {
+    ...persistedPreferences,
+    animationDurationSec: isTargetRouteDuration(persisted.animationDurationSec)
+      ? persisted.animationDurationSec
+      : DEFAULT_TARGET_ROUTE_DURATION_SEC,
+    animationPlaybackMode: isRoutePlaybackMode(persisted.animationPlaybackMode)
+      ? persisted.animationPlaybackMode
+      : "recorded",
+  };
+}
 
 export const useStore = create<MapRouteState>()(
   devtools(
@@ -54,9 +84,9 @@ export const useStore = create<MapRouteState>()(
           viewMode: "2d" as "2d" | "3d",
           listView: "cards" as ListView,
           units: "metric" as UnitSystem,
-          animationSpeed: 50,
-          animationPlaybackMode: "indexed" as AnimationPlaybackMode,
-          animationProgress: 0,
+          animationDurationSec: DEFAULT_TARGET_ROUTE_DURATION_SEC,
+          animationPlaybackMode: "recorded" as RoutePlaybackMode,
+          animationDistanceProgress: 0,
         } as MapRouteState,
         (set) => ({
           setPage: (page: PageType) => set({ page }, undefined, "page/setPage"),
@@ -79,11 +109,17 @@ export const useStore = create<MapRouteState>()(
           setUnits: (units: UnitSystem) => {
             set({ units }, undefined, "units/setUnits");
           },
-          setAnimationSpeed: (animationSpeed: number) => {
-            set({ animationSpeed }, undefined, "animation/setAnimationSpeed");
+          setAnimationDurationSec: (
+            animationDurationSec: TargetRouteDurationSec,
+          ) => {
+            set(
+              { animationDurationSec },
+              undefined,
+              "animation/setAnimationDurationSec",
+            );
           },
           setAnimationPlaybackMode: (
-            animationPlaybackMode: AnimationPlaybackMode,
+            animationPlaybackMode: RoutePlaybackMode,
           ) => {
             set(
               { animationPlaybackMode },
@@ -91,21 +127,24 @@ export const useStore = create<MapRouteState>()(
               "animation/setAnimationPlaybackMode",
             );
           },
-          setAnimationProgress: (animationProgress: number) => {
+          setAnimationDistanceProgress: (animationDistanceProgress: number) => {
             set(
-              { animationProgress },
+              { animationDistanceProgress },
               undefined,
-              "animation/setAnimationProgress",
+              "animation/setAnimationDistanceProgress",
             );
           },
         }),
       ),
       {
         name: "map-routes-store",
+        version: 1,
+        migrate: (persistedState) =>
+          migratePersistedAnimationState(persistedState),
         partialize: (state) => ({
           listView: state.listView,
           units: state.units,
-          animationSpeed: state.animationSpeed,
+          animationDurationSec: state.animationDurationSec,
           animationPlaybackMode: state.animationPlaybackMode,
         }),
       },

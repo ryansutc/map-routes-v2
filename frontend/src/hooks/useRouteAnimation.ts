@@ -4,232 +4,114 @@ import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-import MapView from "@arcgis/core/views/MapView";
-import SceneView from "@arcgis/core/views/SceneView";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { shouldUpdateProgress } from "./useRouteAnimationUtils";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  createRouteAnimationEngine,
+  type AnimationPauseReason,
+  type RouteAnimationSettings,
+  type RoutePlaybackMode,
+  type TargetRouteDurationSec,
+} from "@/domain/routeAnimation";
+import type { RouteTrack } from "@/domain/timedTrack";
 
 const ANIMATION_LAYER_ID = "routeAnimationLayer";
-const PORTAL_GEOJSON_URL =
-  "https://www.arcgis.com/sharing/rest/content/items/{itemId}/data";
-
-export type AnimationPlaybackMode = "indexed" | "distance";
+const DEFAULT_LINE_COLOR: [number, number, number, number] = [
+  226, 119, 40, 255,
+];
+const DEFAULT_MARKER_COLOR: [number, number, number, number] = [
+  255, 50, 50, 255,
+];
 
 interface AnimationOptions {
-  pointsPerSecond?: number;
+  targetDurationSec: TargetRouteDurationSec;
+  playbackMode: RoutePlaybackMode;
   lineColor?: [number, number, number, number];
   lineWidth?: number;
   markerColor?: [number, number, number, number];
   markerSize?: number;
-  /** Densify sparse routes to this many points for smooth playback */
-  targetPoints?: number;
-  /** Choose how the animation advances along the route */
-  playbackMode?: AnimationPlaybackMode;
 }
 
-interface UseRouteAnimationReturn {
-  isPlaying: boolean;
-  progress: number; // 0–1
-  pointCount: number | null;
-  play: (startProgress?: number) => void;
-  stop: () => void;
-}
-
-function flattenGeoJSONCoords(
-  geojson: GeoJSON.FeatureCollection | GeoJSON.Feature,
-): number[][] {
-  const features =
-    geojson.type === "FeatureCollection" ? geojson.features : [geojson];
-
-  const coords: number[][] = [];
-  for (const feature of features) {
-    const geom = feature.geometry;
-    if (!geom) continue;
-    if (geom.type === "LineString") {
-      coords.push(...(geom.coordinates as number[][]));
-    } else if (geom.type === "MultiLineString") {
-      for (const segment of geom.coordinates as number[][][]) {
-        coords.push(...segment);
-      }
-    }
+function pathsFromTrack(track: RouteTrack): number[][][] {
+  const paths: number[][][] = [];
+  for (const point of track.profilePoints) {
+    const path = paths[point.segmentIndex] ?? [];
+    path.push([point.lon, point.lat, point.elevation]);
+    paths[point.segmentIndex] = path;
   }
-  return coords;
-}
-
-/**
- * Resamples coords to exactly targetPoints by walking cumulative arc length.
- * Handles both sparse (densify) and dense (downsample) routes.
- */
-function resamplePath(coords: number[][], targetPoints: number): number[][] {
-  if (coords.length < 2) return coords;
-  if (coords.length <= targetPoints) {
-    // Dense enough already — no need to densify
-    // But if way over target, downsample via uniform stride
-    if (coords.length <= targetPoints * 1.5) return coords;
-  }
-
-  // Compute cumulative distances
-  const dists: number[] = [0];
-  for (let i = 1; i < coords.length; i++) {
-    const [x0, y0] = coords[i - 1] as [number, number];
-    const [x1, y1] = coords[i] as [number, number];
-    const dx = x1 - x0,
-      dy = y1 - y0;
-    dists.push(dists[i - 1]! + Math.sqrt(dx * dx + dy * dy));
-  }
-  const totalDist = dists[dists.length - 1]!;
-
-  const result: number[][] = [];
-  let srcIdx = 0;
-  for (let t = 0; t < targetPoints; t++) {
-    const targetDist = (t / (targetPoints - 1)) * totalDist;
-    while (srcIdx < dists.length - 2 && dists[srcIdx + 1]! < targetDist)
-      srcIdx++;
-    const d0 = dists[srcIdx]!,
-      d1 = dists[srcIdx + 1] ?? d0;
-    const segLen = d1 - d0;
-    const frac = segLen > 0 ? (targetDist - d0) / segLen : 0;
-    const [x0, y0] = coords[srcIdx] as [number, number];
-    const [x1, y1] = (coords[srcIdx + 1] ?? coords[srcIdx]) as [number, number];
-    result.push([x0 + (x1 - x0) * frac, y0 + (y1 - y0) * frac]);
-  }
-  return result;
-}
-
-function buildCumulativeDistances(coords: number[][]): number[] {
-  const distances: number[] = [0];
-  for (let i = 1; i < coords.length; i++) {
-    const [x0, y0] = coords[i - 1] as [number, number];
-    const [x1, y1] = coords[i] as [number, number];
-    const dx = x1 - x0,
-      dy = y1 - y0;
-    distances.push(distances[i - 1]! + Math.sqrt(dx * dx + dy * dy));
-  }
-  return distances;
-}
-
-function interpolatePointAtDistance(
-  coords: number[][],
-  distances: number[],
-  targetDistance: number,
-): [number, number] {
-  if (coords.length === 0) return [0, 0];
-  const lastDist = distances[distances.length - 1]!;
-  if (targetDistance <= 0) return coords[0] as [number, number];
-  if (targetDistance >= lastDist)
-    return coords[coords.length - 1] as [number, number];
-
-  let idx = 0;
-  while (idx < distances.length - 2 && distances[idx + 1]! < targetDistance)
-    idx++;
-  const d0 = distances[idx]!,
-    d1 = distances[idx + 1]!;
-  const frac = d1 > d0 ? (targetDistance - d0) / (d1 - d0) : 0;
-  const [x0, y0] = coords[idx] as [number, number];
-  const [x1, y1] = coords[idx + 1] as [number, number];
-  return [x0 + (x1 - x0) * frac, y0 + (y1 - y0) * frac];
+  return paths;
 }
 
 export function useRouteAnimation(
   map: __esri.Map | null,
-  _view: MapView | SceneView | null,
-  arcgisItemId: string | null | undefined,
-  options: AnimationOptions = {},
-): UseRouteAnimationReturn {
+  track: RouteTrack,
+  options: AnimationOptions,
+) {
   const {
-    pointsPerSecond = 50,
-    lineColor = [226, 119, 40, 255],
+    targetDurationSec,
+    playbackMode,
+    lineColor = DEFAULT_LINE_COLOR,
     lineWidth = 3,
-    markerColor = [255, 50, 50, 255],
+    markerColor = DEFAULT_MARKER_COLOR,
     markerSize = 10,
-    targetPoints = 1000,
-    playbackMode = "indexed",
   } = options;
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  // Tagged with the request that produced it, so the count can be derived
-  // during render instead of being reset from inside the fetch effect.
-  const [fetchedPoints, setFetchedPoints] = useState<{
-    itemId: string;
-    targetPoints: number;
-    count: number;
-  } | null>(null);
+  const initialSettings = useMemo<RouteAnimationSettings>(
+    () => ({ targetDurationSec, playbackMode }),
+    // Settings changes are applied through configure so the current route
+    // position survives them; only route data creates a new session engine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [track],
+  );
+  const engine = useMemo(
+    () => createRouteAnimationEngine(track, initialSettings),
+    [initialSettings, track],
+  );
+  const snapshot = useSyncExternalStore(
+    engine.subscribe,
+    engine.getSnapshot,
+    engine.getSnapshot,
+  );
 
-  const pointCount =
-    fetchedPoints?.itemId === arcgisItemId &&
-    fetchedPoints?.targetPoints === targetPoints
-      ? fetchedPoints.count
-      : null;
-
-  const rafRef = useRef<number | null>(null);
-  const coordsRef = useRef<number[][] | null>(null);
-  const distanceLookupRef = useRef<number[] | null>(null);
-  const layerRef = useRef<GraphicsLayer | null>(null);
-  const staticLineGraphicRef = useRef<Graphic | null>(null);
-  const markerGraphicRef = useRef<Graphic | null>(null);
-  const lastProgressFrameRef = useRef<number>(0);
-  const lastProgressValueRef = useRef<number>(0);
-  const lastMarkerFrameRef = useRef<number>(0);
-
-  // Fetch and cache coordinates when itemId or map changes
   useEffect(() => {
-    if (!arcgisItemId) return;
-    coordsRef.current = null;
-    distanceLookupRef.current = null;
+    engine.configure({ targetDurationSec, playbackMode });
+  }, [engine, playbackMode, targetDurationSec]);
 
-    // Guards against a slow response for a previous route landing after the
-    // user has already navigated to a different one.
-    let cancelled = false;
+  useEffect(() => () => engine.destroy(), [engine]);
 
-    const url = PORTAL_GEOJSON_URL.replace("{itemId}", arcgisItemId);
-    fetch(url)
-      .then((r) => r.json())
-      .then((geojson: GeoJSON.FeatureCollection | GeoJSON.Feature) => {
-        if (cancelled) return;
-        const raw = flattenGeoJSONCoords(geojson);
-        const resampled = resamplePath(raw, targetPoints);
-        coordsRef.current = resampled;
-        distanceLookupRef.current = buildCumulativeDistances(resampled);
-        setFetchedPoints({
-          itemId: arcgisItemId,
-          targetPoints,
-          count: resampled.length,
-        });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        console.error("useRouteAnimation: failed to fetch GeoJSON", err);
-      });
-
-    return () => {
-      cancelled = true;
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    let releaseVisibilityPause: (() => void) | null = null;
+    const updateVisibilityPause = () => {
+      if (document.hidden && !releaseVisibilityPause) {
+        releaseVisibilityPause = engine.acquirePause("document-hidden");
+      } else if (!document.hidden && releaseVisibilityPause) {
+        releaseVisibilityPause();
+        releaseVisibilityPause = null;
+      }
     };
-  }, [arcgisItemId, targetPoints]);
+    updateVisibilityPause();
+    document.addEventListener("visibilitychange", updateVisibilityPause);
+    return () => {
+      document.removeEventListener("visibilitychange", updateVisibilityPause);
+      releaseVisibilityPause?.();
+    };
+  }, [engine]);
 
-  // Set up (or tear down) the GraphicsLayer on the map
   useEffect(() => {
     if (!map) return;
 
     const layer = new GraphicsLayer({ id: ANIMATION_LAYER_ID });
-    map.add(layer);
-    layerRef.current = layer;
-
-    const lineSym = new SimpleLineSymbol({
-      color: lineColor,
-      width: lineWidth,
-      cap: "round",
-      join: "round",
-    });
-    const markerSym = new SimpleMarkerSymbol({
-      color: markerColor,
-      size: markerSize,
-      outline: { color: [255, 255, 255, 200], width: 1.5 },
-    });
-
     const staticLineGraphic = new Graphic({
-      geometry: new Polyline({ paths: [[]], spatialReference: { wkid: 4326 } }),
-      symbol: lineSym,
+      geometry: new Polyline({
+        paths: pathsFromTrack(track),
+        spatialReference: { wkid: 4326 },
+      }),
+      symbol: new SimpleLineSymbol({
+        color: lineColor,
+        width: lineWidth,
+        cap: "round",
+        join: "round",
+      }),
     });
     const markerGraphic = new Graphic({
       geometry: new Point({
@@ -237,162 +119,45 @@ export function useRouteAnimation(
         latitude: 0,
         spatialReference: { wkid: 4326 },
       }),
-      symbol: markerSym,
+      symbol: new SimpleMarkerSymbol({
+        color: markerColor,
+        size: markerSize,
+        outline: { color: [255, 255, 255, 200], width: 1.5 },
+      }),
       visible: false,
     });
 
     layer.addMany([staticLineGraphic, markerGraphic]);
-    staticLineGraphicRef.current = staticLineGraphic;
-    markerGraphicRef.current = markerGraphic;
+    map.add(layer);
 
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      map.remove(layer);
-      layerRef.current = null;
-      staticLineGraphicRef.current = null;
-      markerGraphicRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map]);
-
-  const stop = useCallback(() => {
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    setIsPlaying(false);
-    setProgress(0);
-    lastProgressValueRef.current = 0;
-    markerGraphicRef.current?.set("visible", false);
-  }, []);
-
-  const play = useCallback(
-    (startProgress = 0) => {
-      const coords = coordsRef.current;
-      if (!coords || coords.length < 2) {
-        console.warn("useRouteAnimation: coordinates not ready yet");
-        return;
-      }
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-
-      const routeCoords = coords;
-      const total = routeCoords.length;
-      const durationMs = (total / pointsPerSecond) * 1000;
-      const offsetMs = startProgress * durationMs;
-      let startTime: number | null = null;
-
-      lastProgressFrameRef.current = 0;
-      lastProgressValueRef.current = startProgress;
-      lastMarkerFrameRef.current = 0;
-
-      // Draw the full route as a static line once
-      staticLineGraphicRef.current?.set(
+    const unsubscribe = engine.subscribeToFrames((frameSnapshot) => {
+      const position = frameSnapshot.position;
+      markerGraphic.set(
+        "visible",
+        frameSnapshot.state !== "idle" && !!position,
+      );
+      if (!position) return;
+      markerGraphic.set(
         "geometry",
-        new Polyline({
-          paths: [routeCoords],
+        new Point({
+          longitude: position.coordinate[0],
+          latitude: position.coordinate[1],
           spatialReference: { wkid: 4326 },
         }),
       );
-
-      markerGraphicRef.current?.set("visible", true);
-      setIsPlaying(true);
-      setProgress(startProgress);
-
-      function frame(timestamp: number) {
-        if (!startTime) startTime = timestamp - offsetMs;
-        const elapsed = timestamp - startTime;
-        const pct = Math.min(elapsed / durationMs, 1);
-
-        let position: [number, number];
-        if (
-          playbackMode === "distance" &&
-          distanceLookupRef.current &&
-          distanceLookupRef.current.length === total
-        ) {
-          const totalDistance = distanceLookupRef.current[total - 1]!;
-          const targetDistance = pct * totalDistance;
-          position = interpolatePointAtDistance(
-            routeCoords,
-            distanceLookupRef.current,
-            targetDistance,
-          );
-        } else {
-          const pointIdx = Math.max(0, Math.floor(pct * (total - 1)));
-          position = routeCoords[pointIdx] as [number, number];
-        }
-        const [lng, lat] = position;
-
-        const markerShouldUpdate = timestamp - lastMarkerFrameRef.current >= 33;
-
-        if (markerShouldUpdate) {
-          lastMarkerFrameRef.current = timestamp;
-          markerGraphicRef.current?.set(
-            "geometry",
-            new Point({
-              longitude: lng,
-              latitude: lat,
-              spatialReference: { wkid: 4326 },
-            }),
-          );
-        }
-
-        const shouldUpdate = shouldUpdateProgress({
-          now: timestamp,
-          lastUpdateTime: lastProgressFrameRef.current,
-          lastProgress: lastProgressValueRef.current,
-          nextProgress: pct,
-          // ~20fps / 200 steps: smooth enough for the elevation-profile cursor
-          // to track the map marker without re-rendering subscribers per frame.
-          intervalMs: 50,
-          threshold: 0.005,
-        });
-
-        if (shouldUpdate) {
-          lastProgressFrameRef.current = timestamp;
-          lastProgressValueRef.current = pct;
-          setProgress(pct);
-        }
-
-        if (pct < 1) {
-          rafRef.current = requestAnimationFrame(frame);
-        } else {
-          lastProgressFrameRef.current = timestamp;
-          lastProgressValueRef.current = 1;
-          setProgress(1);
-          rafRef.current = null;
-          setIsPlaying(false);
-        }
-      }
-
-      rafRef.current = requestAnimationFrame(frame);
-    },
-    [pointsPerSecond, playbackMode],
-  );
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-
-    const handleVisibilityChange = () => {
-      if (document.hidden && rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    });
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      unsubscribe();
+      map.remove(layer);
     };
-  }, []);
+  }, [engine, lineColor, lineWidth, map, markerColor, markerSize, track]);
 
-  // Stop animation on unmount
-  useEffect(
-    () => () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    },
-    [],
-  );
-
-  return { isPlaying, progress, pointCount, play, stop };
+  return {
+    ...snapshot,
+    pointCount: track.profilePoints.length,
+    play: engine.play,
+    stop: engine.stop,
+    acquirePause: (reason: AnimationPauseReason) => engine.acquirePause(reason),
+  };
 }

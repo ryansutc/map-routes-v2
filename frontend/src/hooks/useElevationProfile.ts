@@ -5,8 +5,7 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import Point from "@arcgis/core/geometry/Point";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
-import type { FeatureCollection } from "geojson";
-import { buildRouteTrack, type TrackProfilePoint } from "@/domain/timedTrack";
+import type { RouteTrack, TrackProfilePoint } from "@/domain/timedTrack";
 
 export type ProfilePoint = Pick<
   TrackProfilePoint,
@@ -23,7 +22,7 @@ const hoverSymbol = new SimpleMarkerSymbol({
 });
 
 export function useElevationProfile(
-  geojson: FeatureCollection | null | undefined,
+  track: RouteTrack,
   view: MapView | SceneView | null,
 ): {
   profilePoints: ProfilePoint[];
@@ -46,14 +45,12 @@ export function useElevationProfile(
   }, [view]);
 
   const { profilePoints, hasElevation } = useMemo(() => {
-    if (!geojson) return { profilePoints: [], hasElevation: false };
-
-    const points = [...buildRouteTrack(geojson).profilePoints];
+    const points = [...track.profilePoints];
 
     const hasElev = points.length > 0 && points.some((p) => p.elevation !== 0);
 
     return { profilePoints: points, hasElevation: hasElev };
-  }, [geojson]);
+  }, [track]);
 
   const onHover = (index: number) => {
     const layer = layerRef.current;
