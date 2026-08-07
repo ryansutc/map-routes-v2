@@ -1,4 +1,4 @@
-import { schemas } from "@/generatedtypes/django_generated";
+import type { RouteListResponseDto } from "@/types/api";
 import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
 import { formatDate } from "@/utils/datetimeHelpers";
 import { formatDistance } from "@/utils/units";
@@ -16,20 +16,17 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
-import type { z } from "zod";
-
-type Route = z.infer<typeof schemas.Route>;
 
 const PLACEHOLDER_IMG =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 180'><rect width='320' height='180' fill='%23e0e0e0'/><text x='50%' y='50%' fill='%23888' font-family='sans-serif' font-size='16' text-anchor='middle' dominant-baseline='middle'>No photo</text></svg>";
 
-function thumbnailFor(route: Route): string {
+function thumbnailFor(route: RouteListResponseDto): string {
   const first = route.photos?.[0]?.url;
   if (!first) return PLACEHOLDER_IMG;
   return dropboxShareUrlToDirectDownload(first) || first;
 }
 
-function RouteCard({ route }: { route: Route }) {
+function RouteCard({ route }: { route: RouteListResponseDto }) {
   const navigate = useNavigate();
   const units = useStore((s) => s.units);
   return (
@@ -123,7 +120,7 @@ export default function RouteCardGrid({
   routes,
   isLoading,
 }: {
-  routes: Route[];
+  routes: RouteListResponseDto[];
   isLoading?: boolean;
 }) {
   if (isLoading) {

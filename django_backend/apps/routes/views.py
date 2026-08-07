@@ -22,6 +22,7 @@ from .serializers import (
     ParseGpxRequestSerializer,
     ParseGpxResponseSerializer,
     RouteCreateSerializer,
+    RouteListSerializer,
     RouteSerializer,
     RouteUpdateSerializer,
 )
@@ -46,22 +47,16 @@ class RouteListCreateView(generics.ListCreateAPIView):
         """Return the write serializer for POST, read serializer otherwise."""
         if self.request.method == "POST":
             return RouteCreateSerializer
-        return RouteSerializer
+        return RouteListSerializer
 
     def get_queryset(self) -> QuerySet[Route]:
         """Return routes owned by the user plus all public routes."""
         user = self.request.user
         if user.is_authenticated:
-            return (
-                Route.objects.filter(Q(owner=user.email) | Q(is_public=True))
-                .prefetch_related("photos")
-                .order_by("-activity_date")
-            )
-        return (
-            Route.objects.filter(is_public=True)
-            .prefetch_related("photos")
-            .order_by("-activity_date")
-        )
+            queryset = Route.objects.filter(Q(owner=user.email) | Q(is_public=True))
+        else:
+            queryset = Route.objects.filter(is_public=True)
+        return queryset.defer("geojson").prefetch_related("photos").order_by("-activity_date")
 
     def perform_create(self, serializer: RouteCreateSerializer) -> None:
         """Save the new route with the requesting user as owner."""

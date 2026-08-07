@@ -21,37 +21,48 @@ class PhotoSerializer(serializers.ModelSerializer):
         return obj.latitude is not None and obj.longitude is not None
 
 
-class RouteSerializer(serializers.ModelSerializer):
-    """Serializer for reading Route instances, including nested photos."""
+_ROUTE_LIST_FIELDS = [
+    "id",
+    "title",
+    "activity_date",
+    "activity_type",
+    "distance",
+    "duration",
+    "avg_pace",
+    "elevation_gain",
+    "arcgis_item_id",
+    "track_point_count",
+    "notes",
+    "route_link",
+    "owner",
+    "is_public",
+    "photos",
+    "created_at",
+    "updated_at",
+]
+
+
+class RouteListSerializer(serializers.ModelSerializer):
+    """Serializer for route collections without the canonical GeoJSON payload."""
 
     photos = PhotoSerializer(many=True, read_only=True)
     distance = serializers.FloatField()
 
     class Meta:
-        """Meta options for RouteSerializer."""
+        """Meta options for RouteListSerializer."""
 
         model = Route
-        fields = [
-            "id",
-            "title",
-            "activity_date",
-            "activity_type",
-            "distance",
-            "duration",
-            "avg_pace",
-            "elevation_gain",
-            "arcgis_item_id",
-            "track_point_count",
-            "geojson",
-            "notes",
-            "route_link",
-            "owner",
-            "is_public",
-            "photos",
-            "created_at",
-            "updated_at",
-        ]
+        fields = _ROUTE_LIST_FIELDS
         read_only_fields = ["owner", "created_at", "updated_at"]
+
+
+class RouteSerializer(RouteListSerializer):
+    """Serializer for route detail, including canonical GeoJSON and nested photos."""
+
+    class Meta(RouteListSerializer.Meta):
+        """Add canonical route observations to the collection representation."""
+
+        fields = [*_ROUTE_LIST_FIELDS, "geojson"]
 
 
 class ParseGpxRequestSerializer(serializers.Serializer):
