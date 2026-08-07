@@ -9,9 +9,10 @@ type formatType = "yyyy-mm-dd" | "mmm-dd-yyyy" | "mmm-yyyy";
  * @returns yyy-mm-dd
  */
 export const formatDate = (
-  dateString: string | Date,
-  format: formatType = "yyyy-mm-dd"
+  dateString: string | Date | null | undefined,
+  format: formatType = "yyyy-mm-dd",
 ): string => {
+  if (dateString == null) return "Date unavailable";
   const date = new Date(dateString);
   if (format === "mmm-dd-yyyy") {
     const options: Intl.DateTimeFormatOptions = {

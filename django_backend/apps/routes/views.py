@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 from apps.shared_utils.error_utils import print_debug_error
 
 from .arcgis import get_token, share_item_public, upload_geojson
-from .gpx_utils import parse_gpx
+from .gpx_utils import geometry_only_geojson, parse_gpx
 from .models import Route
 from .serializers import (
     ParseGpxRequestSerializer,
@@ -131,7 +131,7 @@ class ParseGpxView(APIView):
 
         try:
             token = get_token(username, password)
-            geojson_str = json.dumps(parsed["geojson"])
+            geojson_str = json.dumps(geometry_only_geojson(parsed["geojson"]))
             item_id = upload_geojson(token, username, geojson_str, title=title)
             share_item_public(token, username, item_id)
         except Exception as exc:
@@ -157,7 +157,11 @@ class ParseGpxView(APIView):
 def _count_geojson_coords(geojson: dict) -> int:
     """Return the total number of coordinate points across all LineString/MultiLineString features."""
     count = 0
-    features = geojson.get("features", [geojson]) if geojson.get("type") == "FeatureCollection" else [geojson]
+    features = (
+        geojson.get("features", [geojson])
+        if geojson.get("type") == "FeatureCollection"
+        else [geojson]
+    )
     for feature in features:
         geom = feature.get("geometry") or {}
         if geom.get("type") == "LineString":

@@ -18,7 +18,7 @@ class Route(models.Model):
     """A map route with activity metadata and optional photos."""
 
     title = models.CharField(max_length=255, blank=True)
-    activity_date = models.DateTimeField()
+    activity_date = models.DateTimeField(null=True, blank=True)
     activity_type = models.CharField(max_length=20, choices=ActivityType, blank=True)
     distance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     duration = models.IntegerField(null=True, blank=True)
