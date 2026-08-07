@@ -8,6 +8,7 @@ import RouteInfoContainer, {
 import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery, { PhotoLightbox } from "@/components/routes/PhotoGallery";
 import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
+import { buildRouteTrack, type RouteTrack } from "@/domain/timedTrack";
 import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useMapInteractionLock } from "@/hooks/useMapInteractionLock";
 import { useRoute } from "@/hooks/useRoute.tsx";
@@ -26,7 +27,6 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type { FeatureCollection } from "geojson";
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -54,6 +54,7 @@ interface RouteMapOverlaysProps {
   map: Map | null;
   view: MapView | SceneView | null;
   routeItem: RouteItem | undefined;
+  routeTrack: RouteTrack;
   error: Error | null;
   isLoading: boolean;
   isPreview: boolean;
@@ -67,6 +68,7 @@ function RouteMapOverlays({
   map,
   view,
   routeItem,
+  routeTrack,
   error,
   isLoading,
   isPreview,
@@ -98,17 +100,16 @@ function RouteMapOverlays({
           />
         </>
       )}
-      {/* Kept mounted across preview/fullscreen toggles — unmounting would
-          drop the animation layer and refetch the route GeoJSON. */}
+      {/* Kept mounted across preview/fullscreen toggles so the active playback
+          session and its animation layer survive the layout change. */}
       <Box sx={{ display: isPreview ? "none" : "contents" }}>
         {ready && <Toggle3d disabled={isAnimating} />}
         {map && view && (
           <RouteAnimationController
             map={map}
-            view={view}
-            arcgisItemId={routeItem?.arcgis_item_id}
+            track={routeTrack}
             activityDurationSec={routeItem?.duration ?? null}
-            onPlayingChange={onPlayingChange}
+            onSessionActiveChange={onPlayingChange}
           />
         )}
       </Box>
@@ -123,6 +124,10 @@ function RouteDetail() {
   const { data: routeItem, isLoading, error, isError } = useRoute(routeId);
   const user = useStore((state) => state.user);
   const isOwner = routeItem?.owner === user;
+  const routeTrack = useMemo(
+    () => buildRouteTrack(routeItem?.geojson),
+    [routeItem?.geojson],
+  );
 
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
@@ -174,10 +179,7 @@ function RouteDetail() {
   };
 
   const { profilePoints, hasElevation, onHover, onHoverEnd } =
-    useElevationProfile(
-      routeItem?.geojson as FeatureCollection | null | undefined,
-      view,
-    );
+    useElevationProfile(routeTrack, view);
 
   const handleMapClick = (e: __esri.ViewClickEvent) => {
     const coords = `${
@@ -207,6 +209,7 @@ function RouteDetail() {
         map={map}
         view={view}
         routeItem={routeItem}
+        routeTrack={routeTrack}
         error={isError ? error : null}
         isLoading={isLoading}
         isPreview={isPreview}

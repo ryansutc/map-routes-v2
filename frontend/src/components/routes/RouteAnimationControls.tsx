@@ -1,4 +1,10 @@
 import AnimationSettingsPopover from "@/components/AnimationSettingsPopover";
+import {
+  isAnimationSessionActive,
+  type AnimationLifecycleState,
+  type RoutePlaybackMode,
+  type TargetRouteDurationSec,
+} from "@/domain/routeAnimation";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
 import {
@@ -10,33 +16,34 @@ import {
 } from "@mui/material";
 
 interface RouteAnimationControlsProps {
-  arcgisItemId?: string | null;
-  isPlaying: boolean;
-  progress: number;
-  pointCount: number | null;
-  pointsPerSecond: number;
-  playbackMode: "indexed" | "distance";
+  state: AnimationLifecycleState;
+  playbackProgress: number;
+  pointCount: number;
+  targetDurationSec: TargetRouteDurationSec;
+  playbackMode: RoutePlaybackMode;
+  availablePlaybackModes: readonly RoutePlaybackMode[];
   activityDurationSec: number | null;
   onPlay: () => void;
   onStop: () => void;
-  onSpeedChange: (pps: number) => void;
-  onPlaybackModeChange: (mode: "indexed" | "distance") => void;
+  onDurationChange: (duration: TargetRouteDurationSec) => void;
+  onPlaybackModeChange: (mode: RoutePlaybackMode) => void;
 }
 
 export function RouteAnimationControls({
-  arcgisItemId,
-  isPlaying,
-  progress,
+  state,
+  playbackProgress,
   pointCount,
-  pointsPerSecond,
+  targetDurationSec,
   playbackMode,
+  availablePlaybackModes,
   activityDurationSec,
   onPlay,
   onStop,
-  onSpeedChange,
+  onDurationChange,
   onPlaybackModeChange,
 }: RouteAnimationControlsProps) {
-  if (!arcgisItemId) return null;
+  if (pointCount < 2) return null;
+  const isActive = isAnimationSessionActive(state);
 
   return (
     <Box
@@ -56,18 +63,18 @@ export function RouteAnimationControls({
         minWidth: 200,
       }}
     >
-      <Tooltip title={isPlaying ? "Stop" : "Replay route"}>
+      <Tooltip title={isActive ? "Stop" : "Replay route"}>
         <IconButton
           size="small"
-          onClick={isPlaying ? onStop : onPlay}
+          onClick={isActive ? onStop : onPlay}
           sx={{ color: "white" }}
         >
-          {isPlaying ? <StopIcon /> : <PlayArrowIcon />}
+          {isActive ? <StopIcon /> : <PlayArrowIcon />}
         </IconButton>
       </Tooltip>
       <LinearProgress
         variant="determinate"
-        value={progress * 100}
+        value={playbackProgress * 100}
         sx={{ flex: 1, borderRadius: 1, height: 6 }}
       />
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -75,14 +82,14 @@ export function RouteAnimationControls({
           variant="caption"
           sx={{ color: "white", fontWeight: 600, whiteSpace: "nowrap" }}
         >
-          {pointsPerSecond}/s
+          {targetDurationSec}s
         </Typography>
         <AnimationSettingsPopover
-          pointsPerSecond={pointsPerSecond}
-          pointCount={pointCount}
+          targetDurationSec={targetDurationSec}
           playbackMode={playbackMode}
+          availablePlaybackModes={availablePlaybackModes}
           activityDurationSec={activityDurationSec}
-          onSpeedChange={onSpeedChange}
+          onDurationChange={onDurationChange}
           onPlaybackModeChange={onPlaybackModeChange}
         />
       </Box>
