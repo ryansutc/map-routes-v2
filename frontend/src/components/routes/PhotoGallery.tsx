@@ -23,11 +23,15 @@ export function PhotoLightbox({
   index,
   onIndexChange,
   onClose,
+  onImageLoad,
+  navigationEnabled = true,
 }: {
   photos: Photo[];
   index: number | null;
   onIndexChange: (index: number) => void;
   onClose: () => void;
+  onImageLoad?: () => void;
+  navigationEnabled?: boolean;
 }) {
   const open = index !== null && photos.length > 0;
 
@@ -90,7 +94,7 @@ export function PhotoLightbox({
           ✕
         </IconButton>
 
-        {photos.length > 1 && (
+        {navigationEnabled && photos.length > 1 && (
           <>
             <IconButton
               onClick={prev}
@@ -125,6 +129,7 @@ export function PhotoLightbox({
           <img
             src={resolveUrl(current.url)}
             alt={current.title ?? `Photo ${index + 1}`}
+            onLoad={onImageLoad}
             style={{
               maxWidth: "100%",
               maxHeight: "80vh",

@@ -58,6 +58,10 @@ export type RouteAnimationEngine = {
   play: () => void;
   stop: () => void;
   acquirePause: (reason: AnimationPauseReason) => () => void;
+  pauseAtCursor: (
+    cursor: TrackCursor,
+    reason: AnimationPauseReason,
+  ) => () => void;
   configure: (settings: RouteAnimationSettings) => void;
   destroy: () => void;
 };
@@ -344,6 +348,35 @@ export function createRouteAnimationEngine(
 
   const routeDurationMs = () => settings.targetDurationSec * 1000;
 
+  const acquirePause = (reason: AnimationPauseReason) => {
+    if (destroyed) return () => {};
+    const token = Symbol(reason);
+    const leases = pauseLeases.get(reason) ?? new Set<symbol>();
+    leases.add(token);
+    pauseLeases.set(reason, leases);
+    if (state === "playing") {
+      cancelScheduledFrame();
+      state = "paused";
+      lastFrameAt = null;
+    }
+    forcePublish();
+
+    let released = false;
+    return () => {
+      if (destroyed || released) return;
+      released = true;
+      const activeLeases = pauseLeases.get(reason);
+      if (!activeLeases?.delete(token)) return;
+      if (activeLeases.size === 0) pauseLeases.delete(reason);
+      if (state === "paused" && pauseLeases.size === 0) {
+        state = "playing";
+        lastFrameAt = null;
+      }
+      forcePublish();
+      scheduleFrame();
+    };
+  };
+
   const frame = (timestamp: number) => {
     frameRequestId = null;
     if (destroyed || state !== "playing") return;
@@ -353,20 +386,26 @@ export function createRouteAnimationEngine(
     elapsedPlaybackMs += deltaMs;
     if (deltaMs > 0) rebasedPosition = null;
     playbackProgress = Math.min(1, elapsedPlaybackMs / routeDurationMs());
-    if (playbackProgress >= 1) state = "completed";
+    const reachedEnd = playbackProgress >= 1;
     updateSnapshot();
     emitFrame();
 
     const uiElapsed = timestamp - lastUiUpdateAt;
     const uiProgressDelta = Math.abs(playbackProgress - lastUiProgress);
     if (
-      state === "completed" ||
+      reachedEnd ||
       uiElapsed >= UI_UPDATE_INTERVAL_MS ||
       uiProgressDelta >= UI_PROGRESS_THRESHOLD
     ) {
       lastUiUpdateAt = timestamp;
       lastUiProgress = playbackProgress;
       emitUi();
+    }
+
+    if (reachedEnd && state === "playing") {
+      state = "completed";
+      forcePublish();
+      return;
     }
 
     if (state === "playing") {
@@ -407,8 +446,12 @@ export function createRouteAnimationEngine(
       if (projection.isInstantaneous) {
         playbackProgress = 1;
         elapsedPlaybackMs = routeDurationMs();
-        state = "completed";
+        state = "playing";
         forcePublish();
+        if (state === "playing") {
+          state = "completed";
+          forcePublish();
+        }
         return;
       }
       lastFrameAt = null;
@@ -430,33 +473,14 @@ export function createRouteAnimationEngine(
       lastUiProgress = 0;
       forcePublish();
     },
-    acquirePause: (reason) => {
-      if (destroyed) return () => {};
-      const token = Symbol(reason);
-      const leases = pauseLeases.get(reason) ?? new Set<symbol>();
-      leases.add(token);
-      pauseLeases.set(reason, leases);
-      if (state === "playing") {
-        cancelScheduledFrame();
-        state = "paused";
-        lastFrameAt = null;
-      }
-      forcePublish();
-
-      let released = false;
-      return () => {
-        if (destroyed || released) return;
-        released = true;
-        const activeLeases = pauseLeases.get(reason);
-        if (!activeLeases?.delete(token)) return;
-        if (activeLeases.size === 0) pauseLeases.delete(reason);
-        if (state === "paused" && pauseLeases.size === 0) {
-          state = "playing";
-          lastFrameAt = null;
-        }
-        forcePublish();
-        scheduleFrame();
-      };
+    acquirePause,
+    pauseAtCursor: (cursor, reason) => {
+      if (destroyed || state !== "playing") return () => {};
+      rebasedPosition = positionAtTimedCursor(cursor);
+      playbackProgress = projection.progressAt(rebasedPosition);
+      elapsedPlaybackMs = playbackProgress * routeDurationMs();
+      lastFrameAt = null;
+      return acquirePause(reason);
     },
     configure: (nextSettings) => {
       if (destroyed) return;

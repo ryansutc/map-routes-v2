@@ -8,6 +8,10 @@ import RouteInfoContainer, {
 import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery, { PhotoLightbox } from "@/components/routes/PhotoGallery";
 import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
+import type {
+  AutomaticPhotoPresentation,
+  TimedPhotoPresenter,
+} from "@/domain/timedPhotoPlayback";
 import { buildRouteTrack, type RouteTrack } from "@/domain/timedTrack";
 import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useMapInteractionLock } from "@/hooks/useMapInteractionLock";
@@ -61,6 +65,7 @@ interface RouteMapOverlaysProps {
   isAnimating: boolean;
   onPhotoClick: (index: number) => void;
   onPlayingChange: (isPlaying: boolean) => void;
+  timedPhotoPresenter: TimedPhotoPresenter;
 }
 
 /** Everything layered on top of the ESRI view for the route detail page. */
@@ -75,6 +80,7 @@ function RouteMapOverlays({
   isAnimating,
   onPhotoClick,
   onPlayingChange,
+  timedPhotoPresenter,
 }: RouteMapOverlaysProps) {
   const ready = map && view && !error && !isLoading && routeItem;
 
@@ -108,6 +114,8 @@ function RouteMapOverlays({
           <RouteAnimationController
             map={map}
             track={routeTrack}
+            photos={routeItem?.photos ?? []}
+            timedPhotoPresenter={timedPhotoPresenter}
             activityDurationSec={routeItem?.duration ?? null}
             onSessionActiveChange={onPlayingChange}
           />
@@ -135,6 +143,18 @@ function RouteDetail() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
     null,
+  );
+  const [automaticPhoto, setAutomaticPhoto] =
+    useState<AutomaticPhotoPresentation | null>(null);
+  const timedPhotoPresenter = useMemo<TimedPhotoPresenter>(
+    () => ({
+      open: setAutomaticPhoto,
+      close: (photoId) =>
+        setAutomaticPhoto((current) =>
+          current?.photoId === photoId ? null : current,
+        ),
+    }),
+    [],
   );
   const navigate = useNavigate();
 
@@ -216,6 +236,7 @@ function RouteDetail() {
         isAnimating={isAnimating}
         onPhotoClick={setSelectedPhotoIndex}
         onPlayingChange={setIsAnimating}
+        timedPhotoPresenter={timedPhotoPresenter}
       />
     </MapContainer>
   );
@@ -278,9 +299,23 @@ function RouteDetail() {
       {createPortal(mapTree, mapHost)}
       <PhotoLightbox
         photos={routeItem?.photos ?? []}
-        index={selectedPhotoIndex}
-        onIndexChange={setSelectedPhotoIndex}
-        onClose={() => setSelectedPhotoIndex(null)}
+        index={
+          automaticPhoto
+            ? (routeItem?.photos.findIndex(
+                (photo) => photo.id === automaticPhoto.photoId,
+              ) ?? -1)
+            : selectedPhotoIndex
+        }
+        onIndexChange={
+          automaticPhoto ? () => {} : setSelectedPhotoIndex
+        }
+        onClose={
+          automaticPhoto
+            ? automaticPhoto.onDismiss
+            : () => setSelectedPhotoIndex(null)
+        }
+        onImageLoad={automaticPhoto?.onLoad}
+        navigationEnabled={!automaticPhoto}
       />
 
       {isMobile && isFullscreenMap && (

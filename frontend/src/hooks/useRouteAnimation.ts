@@ -169,5 +169,6 @@ export function useRouteAnimation(
     play: engine.play,
     stop: engine.stop,
     acquirePause: (reason: AnimationPauseReason) => engine.acquirePause(reason),
+    photoPlaybackEngine: engine,
   };
 }
