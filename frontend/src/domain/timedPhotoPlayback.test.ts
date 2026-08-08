@@ -5,13 +5,19 @@ import {
   type RouteAnimationEngine,
   type RoutePlaybackMode,
 } from "./routeAnimation";
-import { planTimedPhotoEvents } from "./timedPhotoEvents";
+import {
+  planTimedPhotoEvents,
+  type TimedPhotoInput,
+} from "./timedPhotoEvents";
 import {
   AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS,
   AUTOMATIC_PHOTO_VISIBLE_MS,
   createTimedPhotoPlaybackCoordinator,
+  type AnimationPhotoPresentation,
   type AutomaticPhotoPresentation,
+  type ManualPhotoPresentation,
   type PhotoPreloadScheduler,
+  type PhotoSessionId,
   type PhotoTimerClock,
 } from "./timedPhotoPlayback";
 import { buildRouteTrack, type TimedTrack } from "./timedTrack";
@@ -70,6 +76,7 @@ function fakeTimerClock() {
   let nextId = 1;
   const timers = new Map<number, { at: number; callback: () => void }>();
   const clock: PhotoTimerClock = {
+    now: () => now,
     setTimeout: (callback, delayMs) => {
       const id = nextId++;
       timers.set(id, { at: now + delayMs, callback });
@@ -115,16 +122,20 @@ function fakePreloadScheduler() {
 
 function presenterSpy() {
   const opened: AutomaticPhotoPresentation[] = [];
-  const closed: number[] = [];
+  const manualOpened: ManualPhotoPresentation[] = [];
+  const closed: PhotoSessionId[] = [];
   const preloaded: number[][] = [];
   return {
     opened,
+    manualOpened,
     closed,
     preloaded,
     presenter: {
-      open: (presentation: AutomaticPhotoPresentation) =>
-        opened.push(presentation),
-      close: (photoId: number) => closed.push(photoId),
+      open: (presentation: AnimationPhotoPresentation) => {
+        if (presentation.kind === "automatic") opened.push(presentation);
+        else manualOpened.push(presentation);
+      },
+      close: (sessionId: PhotoSessionId) => closed.push(sessionId),
       preload: (photoIds: readonly number[]) => preloaded.push([...photoIds]),
     },
   };
@@ -132,6 +143,20 @@ function presenterSpy() {
 
 function setup(
   takenAt: string,
+  playbackMode: RoutePlaybackMode = "recorded",
+  enabled = true,
+  track = timedTrack(),
+) {
+  return setupPhotos(
+    [{ id: 7, takenAt }],
+    playbackMode,
+    enabled,
+    track,
+  );
+}
+
+function setupPhotos(
+  photos: readonly TimedPhotoInput[],
   playbackMode: RoutePlaybackMode = "recorded",
   enabled = true,
   track = timedTrack(),
@@ -145,7 +170,7 @@ function setup(
     { playbackMode, targetDurationSec: 10, skipDetectedStops: false },
     frames.clock,
   );
-  const events = planTimedPhotoEvents(track, [{ id: 7, takenAt }]);
+  const events = planTimedPhotoEvents(track, photos);
   const coordinator = createTimedPhotoPlaybackCoordinator({
     track,
     events,
@@ -198,7 +223,7 @@ describe("timed photo playback coordinator", () => {
 
       finishLoadedPhoto(engine, timers, presentation);
 
-      expect(presentation.closed).toEqual([7]);
+      expect(presentation.closed).toHaveLength(1);
       expect(engine.getSnapshot().state).toBe("playing");
       coordinator.destroy();
     },
@@ -268,13 +293,13 @@ describe("timed photo playback coordinator", () => {
       "2026-01-01T00:00:00Z",
     );
     engine.play();
-    const releaseHidden = engine.acquirePause("document-hidden");
+    const releaseManual = engine.acquirePause("manual-gallery");
     expect(engine.getSnapshot().state).toBe("paused");
 
     finishLoadedPhoto(engine, timers, presentation);
 
     expect(engine.getSnapshot().state).toBe("paused");
-    releaseHidden();
+    releaseManual();
     expect(engine.getSnapshot().state).toBe("playing");
     coordinator.destroy();
   });
@@ -287,7 +312,7 @@ describe("timed photo playback coordinator", () => {
 
     engine.stop();
 
-    expect(presentation.closed).toEqual([7]);
+    expect(presentation.closed).toHaveLength(1);
     expect(engine.getSnapshot().state).toBe("idle");
     engine.play();
     expect(presentation.opened).toHaveLength(2);
@@ -360,7 +385,7 @@ describe("timed photo playback coordinator", () => {
     presentation.opened[2]!.onLoad();
     timers.step(AUTOMATIC_PHOTO_VISIBLE_MS);
     expect(engine.getSnapshot().state).toBe("playing");
-    expect(presentation.closed).toEqual([3]);
+    expect(presentation.closed).toHaveLength(1);
     coordinator.destroy();
   });
 
@@ -461,5 +486,213 @@ describe("timed photo playback coordinator", () => {
 
     expect(presentation.preloaded).toEqual([[7]]);
     coordinator.destroy();
+  });
+
+  it("manual close consumes the rest of an automatic group", () => {
+    const { engine, frames, presentation, coordinator } = setupPhotos([
+      { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+      { id: 2, takenAt: "2026-01-01T00:00:01Z" },
+      { id: 3, takenAt: "2026-01-01T00:00:02Z" },
+    ]);
+    engine.play();
+
+    presentation.opened[0]!.onDismiss();
+    frames.step(10_000);
+
+    expect(presentation.opened.map((photo) => photo.photoId)).toEqual([1]);
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("transfers automatic navigation to full-gallery manual control", () => {
+    const { engine, timers, presentation, coordinator } = setupPhotos([
+      { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+      { id: 2, takenAt: "2026-01-01T00:00:01Z" },
+    ]);
+    engine.play();
+    const automatic = presentation.opened[0]!;
+
+    automatic.onNavigate(42);
+    automatic.onLoad();
+    timers.step(AUTOMATIC_PHOTO_VISIBLE_MS);
+
+    expect(presentation.manualOpened.map((photo) => photo.photoId)).toEqual([
+      42,
+    ]);
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      activePauseReasons: ["manual-gallery"],
+    });
+    expect(presentation.opened).toHaveLength(1);
+
+    presentation.manualOpened[0]!.onDismiss();
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("pauses for manually opened photos only during an active session", () => {
+    const { engine, presentation, coordinator } = setup(
+      "2026-01-01T00:00:10Z",
+    );
+
+    expect(coordinator.openManualPhoto(42)).toBe(false);
+    engine.play();
+    expect(coordinator.openManualPhoto(42)).toBe(true);
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      activePauseReasons: ["manual-gallery"],
+    });
+
+    presentation.manualOpened[0]!.onDismiss();
+    expect(engine.getSnapshot().state).toBe("playing");
+    engine.stop();
+    expect(coordinator.openManualPhoto(42)).toBe(false);
+    expect(engine.getSnapshot().state).toBe("idle");
+    coordinator.destroy();
+  });
+
+  it("replaces an active automatic session when a photo is opened manually", () => {
+    const { engine, timers, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+    const automatic = presentation.opened[0]!;
+
+    expect(coordinator.openManualPhoto(42)).toBe(true);
+    automatic.onLoad();
+    timers.step(AUTOMATIC_PHOTO_VISIBLE_MS);
+
+    expect(presentation.manualOpened.map((photo) => photo.photoId)).toEqual([
+      42,
+    ]);
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      activePauseReasons: ["manual-gallery"],
+    });
+    presentation.manualOpened[0]!.onDismiss();
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("keeps composed pauses when a manual gallery closes", () => {
+    const { engine, presentation, coordinator } = setup(
+      "2026-01-01T00:00:10Z",
+    );
+    engine.play();
+    const releaseHidden = engine.acquirePause("document-hidden");
+    coordinator.openManualPhoto(42);
+
+    presentation.manualOpened[0]!.onDismiss();
+
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      activePauseReasons: ["document-hidden"],
+    });
+    releaseHidden();
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it.each(["automatic", "manual"] as const)(
+    "offers explicit stop from an %s animation lightbox",
+    (kind) => {
+      const { engine, presentation, coordinator } = setup(
+        "2026-01-01T00:00:00Z",
+      );
+      engine.play();
+      if (kind === "automatic") presentation.opened[0]!.onStop();
+      else {
+        presentation.opened[0]!.onNavigate(42);
+        presentation.manualOpened[0]!.onStop();
+      }
+
+      expect(engine.getSnapshot()).toMatchObject({
+        state: "idle",
+        playbackProgress: 0,
+      });
+      expect(presentation.closed).toHaveLength(1);
+      coordinator.destroy();
+    },
+  );
+
+  it("pauses photo loading and visible time while the document is hidden", () => {
+    const { engine, timers, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+    presentation.opened[0]!.onLoad();
+    timers.step(1_000);
+    const releaseHidden = engine.acquirePause("document-hidden");
+
+    timers.step(10_000);
+    expect(presentation.closed).toHaveLength(0);
+
+    releaseHidden();
+    timers.step(999);
+    expect(presentation.closed).toHaveLength(0);
+    timers.step(1);
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("pauses the bounded image-load timeout while the document is hidden", () => {
+    const { engine, timers, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+    const releaseHidden = engine.acquirePause("document-hidden");
+
+    timers.step(AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS * 2);
+    expect(presentation.closed).toHaveLength(0);
+
+    releaseHidden();
+    timers.step(AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS - 1);
+    expect(presentation.closed).toHaveLength(0);
+    timers.step(1);
+    expect(presentation.closed).toHaveLength(1);
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("ignores stale automatic callbacks from an earlier playback session", () => {
+    const { engine, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+    const stale = presentation.opened[0]!;
+    engine.stop();
+    engine.play();
+
+    stale.onLoad();
+    stale.onDismiss();
+    stale.onNavigate(42);
+    stale.onStop();
+
+    expect(presentation.opened).toHaveLength(2);
+    expect(presentation.manualOpened).toHaveLength(0);
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      activePauseReasons: ["photo"],
+    });
+    coordinator.destroy();
+  });
+
+  it("cancels session work and ignores callbacks after destroy", () => {
+    const { engine, timers, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+    const stale = presentation.opened[0]!;
+
+    coordinator.destroy();
+    stale.onLoad();
+    stale.onDismiss();
+    stale.onNavigate(42);
+    stale.onStop();
+    timers.step(AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS);
+
+    expect(engine.getSnapshot().state).toBe("playing");
+    expect(presentation.manualOpened).toHaveLength(0);
+    expect(presentation.closed).toHaveLength(1);
   });
 });
