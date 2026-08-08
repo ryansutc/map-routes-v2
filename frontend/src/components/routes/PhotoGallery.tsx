@@ -2,6 +2,7 @@ import { schemas } from "@/generatedtypes/django_generated";
 import { resolvePhotoUrl } from "@/utils/dropboxImgHelpers";
 import {
   Box,
+  Button,
   Dialog,
   DialogContent,
   IconButton,
@@ -21,6 +22,7 @@ export function PhotoLightbox({
   onClose,
   onImageLoad,
   onImageError,
+  onStopPlayback,
   navigationEnabled = true,
 }: {
   photos: Photo[];
@@ -29,6 +31,7 @@ export function PhotoLightbox({
   onClose: () => void;
   onImageLoad?: () => void;
   onImageError?: () => void;
+  onStopPlayback?: () => void;
   navigationEnabled?: boolean;
 }) {
   const open = index !== null && photos.length > 0;
@@ -91,6 +94,18 @@ export function PhotoLightbox({
         >
           ✕
         </IconButton>
+
+        {onStopPlayback && (
+          <Button
+            onClick={onStopPlayback}
+            size="small"
+            variant="contained"
+            color="error"
+            sx={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}
+          >
+            Stop playback
+          </Button>
+        )}
 
         {navigationEnabled && photos.length > 1 && (
           <>

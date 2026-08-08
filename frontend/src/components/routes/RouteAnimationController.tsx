@@ -9,6 +9,7 @@ import {
 import { planTimedPhotoEvents } from "@/domain/timedPhotoEvents";
 import {
   createTimedPhotoPlaybackCoordinator,
+  type PhotoSessionController,
   type TimedPhotoPresenter,
 } from "@/domain/timedPhotoPlayback";
 import type { RouteTrack } from "@/domain/timedTrack";
@@ -30,6 +31,9 @@ interface RouteAnimationControllerProps {
   activityDurationSec: number | null;
   /** Notified for the full active session, including composed pauses. */
   onSessionActiveChange?: (isActive: boolean) => void;
+  onPhotoSessionControllerChange?: (
+    controller: PhotoSessionController | null,
+  ) => void;
 }
 
 export function RouteAnimationController({
@@ -39,6 +43,7 @@ export function RouteAnimationController({
   timedPhotoPresenter,
   activityDurationSec,
   onSessionActiveChange,
+  onPhotoSessionControllerChange,
 }: RouteAnimationControllerProps) {
   const targetDurationSec = useStore((state) => state.animationDurationSec);
   const preferredPlaybackMode = useStore(
@@ -122,11 +127,19 @@ export function RouteAnimationController({
       groupingSettings: timedPhotoGroupingSettingsRef.current,
     });
     photoCoordinatorRef.current = coordinator;
+    onPhotoSessionControllerChange?.(coordinator);
     return () => {
       photoCoordinatorRef.current = null;
+      onPhotoSessionControllerChange?.(null);
       coordinator.destroy();
     };
-  }, [photoPlaybackEngine, timedPhotoEvents, timedPhotoPresenter, track]);
+  }, [
+    onPhotoSessionControllerChange,
+    photoPlaybackEngine,
+    timedPhotoEvents,
+    timedPhotoPresenter,
+    track,
+  ]);
 
   useEffect(() => {
     onSessionActiveChange?.(isSessionActive);

@@ -12,20 +12,58 @@ import type { TimedTrack } from "./timedTrack";
 export const AUTOMATIC_PHOTO_VISIBLE_MS = 2_000;
 export const AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS = 10_000;
 
+declare const photoSessionIdBrand: unique symbol;
+declare const photoPresentationTokenBrand: unique symbol;
+
+export type PhotoSessionId = symbol & {
+  readonly [photoSessionIdBrand]: "PhotoSessionId";
+};
+
+type PhotoPresentationToken = symbol & {
+  readonly [photoPresentationTokenBrand]: "PhotoPresentationToken";
+};
+
+function createPhotoSessionId(description: string): PhotoSessionId {
+  return Symbol(description) as PhotoSessionId;
+}
+
+function createPhotoPresentationToken(
+  description: string,
+): PhotoPresentationToken {
+  return Symbol(description) as PhotoPresentationToken;
+}
+
 export type AutomaticPhotoPresentation = {
+  kind: "automatic";
+  sessionId: PhotoSessionId;
   photoId: number;
   onLoad: () => void;
   onError: () => void;
   onDismiss: () => void;
+  onNavigate: (photoId: number) => void;
+  onStop: () => void;
 };
 
+export type ManualPhotoPresentation = {
+  kind: "manual";
+  sessionId: PhotoSessionId;
+  photoId: number;
+  onDismiss: () => void;
+  onStop: () => void;
+};
+
+export type AnimationPhotoPresentation =
+  | AutomaticPhotoPresentation
+  | ManualPhotoPresentation;
+
 export type TimedPhotoPresenter = {
-  open: (presentation: AutomaticPhotoPresentation) => void;
-  close: (photoId: number) => void;
+  open: (presentation: AnimationPhotoPresentation) => void;
+  close: (sessionId: PhotoSessionId) => void;
   preload: (photoIds: readonly number[]) => void;
 };
 
 export type PhotoTimerClock = {
+  now: () => number;
   setTimeout: (callback: () => void, delayMs: number) => unknown;
   clearTimeout: (timerId: unknown) => void;
 };
@@ -36,24 +74,42 @@ export type PhotoPreloadScheduler = {
 
 type PhotoPlaybackEngine = Pick<
   RouteAnimationEngine,
-  "getSnapshot" | "subscribeToFrames" | "pauseAtCursor" | "moveToCursor"
+  | "getSnapshot"
+  | "subscribeToFrames"
+  | "pauseAtCursor"
+  | "moveToCursor"
+  | "acquirePause"
+  | "stop"
 >;
 
 type ActiveGroup = {
   group: TimedPhotoEventGroup;
   eventIndex: number;
-  groupToken: symbol;
-  photoToken: symbol;
+  sessionId: PhotoSessionId;
+  photoToken: PhotoPresentationToken;
   phase: "loading" | "visible";
   releasePause: () => void;
   timerId: unknown | null;
+  timerStartedAtMs: number | null;
+  timerRemainingMs: number;
+};
+
+type ActiveManualSession = {
+  sessionId: PhotoSessionId;
+  releasePause: () => void;
 };
 
 export type TimedPhotoPlaybackCoordinator = {
   setEnabled: (enabled: boolean) => void;
   setGroupingSettings: (settings: TimedPhotoGroupingSettings) => void;
+  openManualPhoto: (photoId: number) => boolean;
   destroy: () => void;
 };
+
+export type PhotoSessionController = Pick<
+  TimedPhotoPlaybackCoordinator,
+  "openManualPhoto"
+>;
 
 export type TimedPhotoGroupingSettings = Pick<
   RouteAnimationSnapshot,
@@ -64,6 +120,7 @@ export type TimedPhotoGroupingSettings = Pick<
 
 function browserPhotoTimerClock(): PhotoTimerClock {
   return {
+    now: () => performance.now(),
     setTimeout: (callback, delayMs) => window.setTimeout(callback, delayMs),
     clearTimeout: (timerId) => window.clearTimeout(timerId as number),
   };
@@ -131,6 +188,8 @@ export function createTimedPhotoPlaybackCoordinator({
   let nextEventIndex = 0;
   let previousState = engine.getSnapshot().state;
   let activeGroup: ActiveGroup | null = null;
+  let activeManualSession: ActiveManualSession | null = null;
+  let documentHidden = false;
   let preloadedGroupFirstPhotoId: number | null = null;
   let fullGroupPlan: readonly TimedPhotoEventGroup[] = [];
   let plannedGroups: readonly TimedPhotoEventGroup[] = [];
@@ -141,13 +200,49 @@ export function createTimedPhotoPlaybackCoordinator({
     group.group.events[group.eventIndex]!;
 
   const clearGroupTimer = (group: ActiveGroup) => {
-    if (group.timerId === null) return;
-    timerClock.clearTimeout(group.timerId);
+    const active = group;
+    if (active.timerId === null) return;
+    timerClock.clearTimeout(active.timerId);
+    active.timerId = null;
+    if (active.timerStartedAtMs !== null) {
+      active.timerRemainingMs = Math.max(
+        0,
+        active.timerRemainingMs -
+          (timerClock.now() - active.timerStartedAtMs),
+      );
+    }
+    active.timerStartedAtMs = null;
+  };
+
+  const scheduleGroupTimer = (group: ActiveGroup) => {
+    const active = group;
+    if (documentHidden || active.timerId !== null) return;
+    const { sessionId, photoToken } = active;
+    active.timerStartedAtMs = timerClock.now();
+    active.timerId = timerClock.setTimeout(
+      () => advanceGroup(sessionId, photoToken),
+      active.timerRemainingMs,
+    );
+  };
+
+  const startGroupTimer = (group: ActiveGroup, delayMs: number) => {
+    const active = group;
+    clearGroupTimer(active);
+    active.timerRemainingMs = delayMs;
+    scheduleGroupTimer(active);
+  };
+
+  const updateDocumentHidden = (hidden: boolean) => {
+    if (documentHidden === hidden) return;
+    documentHidden = hidden;
+    if (!activeGroup) return;
+    if (hidden) clearGroupTimer(activeGroup);
+    else scheduleGroupTimer(activeGroup);
   };
 
   const closeAndRelease = (group: ActiveGroup) => {
     clearGroupTimer(group);
-    presenter.close(currentEvent(group).photoId);
+    presenter.close(group.sessionId);
     group.releasePause();
   };
 
@@ -156,6 +251,14 @@ export function createTimedPhotoPlaybackCoordinator({
     const cancelling = activeGroup;
     activeGroup = null;
     closeAndRelease(cancelling);
+  };
+
+  const cancelActiveManualSession = () => {
+    if (!activeManualSession) return;
+    const cancelling = activeManualSession;
+    activeManualSession = null;
+    presenter.close(cancelling.sessionId);
+    cancelling.releasePause();
   };
 
   const buildGroupPlan = (sourceEvents: readonly TimedPhotoEvent[]) =>
@@ -222,95 +325,142 @@ export function createTimedPhotoPlaybackCoordinator({
     nextEventIndex = low;
   };
 
-  const finishGroup = (groupToken: symbol) => {
-    if (destroyed || activeGroup?.groupToken !== groupToken) return;
+  const finishGroup = (sessionId: PhotoSessionId) => {
+    if (destroyed || activeGroup?.sessionId !== sessionId) return;
     const finishing = activeGroup;
     activeGroup = null;
     closeAndRelease(finishing);
   };
 
-  const openCurrentPhoto = (groupToken: symbol) => {
-    if (destroyed || activeGroup?.groupToken !== groupToken) return;
+  const finishManualSession = (
+    sessionId: PhotoSessionId,
+    stopPlayback: boolean,
+  ) => {
+    if (destroyed || activeManualSession?.sessionId !== sessionId) return;
+    const finishing = activeManualSession;
+    activeManualSession = null;
+    presenter.close(sessionId);
+    if (stopPlayback) engine.stop();
+    finishing.releasePause();
+  };
+
+  const openManualSession = (sessionId: PhotoSessionId, photoId: number) => {
+    const releaseManualPause = engine.acquirePause("manual-gallery");
+    if (activeGroup) {
+      const automatic = activeGroup;
+      activeGroup = null;
+      clearGroupTimer(automatic);
+      automatic.releasePause();
+    }
+    cancelActiveManualSession();
+    activeManualSession = { sessionId, releasePause: releaseManualPause };
+    presenter.open({
+      kind: "manual",
+      sessionId,
+      photoId,
+      onDismiss: () => finishManualSession(sessionId, false),
+      onStop: () => finishManualSession(sessionId, true),
+    });
+  };
+
+  const openCurrentPhoto = (sessionId: PhotoSessionId) => {
+    if (destroyed || activeGroup?.sessionId !== sessionId) return;
     const group = activeGroup;
     const event = currentEvent(group);
-    const photoToken = Symbol(`photo-${event.photoId}`);
+    const photoToken = createPhotoPresentationToken(`photo-${event.photoId}`);
     group.photoToken = photoToken;
     group.phase = "loading";
-    clearGroupTimer(group);
-    group.timerId = timerClock.setTimeout(
-      () => advanceGroup(groupToken, photoToken),
-      AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS,
-    );
+    startGroupTimer(group, AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS);
     presenter.open({
+      kind: "automatic",
+      sessionId,
       photoId: event.photoId,
       onLoad: () => {
         if (
           destroyed ||
-          activeGroup?.groupToken !== groupToken ||
+          activeGroup?.sessionId !== sessionId ||
           activeGroup.photoToken !== photoToken ||
           activeGroup.phase !== "loading"
         ) {
           return;
         }
-        clearGroupTimer(activeGroup);
         activeGroup.phase = "visible";
-        activeGroup.timerId = timerClock.setTimeout(
-          () => advanceGroup(groupToken, photoToken),
-          AUTOMATIC_PHOTO_VISIBLE_MS,
-        );
+        startGroupTimer(activeGroup, AUTOMATIC_PHOTO_VISIBLE_MS);
       },
       onError: () => {
         if (activeGroup?.phase === "loading") {
-          advanceGroup(groupToken, photoToken);
+          advanceGroup(sessionId, photoToken);
         }
       },
-      onDismiss: () => finishGroup(groupToken),
+      onDismiss: () => finishGroup(sessionId),
+      onNavigate: (photoId) => {
+        if (
+          destroyed ||
+          activeGroup?.sessionId !== sessionId ||
+          activeGroup.photoToken !== photoToken
+        ) {
+          return;
+        }
+        openManualSession(sessionId, photoId);
+      },
+      onStop: () => {
+        if (destroyed || activeGroup?.sessionId !== sessionId) return;
+        engine.stop();
+      },
     });
   };
 
-  function advanceGroup(groupToken: symbol, photoToken: symbol) {
+  function advanceGroup(
+    sessionId: PhotoSessionId,
+    photoToken: PhotoPresentationToken,
+  ) {
     if (
       destroyed ||
-      activeGroup?.groupToken !== groupToken ||
+      activeGroup?.sessionId !== sessionId ||
       activeGroup.photoToken !== photoToken
     ) {
       return;
     }
     clearGroupTimer(activeGroup);
     if (activeGroup.eventIndex + 1 >= activeGroup.group.events.length) {
-      finishGroup(groupToken);
+      finishGroup(sessionId);
       return;
     }
     activeGroup.eventIndex += 1;
     engine.moveToCursor(currentEvent(activeGroup).cursor);
-    openCurrentPhoto(groupToken);
+    openCurrentPhoto(sessionId);
   }
 
   const openGroup = (group: TimedPhotoEventGroup) => {
     const firstEvent = group.events[0];
     if (!firstEvent) return;
-    const groupToken = Symbol(`photo-group-${firstEvent.photoId}`);
+    const sessionId = createPhotoSessionId(`photo-group-${firstEvent.photoId}`);
     activeGroup = {
       group,
       eventIndex: 0,
-      groupToken,
-      photoToken: Symbol("pending-photo"),
+      sessionId,
+      photoToken: createPhotoPresentationToken("pending-photo"),
       phase: "loading",
       releasePause: () => {},
       timerId: null,
+      timerStartedAtMs: null,
+      timerRemainingMs: 0,
     };
     const releasePause = engine.pauseAtCursor(firstEvent.cursor, "photo");
-    if (!activeGroup || activeGroup.groupToken !== groupToken) {
+    if (!activeGroup || activeGroup.sessionId !== sessionId) {
       releasePause();
       return;
     }
     activeGroup.releasePause = releasePause;
     preloadUpcomingGroup();
-    openCurrentPhoto(groupToken);
+    openCurrentPhoto(sessionId);
   };
 
   const onFrame = (snapshot: RouteAnimationSnapshot) => {
     if (destroyed) return;
+    updateDocumentHidden(
+      snapshot.activePauseReasons.includes("document-hidden"),
+    );
     const priorState = previousState;
     previousState = snapshot.state;
 
@@ -324,9 +474,11 @@ export function createTimedPhotoPlaybackCoordinator({
     if (snapshot.state === "idle") {
       resetRunCursor();
       cancelActiveGroup();
+      cancelActiveManualSession();
       return;
     }
-    if (snapshot.state !== "playing" || activeGroup) return;
+    if (snapshot.state !== "playing" || activeGroup || activeManualSession)
+      return;
 
     if (!enabled) {
       consumeDisabledEventsThrough(snapshot);
@@ -389,11 +541,19 @@ export function createTimedPhotoPlaybackCoordinator({
       preloadUpcomingGroup();
       onFrame(engine.getSnapshot());
     },
+    openManualPhoto: (photoId) => {
+      if (destroyed) return false;
+      const { state } = engine.getSnapshot();
+      if (state !== "playing" && state !== "paused") return false;
+      openManualSession(createPhotoSessionId(`manual-photo-${photoId}`), photoId);
+      return true;
+    },
     destroy: () => {
       if (destroyed) return;
       unsubscribe();
       cancelPreload();
       cancelActiveGroup();
+      cancelActiveManualSession();
       destroyed = true;
     },
   };
