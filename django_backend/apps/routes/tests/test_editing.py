@@ -2,7 +2,8 @@
 
 # ruff: noqa: D102
 
-from unittest.mock import patch
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -32,7 +33,19 @@ class EditingApiTests(TestCase):
             avg_pace=5.2,
             elevation_gain=400,
             arcgis_item_id="immutable-item",
-            geojson={"type": "FeatureCollection", "features": []},
+            geojson={
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-123.12, 49.28, 10], [-123.13, 49.29, 20]],
+                        },
+                        "properties": {},
+                    }
+                ],
+            },
             notes="Original notes",
             owner=self.owner.email,
             is_public=True,
@@ -127,6 +140,56 @@ class EditingApiTests(TestCase):
         self.assertEqual(photo.title, "New")
         self.assertEqual(self.route.updated_at, old_updated_at)
 
+    def test_owner_can_set_out_of_range_photo_time_and_clear_it(self):
+        photo = Photo.objects.create(route=self.route, url="https://example.com/photo.jpg")
+
+        response = self.client.patch(
+            f"/api/route/{self.route.pk}/photos/{photo.pk}/",
+            {"taken_at": "1990-01-01T12:00:00-08:00"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        photo.refresh_from_db()
+        self.assertEqual(photo.taken_at, datetime(1990, 1, 1, 20, 0, tzinfo=UTC))
+        self.assertEqual(response.data["taken_at"], "1990-01-01T20:00:00Z")
+        self.assertEqual(response.data["taken_at_timezone"], "America/Vancouver")
+
+        response = self.client.patch(
+            f"/api/route/{self.route.pk}/photos/{photo.pk}/",
+            {"taken_at": None},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        photo.refresh_from_db()
+        self.assertIsNone(photo.taken_at)
+
+    def test_photo_patch_rejects_naive_taken_at(self):
+        photo = Photo.objects.create(route=self.route, url="https://example.com/photo.jpg")
+
+        response = self.client.patch(
+            f"/api/route/{self.route.pk}/photos/{photo.pk}/",
+            {"taken_at": "2024-01-01T12:00:00"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("taken_at", response.data)
+
+    def test_non_owner_cannot_change_photo_time(self):
+        photo = Photo.objects.create(route=self.route, url="https://example.com/photo.jpg")
+        self.client.force_authenticate(self.other_user)
+
+        response = self.client.patch(
+            f"/api/route/{self.route.pk}/photos/{photo.pk}/",
+            {"taken_at": "2024-01-01T12:00:00Z"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        photo.refresh_from_db()
+        self.assertIsNone(photo.taken_at)
+
     def test_photo_patch_rejects_other_fields_and_wrong_route(self):
         photo = Photo.objects.create(route=self.route, url="https://example.com/photo.jpg")
         response = self.client.patch(
@@ -166,6 +229,30 @@ class EditingApiTests(TestCase):
         photo = Photo.objects.get(pk=response.data["id"])
         self.assertEqual(photo.cloudinary_public_id, "map-routes/photos/new")
         upload_mock.assert_called_once()
+
+    @patch(
+        "apps.routes.photo_views.upload_photo",
+        return_value=("https://res.cloudinary.com/photo.jpg", "map-routes/photos/timed"),
+    )
+    @patch("apps.routes.photo_views.Image.open")
+    def test_photo_upload_honors_embedded_exif_offset(self, image_open_mock, _upload_mock):
+        image = MagicMock()
+        image._getexif.return_value = {
+            36867: "2024:07:01 12:30:00",
+            36881: "-07:00",
+        }
+        image_open_mock.return_value = image
+
+        response = self.client.post(
+            f"/api/route/{self.route.pk}/photos/",
+            {"file": SimpleUploadedFile("photo.jpg", b"image", content_type="image/jpeg")},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        photo = Photo.objects.get(pk=response.data["id"])
+        self.assertEqual(photo.taken_at, datetime(2024, 7, 1, 19, 30, tzinfo=UTC))
+        self.assertEqual(response.data["taken_at"], "2024-07-01T19:30:00Z")
 
     def test_photo_limit_counts_existing_photos(self):
         """The upload endpoint refuses a twenty-first photo."""

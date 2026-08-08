@@ -244,7 +244,7 @@ paths:
   /api/route/{id}/photos/{photo_pk}/:
     patch:
       operationId: route_photos_partial_update
-      description: Change only the optional title of a photo.
+      description: Change only the optional title and aware taken-at time of a photo.
       parameters:
       - in: path
         name: id
@@ -262,7 +262,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedPhotoTitleUpdateRequest'
+              $ref: '#/components/schemas/PatchedPhotoUpdateRequest'
       security:
       - jwtAuth: []
       responses:
@@ -427,13 +427,17 @@ components:
       - elevation_gain_m
       - geojson
       - track_point_count
-    PatchedPhotoTitleUpdateRequest:
+    PatchedPhotoUpdateRequest:
       type: object
-      description: Serializer restricted to changing a photo's optional title.
+      description: Serializer restricted to an optional title and aware taken-at time.
       properties:
         title:
           type: string
           maxLength: 255
+        taken_at:
+          type: string
+          format: date-time
+          nullable: true
     PatchedRouteUpdateRequest:
       type: object
       description: Serializer restricted to owner-managed route information.
@@ -476,10 +480,21 @@ components:
           type: boolean
           description: Return True if the photo has GPS coordinates.
           readOnly: true
+        taken_at:
+          type: string
+          format: date-time
+          nullable: true
+        taken_at_timezone:
+          type: string
+          nullable: true
+          description: Return the local IANA zone used to interpret owner-entered
+            photo time.
+          readOnly: true
       required:
       - has_gps
       - id
       - route_id
+      - taken_at_timezone
       - url
     RegisterRequest:
       type: object
