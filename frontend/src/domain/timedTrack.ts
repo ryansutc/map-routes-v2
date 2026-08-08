@@ -623,9 +623,6 @@ function createTimedTrack(
       upperBound(points, elapsedMs, (point) => point.originalElapsedMs) - 1;
     const recordedPoint = points[Math.max(0, pointIndex)]!;
     const stop = findContainingStop(stops, elapsedMs);
-    if (recordedPoint.originalElapsedMs === elapsedMs) {
-      return cursorAtPoint(recordedPoint, stop?.index ?? null);
-    }
     if (stop) {
       const point = points[stop.startPointIndex]!;
       return {
@@ -636,6 +633,9 @@ function createTimedTrack(
         movingElapsedMs: movingElapsedAtOriginal(elapsedMs, collapsedIntervals),
         cumulativeDistanceM: stop.cumulativeDistanceM,
       };
+    }
+    if (recordedPoint.originalElapsedMs === elapsedMs) {
+      return cursorAtPoint(recordedPoint, null);
     }
 
     const gap = findContainingGap(gaps, elapsedMs);

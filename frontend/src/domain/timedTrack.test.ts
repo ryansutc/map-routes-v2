@@ -233,7 +233,12 @@ describe("TimedTrack stops", () => {
     expect(firstCursor.coordinate).toEqual(track.stops[0]!.anchor);
     expect(secondCursor.coordinate).toEqual(track.stops[0]!.anchor);
     expect(firstCursor.stopIndex).toBe(0);
-    expect(track.atOriginalElapsed(120_000).coordinate).toEqual([0.00002, 0]);
+    expect(track.atOriginalElapsed(60_000).coordinate).toEqual(
+      track.stops[0]!.anchor,
+    );
+    expect(track.atOriginalElapsed(120_000).coordinate).toEqual(
+      track.stops[0]!.anchor,
+    );
   });
 
   it("applies the fixed stay radius and minimum duration at their boundaries", () => {

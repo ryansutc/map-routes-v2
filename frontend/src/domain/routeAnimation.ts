@@ -31,6 +31,7 @@ export type AnimationPosition = {
 export type RouteAnimationSnapshot = {
   state: AnimationLifecycleState;
   playbackMode: RoutePlaybackMode;
+  skipDetectedStops: boolean;
   playbackProgress: number;
   distanceProgress: number;
   position: AnimationPosition | null;
@@ -40,6 +41,7 @@ export type RouteAnimationSnapshot = {
 export type RouteAnimationSettings = {
   playbackMode: RoutePlaybackMode;
   targetDurationSec: TargetRouteDurationSec;
+  skipDetectedStops: boolean;
 };
 
 export type AnimationFrameClock = {
@@ -192,27 +194,37 @@ function positionAtLegacyDistance(
 type PlaybackProjection = {
   positionAt: (progress: number) => AnimationPosition | null;
   progressAt: (position: AnimationPosition | null) => number;
+  isInstantaneous: boolean;
 };
 
 function playbackProjection(
   track: RouteTrack,
   mode: RoutePlaybackMode,
+  skipDetectedStops: boolean,
 ): PlaybackProjection {
   const clamp = (progress: number) => Math.min(1, Math.max(0, progress));
 
   if (mode === "recorded" && track.kind === "timed") {
+    const timelineDurationMs = skipDetectedStops
+      ? track.movingDurationMs
+      : track.originalDurationMs;
     return {
       positionAt: (progress) =>
         positionAtTimedCursor(
-          track.atOriginalElapsed(track.originalDurationMs * clamp(progress)),
+          skipDetectedStops
+            ? track.atMovingElapsed(timelineDurationMs * clamp(progress))
+            : track.atOriginalElapsed(timelineDurationMs * clamp(progress)),
         ),
       progressAt: (position) => {
         if (!position) return 0;
-        return track.originalDurationMs > 0 &&
-          position.originalElapsedMs !== null
-          ? position.originalElapsedMs / track.originalDurationMs
-          : 1;
+        if (timelineDurationMs <= 0 || position.originalElapsedMs === null)
+          return 1;
+        const elapsedMs = skipDetectedStops
+          ? track.atOriginalElapsed(position.originalElapsedMs).movingElapsedMs
+          : position.originalElapsedMs;
+        return elapsedMs / timelineDurationMs;
       },
+      isInstantaneous: timelineDurationMs === 0,
     };
   }
 
@@ -230,6 +242,7 @@ function playbackProjection(
           ? position.cumulativeDistanceM / track.totalDistanceM
           : 1;
       },
+      isInstantaneous: false,
     };
   }
 
@@ -247,6 +260,7 @@ function playbackProjection(
         ? position.pointIndex / (track.profilePoints.length - 1)
         : 1;
     },
+    isInstantaneous: false,
   };
 }
 
@@ -277,7 +291,11 @@ export function createRouteAnimationEngine(
     ...initialSettings,
     playbackMode: resolvePlaybackMode(track, initialSettings.playbackMode),
   };
-  let projection = playbackProjection(track, settings.playbackMode);
+  let projection = playbackProjection(
+    track,
+    settings.playbackMode,
+    settings.skipDetectedStops,
+  );
   let state: AnimationLifecycleState = "idle";
   let playbackProgress = 0;
   let elapsedPlaybackMs = 0;
@@ -286,6 +304,7 @@ export function createRouteAnimationEngine(
   let destroyed = false;
   let lastUiUpdateAt = 0;
   let lastUiProgress = 0;
+  let rebasedPosition: AnimationPosition | null = null;
   const pauseLeases = new Map<AnimationPauseReason, Set<symbol>>();
   const listeners = new Set<() => void>();
   const frameListeners = new Set<(snapshot: RouteAnimationSnapshot) => void>();
@@ -293,6 +312,7 @@ export function createRouteAnimationEngine(
   let snapshot: RouteAnimationSnapshot = {
     state,
     playbackMode: settings.playbackMode,
+    skipDetectedStops: settings.skipDetectedStops,
     playbackProgress,
     distanceProgress: 0,
     position: projection.positionAt(0),
@@ -300,10 +320,11 @@ export function createRouteAnimationEngine(
   };
 
   const updateSnapshot = () => {
-    const position = projection.positionAt(playbackProgress);
+    const position = rebasedPosition ?? projection.positionAt(playbackProgress);
     snapshot = {
       state,
       playbackMode: settings.playbackMode,
+      skipDetectedStops: settings.skipDetectedStops,
       playbackProgress,
       distanceProgress: distanceProgress(track, position),
       position,
@@ -330,6 +351,7 @@ export function createRouteAnimationEngine(
     const deltaMs = Math.max(0, timestamp - lastFrameAt);
     lastFrameAt = timestamp;
     elapsedPlaybackMs += deltaMs;
+    if (deltaMs > 0) rebasedPosition = null;
     playbackProgress = Math.min(1, elapsedPlaybackMs / routeDurationMs());
     if (playbackProgress >= 1) state = "completed";
     updateSnapshot();
@@ -380,12 +402,9 @@ export function createRouteAnimationEngine(
       if (state === "completed") {
         playbackProgress = 0;
         elapsedPlaybackMs = 0;
+        rebasedPosition = null;
       }
-      if (
-        settings.playbackMode === "recorded" &&
-        track.kind === "timed" &&
-        track.originalDurationMs === 0
-      ) {
+      if (projection.isInstantaneous) {
         playbackProgress = 1;
         elapsedPlaybackMs = routeDurationMs();
         state = "completed";
@@ -406,6 +425,7 @@ export function createRouteAnimationEngine(
       state = "idle";
       playbackProgress = 0;
       elapsedPlaybackMs = 0;
+      rebasedPosition = null;
       lastFrameAt = null;
       lastUiProgress = 0;
       forcePublish();
@@ -443,9 +463,18 @@ export function createRouteAnimationEngine(
       const position = snapshot.position;
       const nextMode = resolvePlaybackMode(track, nextSettings.playbackMode);
       settings = { ...nextSettings, playbackMode: nextMode };
-      projection = playbackProjection(track, nextMode);
+      projection = playbackProjection(
+        track,
+        nextMode,
+        nextSettings.skipDetectedStops,
+      );
       playbackProgress = projection.progressAt(position);
       elapsedPlaybackMs = playbackProgress * routeDurationMs();
+      if ((state === "playing" || state === "paused") && position) {
+        rebasedPosition = position;
+      } else {
+        rebasedPosition = null;
+      }
       lastFrameAt = null;
       forcePublish();
     },

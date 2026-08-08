@@ -60,6 +60,40 @@ const timedTrack = () =>
     "2026-01-01T00:01:40Z",
   ]);
 
+const defaultSettings = {
+  skipDetectedStops: false,
+} as const;
+
+function stopTrack(): RouteTrack {
+  return buildRouteTrack({
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [0, 0],
+            [0.00004, 0],
+            [0.00002, 0],
+            [0.001, 0],
+            [0.003, 0],
+          ],
+        },
+        properties: {
+          coordinate_times: [
+            "2026-01-01T00:00:00Z",
+            "2026-01-01T00:01:00Z",
+            "2026-01-01T00:02:00Z",
+            "2026-01-01T00:02:01Z",
+            "2026-01-01T00:03:00Z",
+          ],
+        },
+      },
+    ],
+  });
+}
+
 describe("route playback preferences", () => {
   it("defines the supported target route durations and default", () => {
     expect(TARGET_ROUTE_DURATIONS_SEC).toEqual([10, 20, 30, 60, 120]);
@@ -83,7 +117,7 @@ describe("route animation engine", () => {
     const fake = fakeClock();
     const engine = createRouteAnimationEngine(
       timedTrack(),
-      { playbackMode: "recorded", targetDurationSec: 10 },
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
       fake.clock,
     );
 
@@ -99,7 +133,7 @@ describe("route animation engine", () => {
     const fake = fakeClock();
     const engine = createRouteAnimationEngine(
       timedTrack(),
-      { playbackMode: "recorded", targetDurationSec: 10 },
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
       fake.clock,
     );
 
@@ -116,7 +150,7 @@ describe("route animation engine", () => {
     const fake = fakeClock();
     const engine = createRouteAnimationEngine(
       timedTrack(),
-      { playbackMode: "distance", targetDurationSec: 10 },
+      { ...defaultSettings, playbackMode: "distance", targetDurationSec: 10 },
       fake.clock,
     );
 
@@ -133,7 +167,7 @@ describe("route animation engine", () => {
     const fake = fakeClock();
     const engine = createRouteAnimationEngine(
       routeTrack(),
-      { playbackMode: "indexed", targetDurationSec: 10 },
+      { ...defaultSettings, playbackMode: "indexed", targetDurationSec: 10 },
       fake.clock,
     );
 
@@ -152,7 +186,7 @@ describe("route animation engine", () => {
     const fake = fakeClock();
     const engine = createRouteAnimationEngine(
       timedTrack(),
-      { playbackMode: "recorded", targetDurationSec: 10 },
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
       fake.clock,
     );
     engine.play();
@@ -184,7 +218,7 @@ describe("route animation engine", () => {
     const fake = fakeClock();
     const engine = createRouteAnimationEngine(
       routeTrack(),
-      { playbackMode: "indexed", targetDurationSec: 10 },
+      { ...defaultSettings, playbackMode: "indexed", targetDurationSec: 10 },
       fake.clock,
     );
     engine.play();
@@ -211,7 +245,7 @@ describe("route animation engine", () => {
     const fake = fakeClock();
     const engine = createRouteAnimationEngine(
       timedTrack(),
-      { playbackMode: "recorded", targetDurationSec: 10 },
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
       fake.clock,
     );
     engine.play();
@@ -231,7 +265,7 @@ describe("route animation engine", () => {
     const track = timedTrack();
     const engine = createRouteAnimationEngine(
       track,
-      { playbackMode: "recorded", targetDurationSec: 10 },
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
       fake.clock,
     );
     engine.play();
@@ -239,7 +273,11 @@ describe("route animation engine", () => {
     fake.step(9_000);
     const longitude = engine.getSnapshot().position?.coordinate[0];
 
-    engine.configure({ playbackMode: "distance", targetDurationSec: 20 });
+    engine.configure({
+      ...defaultSettings,
+      playbackMode: "distance",
+      targetDurationSec: 20,
+    });
 
     expect(engine.getSnapshot().playbackMode).toBe("distance");
     expect(engine.getSnapshot().position?.coordinate[0]).toBeCloseTo(
@@ -256,7 +294,7 @@ describe("route animation engine", () => {
     ]);
     const engine = createRouteAnimationEngine(
       track,
-      { playbackMode: "recorded", targetDurationSec: 20 },
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 20 },
       fake.clock,
     );
 
@@ -267,5 +305,92 @@ describe("route animation engine", () => {
       playbackProgress: 1,
       position: { pointIndex: 2, coordinate: [0.003, 0] },
     });
+  });
+
+  it("includes or collapses detected stops only in recorded-time mode", () => {
+    const includedClock = fakeClock();
+    const skippedClock = fakeClock();
+    const included = createRouteAnimationEngine(
+      stopTrack(),
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
+      includedClock.clock,
+    );
+    const skipped = createRouteAnimationEngine(
+      stopTrack(),
+      {
+        ...defaultSettings,
+        playbackMode: "recorded",
+        targetDurationSec: 10,
+        skipDetectedStops: true,
+      },
+      skippedClock.clock,
+    );
+
+    included.play();
+    skipped.play();
+    includedClock.step(0);
+    skippedClock.step(0);
+    includedClock.step(5_000);
+    skippedClock.step(5_000);
+
+    expect(included.getSnapshot().position?.coordinate[0]).toBeLessThan(0.0001);
+    expect(skipped.getSnapshot().position?.coordinate[0]).toBeGreaterThan(
+      0.001,
+    );
+
+    const distanceClock = fakeClock();
+    const distance = createRouteAnimationEngine(
+      stopTrack(),
+      {
+        ...defaultSettings,
+        playbackMode: "distance",
+        targetDurationSec: 10,
+        skipDetectedStops: true,
+      },
+      distanceClock.clock,
+    );
+    distance.play();
+    distanceClock.step(0);
+    distanceClock.step(5_000);
+    const skippedDistanceLongitude =
+      distance.getSnapshot().position?.coordinate[0];
+    distance.configure({
+      ...defaultSettings,
+      playbackMode: "distance",
+      targetDurationSec: 10,
+      skipDetectedStops: false,
+    });
+    expect(distance.getSnapshot().position?.coordinate[0]).toBeCloseTo(
+      skippedDistanceLongitude ?? 0,
+    );
+  });
+
+  it("rebases live duration and stop-setting changes through the cursor", () => {
+    const fake = fakeClock();
+    const engine = createRouteAnimationEngine(
+      stopTrack(),
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
+      fake.clock,
+    );
+    engine.play();
+    fake.step(0);
+    fake.step(5_000);
+    const coordinate = engine.getSnapshot().position?.coordinate;
+    const originalElapsedMs = engine.getSnapshot().position?.originalElapsedMs;
+
+    engine.configure({
+      playbackMode: "recorded",
+      targetDurationSec: 20,
+      skipDetectedStops: true,
+    });
+
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "playing",
+      skipDetectedStops: true,
+      position: { coordinate, originalElapsedMs },
+    });
+    fake.step(0);
+    fake.step(1_000);
+    expect(engine.getSnapshot().playbackProgress).toBeGreaterThan(0);
   });
 });

@@ -36,6 +36,10 @@ export function RouteAnimationController({
   const setPreferredPlaybackMode = useStore(
     (state) => state.setAnimationPlaybackMode,
   );
+  const skipDetectedStops = useStore((state) => state.skipDetectedStops);
+  const setSkipDetectedStops = useStore((state) => state.setSkipDetectedStops);
+  const showTimedPhotos = useStore((state) => state.showTimedPhotos);
+  const setShowTimedPhotos = useStore((state) => state.setShowTimedPhotos);
   const setAnimationDistanceProgress = useStore(
     (state) => state.setAnimationDistanceProgress,
   );
@@ -45,6 +49,7 @@ export function RouteAnimationController({
     useRouteAnimation(map, track, {
       targetDurationSec,
       playbackMode,
+      skipDetectedStops,
     });
   const isSessionActive = isAnimationSessionActive(state);
 
@@ -81,11 +86,16 @@ export function RouteAnimationController({
       targetDurationSec={targetDurationSec}
       playbackMode={playbackMode}
       availablePlaybackModes={availablePlaybackModes(track)}
+      timestampCapable={track.kind === "timed"}
+      skipDetectedStops={skipDetectedStops}
+      showTimedPhotos={showTimedPhotos}
       activityDurationSec={activityDurationSec}
       onPlay={play}
       onStop={stop}
       onDurationChange={handleDurationChange}
       onPlaybackModeChange={handlePlaybackModeChange}
+      onSkipDetectedStopsChange={setSkipDetectedStops}
+      onShowTimedPhotosChange={setShowTimedPhotos}
     />
   );
 }
