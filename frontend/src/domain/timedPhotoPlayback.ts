@@ -2,20 +2,27 @@ import type {
   RouteAnimationEngine,
   RouteAnimationSnapshot,
 } from "./routeAnimation";
-import type { TimedPhotoEvent } from "./timedPhotoEvents";
+import {
+  groupTimedPhotoEvents,
+  type TimedPhotoEvent,
+  type TimedPhotoEventGroup,
+} from "./timedPhotoEvents";
 import type { TimedTrack } from "./timedTrack";
 
 export const AUTOMATIC_PHOTO_VISIBLE_MS = 2_000;
+export const AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS = 10_000;
 
 export type AutomaticPhotoPresentation = {
   photoId: number;
   onLoad: () => void;
+  onError: () => void;
   onDismiss: () => void;
 };
 
 export type TimedPhotoPresenter = {
   open: (presentation: AutomaticPhotoPresentation) => void;
   close: (photoId: number) => void;
+  preload: (photoIds: readonly number[]) => void;
 };
 
 export type PhotoTimerClock = {
@@ -23,21 +30,36 @@ export type PhotoTimerClock = {
   clearTimeout: (timerId: unknown) => void;
 };
 
+export type PhotoPreloadScheduler = {
+  schedule: (callback: () => void) => () => void;
+};
+
 type PhotoPlaybackEngine = Pick<
   RouteAnimationEngine,
-  "getSnapshot" | "subscribeToFrames" | "pauseAtCursor"
+  "getSnapshot" | "subscribeToFrames" | "pauseAtCursor" | "moveToCursor"
 >;
 
-type ActivePhoto = {
-  event: TimedPhotoEvent;
-  token: symbol;
+type ActiveGroup = {
+  group: TimedPhotoEventGroup;
+  eventIndex: number;
+  groupToken: symbol;
+  photoToken: symbol;
+  phase: "loading" | "visible";
   releasePause: () => void;
   timerId: unknown | null;
 };
 
 export type TimedPhotoPlaybackCoordinator = {
   setEnabled: (enabled: boolean) => void;
+  setGroupingSettings: (settings: TimedPhotoGroupingSettings) => void;
   destroy: () => void;
+};
+
+export type TimedPhotoGroupingSettings = Pick<
+  RouteAnimationSnapshot,
+  "playbackMode" | "skipDetectedStops"
+> & {
+  targetDurationSec: number;
 };
 
 function browserPhotoTimerClock(): PhotoTimerClock {
@@ -47,21 +69,33 @@ function browserPhotoTimerClock(): PhotoTimerClock {
   };
 }
 
+function browserPhotoPreloadScheduler(): PhotoPreloadScheduler {
+  return {
+    schedule: (callback) => {
+      const timerId = window.setTimeout(callback, 0);
+      return () => window.clearTimeout(timerId);
+    },
+  };
+}
+
 function eventProgress(
   track: TimedTrack,
   event: TimedPhotoEvent,
-  snapshot: RouteAnimationSnapshot,
+  settings: Pick<
+    RouteAnimationSnapshot,
+    "playbackMode" | "skipDetectedStops"
+  >,
 ) {
-  if (snapshot.playbackMode === "distance") {
+  if (settings.playbackMode === "distance") {
     return track.totalDistanceM > 0
       ? event.cursor.cumulativeDistanceM / track.totalDistanceM
       : 0;
   }
-  const durationMs = snapshot.skipDetectedStops
+  const durationMs = settings.skipDetectedStops
     ? track.movingDurationMs
     : track.originalDurationMs;
   if (durationMs <= 0) return 0;
-  const elapsedMs = snapshot.skipDetectedStops
+  const elapsedMs = settings.skipDetectedStops
     ? event.cursor.movingElapsedMs
     : event.cursor.originalElapsedMs;
   return elapsedMs / durationMs;
@@ -78,72 +112,201 @@ export function createTimedPhotoPlaybackCoordinator({
   engine,
   presenter,
   enabled: initialEnabled,
+  groupingSettings: initialGroupingSettings,
   timerClock = browserPhotoTimerClock(),
+  preloadScheduler = browserPhotoPreloadScheduler(),
 }: {
   track: TimedTrack;
   events: readonly TimedPhotoEvent[];
   engine: PhotoPlaybackEngine;
   presenter: TimedPhotoPresenter;
   enabled: boolean;
+  groupingSettings: TimedPhotoGroupingSettings;
   timerClock?: PhotoTimerClock;
+  preloadScheduler?: PhotoPreloadScheduler;
 }): TimedPhotoPlaybackCoordinator {
   let enabled = initialEnabled;
+  let groupingSettings = initialGroupingSettings;
   let destroyed = false;
   let nextEventIndex = 0;
   let previousState = engine.getSnapshot().state;
-  let activePhoto: ActivePhoto | null = null;
+  let activeGroup: ActiveGroup | null = null;
+  let preloadedGroupFirstPhotoId: number | null = null;
+  let fullGroupPlan: readonly TimedPhotoEventGroup[] = [];
+  let plannedGroups: readonly TimedPhotoEventGroup[] = [];
+  let plannedGroupIndex = 0;
+  let cancelScheduledPreload: (() => void) | null = null;
 
-  const closeAndRelease = (photo: ActivePhoto) => {
-    if (photo.timerId !== null) timerClock.clearTimeout(photo.timerId);
-    presenter.close(photo.event.photoId);
-    photo.releasePause();
+  const currentEvent = (group: ActiveGroup) =>
+    group.group.events[group.eventIndex]!;
+
+  const clearGroupTimer = (group: ActiveGroup) => {
+    if (group.timerId === null) return;
+    timerClock.clearTimeout(group.timerId);
   };
 
-  const finishActivePhoto = (token: symbol) => {
-    if (destroyed || activePhoto?.token !== token) return;
-    const finishing = activePhoto;
-    activePhoto = null;
-    closeAndRelease(finishing);
+  const closeAndRelease = (group: ActiveGroup) => {
+    clearGroupTimer(group);
+    presenter.close(currentEvent(group).photoId);
+    group.releasePause();
   };
 
-  const cancelActivePhoto = () => {
-    if (!activePhoto) return;
-    const cancelling = activePhoto;
-    activePhoto = null;
+  const cancelActiveGroup = () => {
+    if (!activeGroup) return;
+    const cancelling = activeGroup;
+    activeGroup = null;
     closeAndRelease(cancelling);
   };
 
-  const openEvent = (event: TimedPhotoEvent) => {
-    const token = Symbol(`photo-${event.photoId}`);
-    activePhoto = {
-      event,
-      token,
-      releasePause: () => {},
-      timerId: null,
-    };
-    const releasePause = engine.pauseAtCursor(event.cursor, "photo");
-    if (!activePhoto || activePhoto.token !== token) {
-      releasePause();
-      return;
+  const buildGroupPlan = (sourceEvents: readonly TimedPhotoEvent[]) =>
+    groupTimedPhotoEvents(
+      sourceEvents,
+      (event) => eventProgress(track, event, groupingSettings),
+      groupingSettings.targetDurationSec * 1_000,
+    );
+
+  const planRemainingGroups = () => {
+    plannedGroups =
+      nextEventIndex === 0
+        ? fullGroupPlan
+        : buildGroupPlan(events.slice(nextEventIndex));
+    plannedGroupIndex = 0;
+  };
+
+  const rebuildGroupPlans = () => {
+    fullGroupPlan = buildGroupPlan(events);
+    planRemainingGroups();
+  };
+
+  const upcomingGroup = () => plannedGroups[plannedGroupIndex];
+
+  const cancelPreload = () => {
+    cancelScheduledPreload?.();
+    cancelScheduledPreload = null;
+  };
+
+  const preloadUpcomingGroup = () => {
+    if (!enabled) return;
+    const group = upcomingGroup();
+    if (!group) return;
+    const firstPhotoId = group.photoIds[0]!;
+    if (firstPhotoId === preloadedGroupFirstPhotoId) return;
+    preloadedGroupFirstPhotoId = firstPhotoId;
+    cancelPreload();
+    cancelScheduledPreload = preloadScheduler.schedule(() => {
+      cancelScheduledPreload = null;
+      if (destroyed || preloadedGroupFirstPhotoId !== firstPhotoId) return;
+      presenter.preload(group.photoIds);
+    });
+  };
+
+  const resetRunCursor = () => {
+    nextEventIndex = 0;
+    preloadedGroupFirstPhotoId = null;
+    plannedGroups = fullGroupPlan;
+    plannedGroupIndex = 0;
+    cancelPreload();
+  };
+
+  const consumeDisabledEventsThrough = (snapshot: RouteAnimationSnapshot) => {
+    let low = nextEventIndex;
+    let high = events.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (eventProgress(track, events[middle]!, snapshot) <= snapshot.playbackProgress) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
     }
-    activePhoto.releasePause = releasePause;
+    nextEventIndex = low;
+  };
+
+  const finishGroup = (groupToken: symbol) => {
+    if (destroyed || activeGroup?.groupToken !== groupToken) return;
+    const finishing = activeGroup;
+    activeGroup = null;
+    closeAndRelease(finishing);
+  };
+
+  const openCurrentPhoto = (groupToken: symbol) => {
+    if (destroyed || activeGroup?.groupToken !== groupToken) return;
+    const group = activeGroup;
+    const event = currentEvent(group);
+    const photoToken = Symbol(`photo-${event.photoId}`);
+    group.photoToken = photoToken;
+    group.phase = "loading";
+    clearGroupTimer(group);
+    group.timerId = timerClock.setTimeout(
+      () => advanceGroup(groupToken, photoToken),
+      AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS,
+    );
     presenter.open({
       photoId: event.photoId,
       onLoad: () => {
         if (
           destroyed ||
-          activePhoto?.token !== token ||
-          activePhoto.timerId !== null
+          activeGroup?.groupToken !== groupToken ||
+          activeGroup.photoToken !== photoToken ||
+          activeGroup.phase !== "loading"
         ) {
           return;
         }
-        activePhoto.timerId = timerClock.setTimeout(
-          () => finishActivePhoto(token),
+        clearGroupTimer(activeGroup);
+        activeGroup.phase = "visible";
+        activeGroup.timerId = timerClock.setTimeout(
+          () => advanceGroup(groupToken, photoToken),
           AUTOMATIC_PHOTO_VISIBLE_MS,
         );
       },
-      onDismiss: () => finishActivePhoto(token),
+      onError: () => {
+        if (activeGroup?.phase === "loading") {
+          advanceGroup(groupToken, photoToken);
+        }
+      },
+      onDismiss: () => finishGroup(groupToken),
     });
+  };
+
+  function advanceGroup(groupToken: symbol, photoToken: symbol) {
+    if (
+      destroyed ||
+      activeGroup?.groupToken !== groupToken ||
+      activeGroup.photoToken !== photoToken
+    ) {
+      return;
+    }
+    clearGroupTimer(activeGroup);
+    if (activeGroup.eventIndex + 1 >= activeGroup.group.events.length) {
+      finishGroup(groupToken);
+      return;
+    }
+    activeGroup.eventIndex += 1;
+    engine.moveToCursor(currentEvent(activeGroup).cursor);
+    openCurrentPhoto(groupToken);
+  }
+
+  const openGroup = (group: TimedPhotoEventGroup) => {
+    const firstEvent = group.events[0];
+    if (!firstEvent) return;
+    const groupToken = Symbol(`photo-group-${firstEvent.photoId}`);
+    activeGroup = {
+      group,
+      eventIndex: 0,
+      groupToken,
+      photoToken: Symbol("pending-photo"),
+      phase: "loading",
+      releasePause: () => {},
+      timerId: null,
+    };
+    const releasePause = engine.pauseAtCursor(firstEvent.cursor, "photo");
+    if (!activeGroup || activeGroup.groupToken !== groupToken) {
+      releasePause();
+      return;
+    }
+    activeGroup.releasePause = releasePause;
+    preloadUpcomingGroup();
+    openCurrentPhoto(groupToken);
   };
 
   const onFrame = (snapshot: RouteAnimationSnapshot) => {
@@ -155,42 +318,82 @@ export function createTimedPhotoPlaybackCoordinator({
       (snapshot.state === "playing" || snapshot.state === "paused") &&
       (priorState === "idle" || priorState === "completed")
     ) {
-      nextEventIndex = 0;
+      resetRunCursor();
     }
 
     if (snapshot.state === "idle") {
-      nextEventIndex = 0;
-      cancelActivePhoto();
+      resetRunCursor();
+      cancelActiveGroup();
       return;
     }
-    if (snapshot.state !== "playing" || activePhoto) return;
+    if (snapshot.state !== "playing" || activeGroup) return;
+
+    if (!enabled) {
+      consumeDisabledEventsThrough(snapshot);
+      return;
+    }
+
+    if (
+      snapshot.playbackMode !== groupingSettings.playbackMode ||
+      snapshot.skipDetectedStops !== groupingSettings.skipDetectedStops
+    ) {
+      return;
+    }
+
+    preloadUpcomingGroup();
 
     while (nextEventIndex < events.length) {
       const event = events[nextEventIndex]!;
       if (eventProgress(track, event, snapshot) > snapshot.playbackProgress) {
         return;
       }
-      nextEventIndex += 1;
-      if (enabled) {
-        openEvent(event);
-        return;
-      }
+      const group = upcomingGroup()!;
+      nextEventIndex += group.events.length;
+      plannedGroupIndex += 1;
+      preloadedGroupFirstPhotoId = null;
+      openGroup(group);
+      return;
     }
   };
 
+  rebuildGroupPlans();
+  preloadUpcomingGroup();
   const unsubscribe = engine.subscribeToFrames(onFrame);
 
   return {
     setEnabled: (nextEnabled) => {
       if (destroyed || enabled === nextEnabled) return;
       enabled = nextEnabled;
-      if (!enabled) cancelActivePhoto();
+      if (!enabled) {
+        cancelPreload();
+        preloadedGroupFirstPhotoId = null;
+        cancelActiveGroup();
+      } else {
+        planRemainingGroups();
+        preloadUpcomingGroup();
+      }
+      onFrame(engine.getSnapshot());
+    },
+    setGroupingSettings: (settings) => {
+      if (
+        destroyed ||
+        (settings.playbackMode === groupingSettings.playbackMode &&
+          settings.skipDetectedStops === groupingSettings.skipDetectedStops &&
+          settings.targetDurationSec === groupingSettings.targetDurationSec)
+      ) {
+        return;
+      }
+      groupingSettings = settings;
+      preloadedGroupFirstPhotoId = null;
+      rebuildGroupPlans();
+      preloadUpcomingGroup();
       onFrame(engine.getSnapshot());
     },
     destroy: () => {
       if (destroyed) return;
       unsubscribe();
-      cancelActivePhoto();
+      cancelPreload();
+      cancelActiveGroup();
       destroyed = true;
     },
   };

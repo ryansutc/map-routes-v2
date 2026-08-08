@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildRouteTrack, type TimedTrack } from "./timedTrack";
-import { planTimedPhotoEvents } from "./timedPhotoEvents";
+import {
+  groupTimedPhotoEvents,
+  planTimedPhotoEvents,
+  TIMED_PHOTO_GROUP_WINDOW_MS,
+} from "./timedPhotoEvents";
 
 function timedTrack(): TimedTrack {
   const track = buildRouteTrack({
@@ -147,5 +151,55 @@ describe("planTimedPhotoEvents", () => {
     ]);
 
     expect(events.map((event) => event.photoId)).toEqual([2, 9]);
+  });
+});
+
+describe("groupTimedPhotoEvents", () => {
+  it("groups consecutive events within the named compressed-playback window", () => {
+    const track = timedTrack();
+    const events = planTimedPhotoEvents(track, [
+      { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+      { id: 2, takenAt: "2026-01-01T00:00:10Z" },
+      { id: 3, takenAt: "2026-01-01T00:00:20Z" },
+      { id: 4, takenAt: "2026-01-01T00:02:00Z" },
+    ]);
+    const groups = groupTimedPhotoEvents(
+      events,
+      (event) => event.cursor.originalElapsedMs / track.originalDurationMs,
+      20_000,
+    );
+
+    expect(TIMED_PHOTO_GROUP_WINDOW_MS).toBe(2_000);
+    expect(groups.map((group) => group.events.map((event) => event.photoId))).toEqual([
+      [1, 2, 3],
+      [4],
+    ]);
+  });
+
+  it("always groups identical timestamps using stable photo-id order", () => {
+    const events = planTimedPhotoEvents(timedTrack(), [
+      { id: 9, takenAt: "2026-01-01T00:02:00Z" },
+      { id: 2, takenAt: "2026-01-01T00:02:00Z" },
+    ]);
+    const groups = groupTimedPhotoEvents(events, () => 0, 120_000);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.events.map((event) => event.photoId)).toEqual([2, 9]);
+  });
+
+  it("groups photos mapped to the same collapsed stop", () => {
+    const track = stoppedTrack();
+    const events = planTimedPhotoEvents(track, [
+      { id: 1, takenAt: "2026-01-01T00:00:10Z" },
+      { id: 2, takenAt: "2026-01-01T00:01:50Z" },
+    ]);
+    const groups = groupTimedPhotoEvents(
+      events,
+      (event) => event.cursor.movingElapsedMs / track.movingDurationMs,
+      120_000,
+    );
+
+    expect(events.every((event) => event.cursor.stopIndex === 0)).toBe(true);
+    expect(groups).toHaveLength(1);
   });
 });

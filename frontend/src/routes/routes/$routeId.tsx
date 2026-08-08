@@ -17,6 +17,7 @@ import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useMapInteractionLock } from "@/hooks/useMapInteractionLock";
 import { useRoute } from "@/hooks/useRoute.tsx";
 import { useStore } from "@/state/store";
+import { resolvePhotoUrl } from "@/utils/dropboxImgHelpers";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
@@ -146,6 +147,16 @@ function RouteDetail() {
   );
   const [automaticPhoto, setAutomaticPhoto] =
     useState<AutomaticPhotoPresentation | null>(null);
+  const timedPhotoUrls = useMemo(
+    () =>
+      new globalThis.Map(
+        (routeItem?.photos ?? []).map((photo) => [
+          photo.id,
+          resolvePhotoUrl(photo.url),
+        ]),
+      ),
+    [routeItem?.photos],
+  );
   const timedPhotoPresenter = useMemo<TimedPhotoPresenter>(
     () => ({
       open: setAutomaticPhoto,
@@ -153,8 +164,16 @@ function RouteDetail() {
         setAutomaticPhoto((current) =>
           current?.photoId === photoId ? null : current,
         ),
+      preload: (photoIds) => {
+        for (const photoId of photoIds) {
+          const url = timedPhotoUrls.get(photoId);
+          if (!url) continue;
+          const image = new Image();
+          image.src = url;
+        }
+      },
     }),
-    [],
+    [timedPhotoUrls],
   );
   const navigate = useNavigate();
 
@@ -315,6 +334,7 @@ function RouteDetail() {
             : () => setSelectedPhotoIndex(null)
         }
         onImageLoad={automaticPhoto?.onLoad}
+        onImageError={automaticPhoto?.onError}
         navigationEnabled={!automaticPhoto}
       />
 

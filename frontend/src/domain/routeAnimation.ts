@@ -62,6 +62,7 @@ export type RouteAnimationEngine = {
     cursor: TrackCursor,
     reason: AnimationPauseReason,
   ) => () => void;
+  moveToCursor: (cursor: TrackCursor) => void;
   configure: (settings: RouteAnimationSettings) => void;
   destroy: () => void;
 };
@@ -348,6 +349,13 @@ export function createRouteAnimationEngine(
 
   const routeDurationMs = () => settings.targetDurationSec * 1000;
 
+  const rebaseAtCursor = (cursor: TrackCursor) => {
+    rebasedPosition = positionAtTimedCursor(cursor);
+    playbackProgress = projection.progressAt(rebasedPosition);
+    elapsedPlaybackMs = playbackProgress * routeDurationMs();
+    lastFrameAt = null;
+  };
+
   const acquirePause = (reason: AnimationPauseReason) => {
     if (destroyed) return () => {};
     const token = Symbol(reason);
@@ -476,11 +484,13 @@ export function createRouteAnimationEngine(
     acquirePause,
     pauseAtCursor: (cursor, reason) => {
       if (destroyed || state !== "playing") return () => {};
-      rebasedPosition = positionAtTimedCursor(cursor);
-      playbackProgress = projection.progressAt(rebasedPosition);
-      elapsedPlaybackMs = playbackProgress * routeDurationMs();
-      lastFrameAt = null;
+      rebaseAtCursor(cursor);
       return acquirePause(reason);
+    },
+    moveToCursor: (cursor) => {
+      if (destroyed || (state !== "playing" && state !== "paused")) return;
+      rebaseAtCursor(cursor);
+      forcePublish();
     },
     configure: (nextSettings) => {
       if (destroyed) return;

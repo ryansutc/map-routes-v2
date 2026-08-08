@@ -7,9 +7,11 @@ import {
 } from "./routeAnimation";
 import { planTimedPhotoEvents } from "./timedPhotoEvents";
 import {
+  AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS,
   AUTOMATIC_PHOTO_VISIBLE_MS,
   createTimedPhotoPlaybackCoordinator,
   type AutomaticPhotoPresentation,
+  type PhotoPreloadScheduler,
   type PhotoTimerClock,
 } from "./timedPhotoPlayback";
 import { buildRouteTrack, type TimedTrack } from "./timedTrack";
@@ -91,16 +93,39 @@ function fakeTimerClock() {
   };
 }
 
+function fakePreloadScheduler() {
+  let nextId = 1;
+  const callbacks = new Map<number, () => void>();
+  const scheduler: PhotoPreloadScheduler = {
+    schedule: (callback) => {
+      const id = nextId++;
+      callbacks.set(id, callback);
+      return () => callbacks.delete(id);
+    },
+  };
+  return {
+    scheduler,
+    flush() {
+      const pending = [...callbacks.values()];
+      callbacks.clear();
+      pending.forEach((callback) => callback());
+    },
+  };
+}
+
 function presenterSpy() {
   const opened: AutomaticPhotoPresentation[] = [];
   const closed: number[] = [];
+  const preloaded: number[][] = [];
   return {
     opened,
     closed,
+    preloaded,
     presenter: {
       open: (presentation: AutomaticPhotoPresentation) =>
         opened.push(presentation),
       close: (photoId: number) => closed.push(photoId),
+      preload: (photoIds: readonly number[]) => preloaded.push([...photoIds]),
     },
   };
 }
@@ -113,6 +138,7 @@ function setup(
 ) {
   const frames = fakeFrameClock();
   const timers = fakeTimerClock();
+  const preloads = fakePreloadScheduler();
   const presentation = presenterSpy();
   const engine = createRouteAnimationEngine(
     track,
@@ -126,9 +152,15 @@ function setup(
     engine,
     presenter: presentation.presenter,
     enabled,
+    groupingSettings: {
+      playbackMode,
+      skipDetectedStops: false,
+      targetDurationSec: 10,
+    },
     timerClock: timers.clock,
+    preloadScheduler: preloads.scheduler,
   });
-  return { engine, frames, timers, presentation, coordinator };
+  return { engine, frames, timers, preloads, presentation, coordinator };
 }
 
 function finishLoadedPhoto(
@@ -162,7 +194,7 @@ describe("timed photo playback coordinator", () => {
         activePauseReasons: ["photo"],
       });
       expect(presentation.opened.map(({ photoId }) => photoId)).toEqual([7]);
-      expect(timers.pendingCount).toBe(0);
+      expect(timers.pendingCount).toBe(1);
 
       finishLoadedPhoto(engine, timers, presentation);
 
@@ -276,6 +308,158 @@ describe("timed photo playback coordinator", () => {
 
     expect(presentation.opened).toHaveLength(0);
     expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("shows a group in order and moves the marker to every photo cursor", () => {
+    const track = timedTrack();
+    const frames = fakeFrameClock();
+    const timers = fakeTimerClock();
+    const preloads = fakePreloadScheduler();
+    const presentation = presenterSpy();
+    const engine = createRouteAnimationEngine(
+      track,
+      { playbackMode: "recorded", targetDurationSec: 20, skipDetectedStops: false },
+      frames.clock,
+    );
+    const events = planTimedPhotoEvents(track, [
+      { id: 3, takenAt: "2026-01-01T00:00:12Z" },
+      { id: 1, takenAt: "2026-01-01T00:00:10Z" },
+      { id: 2, takenAt: "2026-01-01T00:00:11Z" },
+    ]);
+    const coordinator = createTimedPhotoPlaybackCoordinator({
+      track,
+      events,
+      engine,
+      presenter: presentation.presenter,
+      enabled: true,
+      groupingSettings: {
+        playbackMode: "recorded",
+        skipDetectedStops: false,
+        targetDurationSec: 20,
+      },
+      timerClock: timers.clock,
+      preloadScheduler: preloads.scheduler,
+    });
+
+    engine.play();
+    frames.step(0);
+    frames.step(10_000);
+    expect(presentation.opened.map((photo) => photo.photoId)).toEqual([1]);
+
+    presentation.opened[0]!.onLoad();
+    timers.step(AUTOMATIC_PHOTO_VISIBLE_MS);
+    expect(presentation.opened.map((photo) => photo.photoId)).toEqual([1, 2]);
+    expect(engine.getSnapshot().position?.originalElapsedMs).toBe(11_000);
+
+    presentation.opened[1]!.onLoad();
+    timers.step(AUTOMATIC_PHOTO_VISIBLE_MS);
+    expect(presentation.opened.map((photo) => photo.photoId)).toEqual([1, 2, 3]);
+    expect(engine.getSnapshot().position?.originalElapsedMs).toBe(12_000);
+
+    presentation.opened[2]!.onLoad();
+    timers.step(AUTOMATIC_PHOTO_VISIBLE_MS);
+    expect(engine.getSnapshot().state).toBe("playing");
+    expect(presentation.closed).toEqual([3]);
+    coordinator.destroy();
+  });
+
+  it("skips failed and timed-out images without deadlocking the group", () => {
+    const track = timedTrack();
+    const frames = fakeFrameClock();
+    const timers = fakeTimerClock();
+    const preloads = fakePreloadScheduler();
+    const presentation = presenterSpy();
+    const engine = createRouteAnimationEngine(
+      track,
+      { playbackMode: "recorded", targetDurationSec: 20, skipDetectedStops: false },
+      frames.clock,
+    );
+    const events = planTimedPhotoEvents(track, [
+      { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+      { id: 2, takenAt: "2026-01-01T00:00:01Z" },
+      { id: 3, takenAt: "2026-01-01T00:00:02Z" },
+    ]);
+    const coordinator = createTimedPhotoPlaybackCoordinator({
+      track,
+      events,
+      engine,
+      presenter: presentation.presenter,
+      enabled: true,
+      groupingSettings: {
+        playbackMode: "recorded",
+        skipDetectedStops: false,
+        targetDurationSec: 20,
+      },
+      timerClock: timers.clock,
+      preloadScheduler: preloads.scheduler,
+    });
+
+    engine.play();
+    presentation.opened[0]!.onError();
+    expect(presentation.opened.map((photo) => photo.photoId)).toEqual([1, 2]);
+
+    timers.step(AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS);
+    expect(presentation.opened.map((photo) => photo.photoId)).toEqual([1, 2, 3]);
+
+    presentation.opened[2]!.onLoad();
+    timers.step(AUTOMATIC_PHOTO_VISIBLE_MS);
+    expect(engine.getSnapshot().state).toBe("playing");
+    expect(timers.pendingCount).toBe(0);
+    coordinator.destroy();
+  });
+
+  it("opportunistically preloads one upcoming group at a time", () => {
+    const track = timedTrack();
+    const frames = fakeFrameClock();
+    const timers = fakeTimerClock();
+    const preloads = fakePreloadScheduler();
+    const presentation = presenterSpy();
+    const engine = createRouteAnimationEngine(
+      track,
+      { playbackMode: "recorded", targetDurationSec: 10, skipDetectedStops: false },
+      frames.clock,
+    );
+    const events = planTimedPhotoEvents(track, [
+      { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+      { id: 2, takenAt: "2026-01-01T00:00:05Z" },
+      { id: 3, takenAt: "2026-01-01T00:00:20Z" },
+    ]);
+    const coordinator = createTimedPhotoPlaybackCoordinator({
+      track,
+      events,
+      engine,
+      presenter: presentation.presenter,
+      enabled: true,
+      groupingSettings: {
+        playbackMode: "recorded",
+        skipDetectedStops: false,
+        targetDurationSec: 10,
+      },
+      timerClock: timers.clock,
+      preloadScheduler: preloads.scheduler,
+    });
+
+    preloads.flush();
+    engine.play();
+    preloads.flush();
+
+    expect(presentation.preloaded).toEqual([[1], [2]]);
+    expect(presentation.preloaded.flat()).not.toContain(3);
+    coordinator.destroy();
+  });
+
+  it("reschedules a canceled preload when timed photos are re-enabled", () => {
+    const { engine, preloads, presentation, coordinator } = setup(
+      "2026-01-01T00:00:10Z",
+    );
+    engine.play();
+
+    coordinator.setEnabled(false);
+    coordinator.setEnabled(true);
+    preloads.flush();
+
+    expect(presentation.preloaded).toEqual([[7]]);
     coordinator.destroy();
   });
 });
