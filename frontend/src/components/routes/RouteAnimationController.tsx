@@ -6,15 +6,27 @@ import {
   type RoutePlaybackMode,
   type TargetRouteDurationSec,
 } from "@/domain/routeAnimation";
+import { planTimedPhotoEvents } from "@/domain/timedPhotoEvents";
+import {
+  createTimedPhotoPlaybackCoordinator,
+  type TimedPhotoPresenter,
+} from "@/domain/timedPhotoPlayback";
 import type { RouteTrack } from "@/domain/timedTrack";
 import { useRouteAnimation } from "@/hooks/useRouteAnimation";
 import { useStore } from "@/state/store";
 import Map from "@arcgis/core/Map";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
+
+type RoutePhotoTiming = {
+  id: number;
+  taken_at?: string | null;
+};
 
 interface RouteAnimationControllerProps {
   map: Map | null;
   track: RouteTrack;
+  photos: readonly RoutePhotoTiming[];
+  timedPhotoPresenter: TimedPhotoPresenter;
   activityDurationSec: number | null;
   /** Notified for the full active session, including composed pauses. */
   onSessionActiveChange?: (isActive: boolean) => void;
@@ -23,6 +35,8 @@ interface RouteAnimationControllerProps {
 export function RouteAnimationController({
   map,
   track,
+  photos,
+  timedPhotoPresenter,
   activityDurationSec,
   onSessionActiveChange,
 }: RouteAnimationControllerProps) {
@@ -45,13 +59,58 @@ export function RouteAnimationController({
   );
   const playbackMode = resolvePlaybackMode(track, preferredPlaybackMode);
 
-  const { state, playbackProgress, distanceProgress, pointCount, play, stop } =
-    useRouteAnimation(map, track, {
+  const {
+    state,
+    playbackProgress,
+    distanceProgress,
+    pointCount,
+    play,
+    stop,
+    photoPlaybackEngine,
+  } = useRouteAnimation(map, track, {
       targetDurationSec,
       playbackMode,
       skipDetectedStops,
     });
   const isSessionActive = isAnimationSessionActive(state);
+  const timedPhotoEvents = useMemo(
+    () =>
+      track.kind === "timed"
+        ? planTimedPhotoEvents(
+            track,
+            photos.map((photo) => ({
+              id: photo.id,
+              takenAt: photo.taken_at,
+            })),
+          )
+        : [],
+    [photos, track],
+  );
+  const photoCoordinatorRef = useRef<ReturnType<
+    typeof createTimedPhotoPlaybackCoordinator
+  > | null>(null);
+  const showTimedPhotosRef = useRef(showTimedPhotos);
+
+  useEffect(() => {
+    showTimedPhotosRef.current = showTimedPhotos;
+    photoCoordinatorRef.current?.setEnabled(showTimedPhotos);
+  }, [showTimedPhotos]);
+
+  useEffect(() => {
+    if (track.kind !== "timed") return;
+    const coordinator = createTimedPhotoPlaybackCoordinator({
+      track,
+      events: timedPhotoEvents,
+      engine: photoPlaybackEngine,
+      presenter: timedPhotoPresenter,
+      enabled: showTimedPhotosRef.current,
+    });
+    photoCoordinatorRef.current = coordinator;
+    return () => {
+      photoCoordinatorRef.current = null;
+      coordinator.destroy();
+    };
+  }, [photoPlaybackEngine, timedPhotoEvents, timedPhotoPresenter, track]);
 
   useEffect(() => {
     onSessionActiveChange?.(isSessionActive);

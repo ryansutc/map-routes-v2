@@ -7,7 +7,7 @@ import {
   resolvePlaybackMode,
   type AnimationFrameClock,
 } from "./routeAnimation";
-import { buildRouteTrack, type RouteTrack } from "./timedTrack";
+import { buildRouteTrack, type RouteTrack, type TimedTrack } from "./timedTrack";
 
 function routeTrack(times?: string[]): RouteTrack {
   return buildRouteTrack({
@@ -59,6 +59,11 @@ const timedTrack = () =>
     "2026-01-01T00:01:30Z",
     "2026-01-01T00:01:40Z",
   ]);
+
+function requireTimedTrack(track: RouteTrack): TimedTrack {
+  if (track.kind !== "timed") throw new Error("Expected a timed track");
+  return track;
+}
 
 const defaultSettings = {
   skipDetectedStops: false,
@@ -212,6 +217,106 @@ describe("route animation engine", () => {
 
     expect(engine.getSnapshot().state).toBe("playing");
     expect(engine.getSnapshot().playbackProgress).toBeCloseTo(0.3);
+  });
+
+  it("pauses at an exact timed cursor without releasing composed reasons", () => {
+    const fake = fakeClock();
+    const track = requireTimedTrack(timedTrack());
+    const engine = createRouteAnimationEngine(
+      track,
+      { ...defaultSettings, playbackMode: "distance", targetDurationSec: 10 },
+      fake.clock,
+    );
+    engine.play();
+    fake.step(0);
+    fake.step(2_000);
+    const releaseHidden = engine.acquirePause("document-hidden");
+    releaseHidden();
+
+    const cursor = track.atTimestamp(Date.parse("2026-01-01T00:01:30Z"));
+    const releasePhoto = engine.pauseAtCursor(cursor, "photo");
+    const releaseManual = engine.acquirePause("manual-gallery");
+
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      position: {
+        coordinate: [0.001, 0],
+        originalElapsedMs: 90_000,
+        cumulativeDistanceM: cursor.cumulativeDistanceM,
+      },
+      activePauseReasons: ["photo", "manual-gallery"],
+    });
+    releasePhoto();
+    expect(engine.getSnapshot().state).toBe("paused");
+    releaseManual();
+    expect(engine.getSnapshot().state).toBe("playing");
+  });
+
+  it("allows an end cursor pause before completion", () => {
+    const fake = fakeClock();
+    const track = requireTimedTrack(timedTrack());
+    const engine = createRouteAnimationEngine(
+      track,
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
+      fake.clock,
+    );
+    let releasePhoto = () => {};
+    let photoPauseAcquired = false;
+    engine.subscribeToFrames((snapshot) => {
+      if (
+        snapshot.state === "playing" &&
+        snapshot.playbackProgress === 1 &&
+        !photoPauseAcquired
+      ) {
+        photoPauseAcquired = true;
+        releasePhoto = engine.pauseAtCursor(
+          track.atTimestamp(track.endedAtMs),
+          "photo",
+        );
+      }
+    });
+
+    engine.play();
+    fake.step(0);
+    fake.step(10_000);
+    expect(engine.getSnapshot().state).toBe("paused");
+
+    releasePhoto();
+    fake.step(0);
+    expect(engine.getSnapshot().state).toBe("completed");
+  });
+
+  it("allows a photo pause before instantaneous completion", () => {
+    const track = requireTimedTrack(
+      routeTrack([
+        "2026-01-01T00:00:00Z",
+        "2026-01-01T00:00:00Z",
+        "2026-01-01T00:00:00Z",
+      ]),
+    );
+    const engine = createRouteAnimationEngine(track, {
+      ...defaultSettings,
+      playbackMode: "recorded",
+      targetDurationSec: 20,
+    });
+    engine.subscribeToFrames((snapshot) => {
+      if (snapshot.state === "playing") {
+        engine.pauseAtCursor(track.atTimestamp(track.startedAtMs), "photo");
+      }
+    });
+
+    engine.play();
+
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      playbackProgress: 1,
+      position: { coordinate: [0.003, 0] },
+    });
+    engine.stop();
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "idle",
+      playbackProgress: 0,
+    });
   });
 
   it("completes, stops, and replays with explicit lifecycle states", () => {
