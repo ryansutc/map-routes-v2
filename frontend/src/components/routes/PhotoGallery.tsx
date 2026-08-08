@@ -1,5 +1,5 @@
 import { schemas } from "@/generatedtypes/django_generated";
-import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
+import { resolvePhotoUrl } from "@/utils/dropboxImgHelpers";
 import {
   Box,
   Dialog,
@@ -14,16 +14,13 @@ import type { z } from "zod";
 
 type Photo = z.infer<typeof schemas.Photo>;
 
-function resolveUrl(url: string): string {
-  return dropboxShareUrlToDirectDownload(url) || url;
-}
-
 export function PhotoLightbox({
   photos,
   index,
   onIndexChange,
   onClose,
   onImageLoad,
+  onImageError,
   navigationEnabled = true,
 }: {
   photos: Photo[];
@@ -31,6 +28,7 @@ export function PhotoLightbox({
   onIndexChange: (index: number) => void;
   onClose: () => void;
   onImageLoad?: () => void;
+  onImageError?: () => void;
   navigationEnabled?: boolean;
 }) {
   const open = index !== null && photos.length > 0;
@@ -127,9 +125,11 @@ export function PhotoLightbox({
 
         <Box sx={{ width: "100%", textAlign: "center", p: 1 }}>
           <img
-            src={resolveUrl(current.url)}
+            key={current.id}
+            src={resolvePhotoUrl(current.url)}
             alt={current.title ?? `Photo ${index + 1}`}
             onLoad={onImageLoad}
+            onError={onImageError}
             style={{
               maxWidth: "100%",
               maxHeight: "80vh",
@@ -175,7 +175,7 @@ export default function PhotoGallery({
             onClick={() => onPhotoClick(i)}
           >
             <img
-              src={resolveUrl(photo.url)}
+              src={resolvePhotoUrl(photo.url)}
               alt={photo.title ?? `Photo ${i + 1}`}
               loading="lazy"
               style={{

@@ -90,11 +90,26 @@ export function RouteAnimationController({
     typeof createTimedPhotoPlaybackCoordinator
   > | null>(null);
   const showTimedPhotosRef = useRef(showTimedPhotos);
+  const timedPhotoGroupingSettingsRef = useRef({
+    playbackMode,
+    skipDetectedStops,
+    targetDurationSec,
+  });
 
   useEffect(() => {
     showTimedPhotosRef.current = showTimedPhotos;
     photoCoordinatorRef.current?.setEnabled(showTimedPhotos);
   }, [showTimedPhotos]);
+
+  useEffect(() => {
+    const groupingSettings = {
+      playbackMode,
+      skipDetectedStops,
+      targetDurationSec,
+    };
+    timedPhotoGroupingSettingsRef.current = groupingSettings;
+    photoCoordinatorRef.current?.setGroupingSettings(groupingSettings);
+  }, [playbackMode, skipDetectedStops, targetDurationSec]);
 
   useEffect(() => {
     if (track.kind !== "timed") return;
@@ -104,6 +119,7 @@ export function RouteAnimationController({
       engine: photoPlaybackEngine,
       presenter: timedPhotoPresenter,
       enabled: showTimedPhotosRef.current,
+      groupingSettings: timedPhotoGroupingSettingsRef.current,
     });
     photoCoordinatorRef.current = coordinator;
     return () => {

@@ -11,6 +11,13 @@ export type TimedPhotoEvent = {
   cursor: TrackCursor;
 };
 
+export const TIMED_PHOTO_GROUP_WINDOW_MS = 2_000;
+
+export type TimedPhotoEventGroup = {
+  events: readonly TimedPhotoEvent[];
+  photoIds: readonly number[];
+};
+
 const ABSOLUTE_TIMESTAMP_PATTERN = /(?:Z|[+-]\d{2}:\d{2})$/i;
 
 function parseAbsoluteTimestamp(value: string | null | undefined) {
@@ -63,4 +70,46 @@ export function planTimedPhotoEvents(
       first.takenAtMs - second.takenAtMs || first.photoId - second.photoId,
   );
   return events;
+}
+
+/** Groups an already sorted event list using its selected playback projection. */
+export function groupTimedPhotoEvents(
+  events: readonly TimedPhotoEvent[],
+  playbackProgressAt: (event: TimedPhotoEvent) => number,
+  targetRouteDurationMs: number,
+): readonly TimedPhotoEventGroup[] {
+  const groups: TimedPhotoEvent[][] = [];
+
+  for (const event of events) {
+    const current = groups.at(-1);
+    const previous = current?.at(-1);
+    const sameTimestamp = previous?.takenAtMs === event.takenAtMs;
+    const sameCollapsedStop =
+      previous?.cursor.stopIndex !== null &&
+      previous?.cursor.stopIndex === event.cursor.stopIndex &&
+      playbackProgressAt(previous) === playbackProgressAt(event);
+    const playbackSeparationMs = previous
+      ? Math.max(
+          0,
+          (playbackProgressAt(event) - playbackProgressAt(previous)) *
+            targetRouteDurationMs,
+        )
+      : Number.POSITIVE_INFINITY;
+
+    if (
+      current &&
+      (sameTimestamp ||
+        sameCollapsedStop ||
+        playbackSeparationMs <= TIMED_PHOTO_GROUP_WINDOW_MS)
+    ) {
+      current.push(event);
+    } else {
+      groups.push([event]);
+    }
+  }
+
+  return groups.map((group) => ({
+    events: group,
+    photoIds: group.map((event) => event.photoId),
+  }));
 }

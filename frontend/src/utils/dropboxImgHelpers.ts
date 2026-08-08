@@ -11,3 +11,8 @@ export function dropboxShareUrlToDirectDownload(url: string): string {
 
   return newUrl;
 }
+
+/** Resolves a stored photo URL to the URL browsers should request. */
+export function resolvePhotoUrl(url: string): string {
+  return dropboxShareUrlToDirectDownload(url) || url;
+}
