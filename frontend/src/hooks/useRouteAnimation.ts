@@ -25,6 +25,7 @@ const DEFAULT_MARKER_COLOR: [number, number, number, number] = [
 interface AnimationOptions {
   targetDurationSec: TargetRouteDurationSec;
   playbackMode: RoutePlaybackMode;
+  skipDetectedStops: boolean;
   lineColor?: [number, number, number, number];
   lineWidth?: number;
   markerColor?: [number, number, number, number];
@@ -49,6 +50,7 @@ export function useRouteAnimation(
   const {
     targetDurationSec,
     playbackMode,
+    skipDetectedStops,
     lineColor = DEFAULT_LINE_COLOR,
     lineWidth = 3,
     markerColor = DEFAULT_MARKER_COLOR,
@@ -56,7 +58,11 @@ export function useRouteAnimation(
   } = options;
 
   const initialSettings = useMemo<RouteAnimationSettings>(
-    () => ({ targetDurationSec, playbackMode }),
+    () => ({
+      targetDurationSec,
+      playbackMode,
+      skipDetectedStops,
+    }),
     // Settings changes are applied through configure so the current route
     // position survives them; only route data creates a new session engine.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,8 +79,12 @@ export function useRouteAnimation(
   );
 
   useEffect(() => {
-    engine.configure({ targetDurationSec, playbackMode });
-  }, [engine, playbackMode, targetDurationSec]);
+    engine.configure({
+      targetDurationSec,
+      playbackMode,
+      skipDetectedStops,
+    });
+  }, [engine, playbackMode, skipDetectedStops, targetDurationSec]);
 
   useEffect(() => () => engine.destroy(), [engine]);
 

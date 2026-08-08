@@ -22,11 +22,16 @@ interface RouteAnimationControlsProps {
   targetDurationSec: TargetRouteDurationSec;
   playbackMode: RoutePlaybackMode;
   availablePlaybackModes: readonly RoutePlaybackMode[];
+  timestampCapable: boolean;
+  skipDetectedStops: boolean;
+  showTimedPhotos: boolean;
   activityDurationSec: number | null;
   onPlay: () => void;
   onStop: () => void;
   onDurationChange: (duration: TargetRouteDurationSec) => void;
   onPlaybackModeChange: (mode: RoutePlaybackMode) => void;
+  onSkipDetectedStopsChange: (skip: boolean) => void;
+  onShowTimedPhotosChange: (show: boolean) => void;
 }
 
 export function RouteAnimationControls({
@@ -36,11 +41,16 @@ export function RouteAnimationControls({
   targetDurationSec,
   playbackMode,
   availablePlaybackModes,
+  timestampCapable,
+  skipDetectedStops,
+  showTimedPhotos,
   activityDurationSec,
   onPlay,
   onStop,
   onDurationChange,
   onPlaybackModeChange,
+  onSkipDetectedStopsChange,
+  onShowTimedPhotosChange,
 }: RouteAnimationControlsProps) {
   if (pointCount < 2) return null;
   const isActive = isAnimationSessionActive(state);
@@ -88,9 +98,14 @@ export function RouteAnimationControls({
           targetDurationSec={targetDurationSec}
           playbackMode={playbackMode}
           availablePlaybackModes={availablePlaybackModes}
+          timestampCapable={timestampCapable}
+          skipDetectedStops={skipDetectedStops}
+          showTimedPhotos={showTimedPhotos}
           activityDurationSec={activityDurationSec}
           onDurationChange={onDurationChange}
           onPlaybackModeChange={onPlaybackModeChange}
+          onSkipDetectedStopsChange={onSkipDetectedStopsChange}
+          onShowTimedPhotosChange={onShowTimedPhotosChange}
         />
       </Box>
     </Box>

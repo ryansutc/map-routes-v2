@@ -41,6 +41,10 @@ type MapRouteState = {
   ) => void;
   animationPlaybackMode: RoutePlaybackMode;
   setAnimationPlaybackMode: (animationPlaybackMode: RoutePlaybackMode) => void;
+  skipDetectedStops: boolean;
+  setSkipDetectedStops: (skipDetectedStops: boolean) => void;
+  showTimedPhotos: boolean;
+  setShowTimedPhotos: (showTimedPhotos: boolean) => void;
   /**
    * Live route-animation progress (0–1). Transient: updated ~20x/sec while
    * playback runs and never persisted. Always subscribe with a selector.
@@ -53,6 +57,8 @@ type PersistedAnimationState = {
   animationDurationSec?: unknown;
   animationPlaybackMode?: unknown;
   animationSpeed?: unknown;
+  skipDetectedStops?: unknown;
+  showTimedPhotos?: unknown;
 };
 
 export function migratePersistedAnimationState(persistedState: unknown) {
@@ -70,6 +76,14 @@ export function migratePersistedAnimationState(persistedState: unknown) {
     animationPlaybackMode: isRoutePlaybackMode(persisted.animationPlaybackMode)
       ? persisted.animationPlaybackMode
       : "recorded",
+    skipDetectedStops:
+      typeof persisted.skipDetectedStops === "boolean"
+        ? persisted.skipDetectedStops
+        : true,
+    showTimedPhotos:
+      typeof persisted.showTimedPhotos === "boolean"
+        ? persisted.showTimedPhotos
+        : true,
   };
 }
 
@@ -86,6 +100,8 @@ export const useStore = create<MapRouteState>()(
           units: "metric" as UnitSystem,
           animationDurationSec: DEFAULT_TARGET_ROUTE_DURATION_SEC,
           animationPlaybackMode: "recorded" as RoutePlaybackMode,
+          skipDetectedStops: true,
+          showTimedPhotos: true,
           animationDistanceProgress: 0,
         } as MapRouteState,
         (set) => ({
@@ -127,6 +143,16 @@ export const useStore = create<MapRouteState>()(
               "animation/setAnimationPlaybackMode",
             );
           },
+          setSkipDetectedStops: (skipDetectedStops: boolean) => {
+            set(
+              { skipDetectedStops },
+              undefined,
+              "animation/setSkipDetectedStops",
+            );
+          },
+          setShowTimedPhotos: (showTimedPhotos: boolean) => {
+            set({ showTimedPhotos }, undefined, "animation/setShowTimedPhotos");
+          },
           setAnimationDistanceProgress: (animationDistanceProgress: number) => {
             set(
               { animationDistanceProgress },
@@ -138,7 +164,7 @@ export const useStore = create<MapRouteState>()(
       ),
       {
         name: "map-routes-store",
-        version: 1,
+        version: 2,
         migrate: (persistedState) =>
           migratePersistedAnimationState(persistedState),
         partialize: (state) => ({
@@ -146,6 +172,8 @@ export const useStore = create<MapRouteState>()(
           units: state.units,
           animationDurationSec: state.animationDurationSec,
           animationPlaybackMode: state.animationPlaybackMode,
+          skipDetectedStops: state.skipDetectedStops,
+          showTimedPhotos: state.showTimedPhotos,
         }),
       },
     ),

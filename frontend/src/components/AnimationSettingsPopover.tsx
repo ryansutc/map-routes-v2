@@ -5,13 +5,17 @@ import {
 } from "@/domain/routeAnimation";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
+  Collapse,
   FormControl,
+  FormControlLabel,
+  FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
   Popover,
   Select,
   Stack,
+  Switch,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -21,10 +25,15 @@ interface Props {
   targetDurationSec: TargetRouteDurationSec;
   playbackMode: RoutePlaybackMode;
   availablePlaybackModes: readonly RoutePlaybackMode[];
+  timestampCapable: boolean;
+  skipDetectedStops: boolean;
+  showTimedPhotos: boolean;
   /** Activity duration in seconds from the route record. */
   activityDurationSec: number | null | undefined;
   onDurationChange: (duration: TargetRouteDurationSec) => void;
   onPlaybackModeChange: (mode: RoutePlaybackMode) => void;
+  onSkipDetectedStopsChange: (skip: boolean) => void;
+  onShowTimedPhotosChange: (show: boolean) => void;
 }
 
 const MODE_LABELS: Record<RoutePlaybackMode, string> = {
@@ -44,9 +53,14 @@ export default function AnimationSettingsPopover({
   targetDurationSec,
   playbackMode,
   availablePlaybackModes,
+  timestampCapable,
+  skipDetectedStops,
+  showTimedPhotos,
   activityDurationSec,
   onDurationChange,
   onPlaybackModeChange,
+  onSkipDetectedStopsChange,
+  onShowTimedPhotosChange,
 }: Props) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
 
@@ -85,6 +99,49 @@ export default function AnimationSettingsPopover({
                 </MenuItem>
               ))}
             </Select>
+          </FormControl>
+          <FormControl>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={skipDetectedStops}
+                  disabled={!timestampCapable || playbackMode !== "recorded"}
+                  onChange={(event) =>
+                    onSkipDetectedStopsChange(event.target.checked)
+                  }
+                />
+              }
+              label="Skip detected stops"
+            />
+            <Collapse
+              in={!timestampCapable || playbackMode !== "recorded"}
+              unmountOnExit
+            >
+              <FormHelperText>
+                {timestampCapable
+                  ? "Only applies to recorded-time playback."
+                  : "Recorded point timestamps are unavailable for this route."}
+              </FormHelperText>
+            </Collapse>
+          </FormControl>
+          <FormControl>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showTimedPhotos}
+                  disabled={!timestampCapable}
+                  onChange={(event) =>
+                    onShowTimedPhotosChange(event.target.checked)
+                  }
+                />
+              }
+              label="Show timed photos"
+            />
+            <Collapse in={!timestampCapable} unmountOnExit>
+              <FormHelperText>
+                Recorded point timestamps are unavailable for this route.
+              </FormHelperText>
+            </Collapse>
           </FormControl>
           <FormControl size="small" fullWidth>
             <InputLabel id="playback-mode-label">Mode</InputLabel>
