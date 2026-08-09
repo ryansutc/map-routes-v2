@@ -21,6 +21,7 @@ tzdata = "*"
 [dev-packages]
 ruff = "*"
 pytest = "*"
+pytest-django = "*"
 
 [requires]
 python_version = "3.12"
