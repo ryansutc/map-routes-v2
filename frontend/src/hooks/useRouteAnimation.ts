@@ -42,6 +42,14 @@ function pathsFromTrack(track: RouteTrack): number[][][] {
   return paths;
 }
 
+/**
+ * Connects the route playback engine to an ArcGIS line and moving map marker.
+ * Used by `RouteAnimationController` to expose playback state and controls.
+ *
+ * @param map - Map that hosts the animation layer, or `null` until available.
+ * @param track - Route geometry and timing data to animate.
+ * @param options - Playback behavior and optional map-symbol styling.
+ */
 export function useRouteAnimation(
   map: __esri.Map | null,
   track: RouteTrack,

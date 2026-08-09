@@ -21,6 +21,13 @@ const hoverSymbol = new SimpleMarkerSymbol({
   style: "circle",
 });
 
+/**
+ * Builds elevation-chart data and keeps its hovered point in sync with the map.
+ * Used by the route detail page to connect the elevation profile to its ArcGIS view.
+ *
+ * @param track - Route track whose profile points supply elevation and coordinates.
+ * @param view - Active map view, or `null` before the view is ready.
+ */
 export function useElevationProfile(
   track: RouteTrack,
   view: MapView | SceneView | null,

@@ -11,6 +11,11 @@ type RoutePhoto = {
   url: string;
 };
 
+/**
+ * Coordinates manual and timed photo lightbox sessions for the route detail page.
+ *
+ * @param photos - Ordered route photos available to the lightbox and animation.
+ */
 export function useRoutePhotoSessions(photos: readonly RoutePhoto[]) {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
     null,

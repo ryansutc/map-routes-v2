@@ -15,6 +15,9 @@ const NAVIGATION_EVENTS = [
  * Suppresses map navigation while `locked` is true. Used for the mobile
  * preview (tap should open fullscreen, not pan the map) and while the route
  * animation is playing.
+ *
+ * @param view - Active map view, or `null` before the view is ready.
+ * @param locked - Whether map navigation events should be suppressed.
  */
 export function useMapInteractionLock(
   view: MapView | SceneView | null,
