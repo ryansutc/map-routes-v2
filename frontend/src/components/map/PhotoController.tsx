@@ -1,5 +1,6 @@
 import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import { PHOTO_MARKERS_LAYER_ID } from "./mapLayerOrder";
 
 import type { PhotoDto } from "@/types/api";
 import type MapView from "@arcgis/core/views/MapView";
@@ -53,7 +54,7 @@ function PhotoController({
     });
 
     const graphicsLayer = new GraphicsLayer({
-      id: "photo-markers",
+      id: PHOTO_MARKERS_LAYER_ID,
       graphics,
     });
 

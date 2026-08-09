@@ -13,6 +13,7 @@ import {
   type TargetRouteDurationSec,
 } from "@/domain/routeAnimation";
 import type { RouteTrack } from "@/domain/timedTrack";
+import { addRouteAnimationLayer } from "@/components/map/mapLayerOrder";
 
 const ANIMATION_LAYER_ID = "routeAnimationLayer";
 const DEFAULT_LINE_COLOR: [number, number, number, number] = [
@@ -146,7 +147,7 @@ export function useRouteAnimation(
     });
 
     layer.addMany([staticLineGraphic, markerGraphic]);
-    map.add(layer);
+    addRouteAnimationLayer(map, layer);
 
     const unsubscribe = engine.subscribeToFrames((frameSnapshot) => {
       const position = frameSnapshot.position;
