@@ -173,10 +173,9 @@ function RouteDetail() {
     [mapHost],
   );
 
-  // Fullscreen only exists at mobile widths -- leaving them would otherwise
-  // strand the header. Derived rather than reset from an effect so that
-  // crossing the breakpoint doesn't trigger a cascading render.
-  const isFullscreenMap = isMobile && fullscreenRequested;
+  // An active desktop session that crosses the mobile breakpoint must stay on
+  // an interactive map surface; the preview never hosts active playback.
+  const isFullscreenMap = isMobile && (fullscreenRequested || isAnimating);
 
   const isPreview = isMobile && !isFullscreenMap;
   useMapInteractionLock(view, isPreview || isAnimating);
@@ -218,6 +217,7 @@ function RouteDetail() {
       onLoad={handleMapLoad}
       onReady={handleMapReady}
       onUnload={handleMapUnload}
+      interactionLocked={isAnimating}
     >
       <RouteMapOverlays
         map={map}
@@ -236,14 +236,8 @@ function RouteDetail() {
     </MapContainer>
   );
 
-  // While the animation plays the map is fully locked: gray out the ESRI
-  // widgets, but leave our own overlays (the animation controls) live.
-  const lockedMapSx = isAnimating
-    ? { "& .esri-ui": { opacity: 0.45, pointerEvents: "none" } }
-    : undefined;
-
   const mapSlot = (
-    <Box sx={{ width: "100%", height: "100%", ...lockedMapSx }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <div ref={attachMapSlot} style={{ width: "100%", height: "100%" }} />
     </Box>
   );
@@ -321,6 +315,7 @@ function RouteDetail() {
             <IconButton
               aria-label="Back to route details"
               onClick={() => setFullscreenRequested(false)}
+              disabled={isAnimating}
               size="small"
             >
               <ArrowBackIcon />

@@ -4,6 +4,7 @@ import {
   TARGET_ROUTE_DURATIONS_SEC,
   availablePlaybackModes,
   createRouteAnimationEngine,
+  isAnimationSessionActive,
   resolvePlaybackMode,
   type AnimationFrameClock,
 } from "./routeAnimation";
@@ -114,6 +115,13 @@ describe("route playback preferences", () => {
     expect(resolvePlaybackMode(timed, "indexed")).toBe("recorded");
     expect(resolvePlaybackMode(legacy, "recorded")).toBe("indexed");
     expect(resolvePlaybackMode(timed, "distance")).toBe("distance");
+  });
+
+  it("treats composed pauses as part of the active playback session", () => {
+    expect(isAnimationSessionActive("idle")).toBe(false);
+    expect(isAnimationSessionActive("playing")).toBe(true);
+    expect(isAnimationSessionActive("paused")).toBe(true);
+    expect(isAnimationSessionActive("completed")).toBe(false);
   });
 });
 
