@@ -1,8 +1,8 @@
 import GeoJSONLayer from "@arcgis/core/layers/GeoJSONLayer";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
-import MapView from "@arcgis/core/views/MapView";
-import SceneView from "@arcgis/core/views/SceneView";
+import type MapView from "@arcgis/core/views/MapView";
+import type SceneView from "@arcgis/core/views/SceneView";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/useToast";
 function LayerController({
