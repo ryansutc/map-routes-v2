@@ -15,10 +15,13 @@ python-decouple = ">=3.8"
 gpxpy = "*"
 cloudinary = "*"
 pillow = "*"
+timezonefinder = "*"
+tzdata = "*"
 
 [dev-packages]
 ruff = "*"
 pytest = "*"
+pytest-django = "*"
 
 [requires]
 python_version = "3.12"

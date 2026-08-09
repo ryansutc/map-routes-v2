@@ -1,9 +1,15 @@
 import { zodiosAPI } from "@/api/axiosClient";
 import { axiosInstance } from "@/api/axiosInstance";
+import {
+  classifyTimedPhotoEligibility,
+  type TimedPhotoExclusionReason,
+} from "@/domain/timedPhotoEvents";
+import { buildRouteTrack } from "@/domain/timedTrack";
 import { routeQueryKey, useRoute } from "@/hooks/useRoute";
 import { useToast } from "@/hooks/useToast";
 import { useStore } from "@/state/store";
 import type { PhotoDto } from "@/types/api";
+import { formatDateTimeForZone, zonedLocalDateTimeToIso } from "@/utils/datetimeHelpers";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UploadIcon from "@mui/icons-material/Upload";
@@ -13,6 +19,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Fade,
   IconButton,
   Paper,
   Stack,
@@ -20,7 +27,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -37,6 +44,17 @@ export const Route = createFileRoute("/routes/$routeId_/photos/edit")({
 });
 
 const MAX_PHOTOS = 20;
+
+const ELIGIBILITY_EXPLANATIONS: Record<TimedPhotoExclusionReason, string> = {
+  "legacy-route":
+    "This route does not have complete recorded point timestamps, so timed photos are unavailable.",
+  "missing-or-unresolved-time":
+    "This photo needs a date and time with a resolved timezone.",
+  "before-route": "This photo was taken before the recorded route began.",
+  "after-route": "This photo was taken after the recorded route ended.",
+  "unknown-gap":
+    "This photo was taken during a gap between recorded track segments.",
+};
 
 type QueuedPhoto = {
   id: string;
@@ -59,6 +77,16 @@ async function uploadPhoto(routeId: number, queued: QueuedPhoto): Promise<PhotoD
   return response.data;
 }
 
+function formatPhotoTakenAt(
+  photo: Pick<PhotoDto, "taken_at" | "taken_at_timezone">,
+  fallbackTimeZone: string,
+): string {
+  return formatDateTimeForZone(
+    photo.taken_at,
+    photo.taken_at_timezone ?? fallbackTimeZone,
+  );
+}
+
 function PhotoEditor() {
   const { routeId } = Route.useParams();
   const { data: route, isLoading, error } = useRoute(routeId);
@@ -71,9 +99,43 @@ function PhotoEditor() {
   const [queue, setQueue] = useState<QueuedPhoto[]>([]);
   const queueRef = useRef<QueuedPhoto[]>([]);
   const [titleDrafts, setTitleDrafts] = useState<Record<number, string>>({});
+  const [takenAtDrafts, setTakenAtDrafts] = useState<Record<number, string>>({});
   const [busyPhotoId, setBusyPhotoId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
+  const browserTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    [],
+  );
+  const routeTrack = useMemo(
+    () => buildRouteTrack(route?.geojson),
+    [route?.geojson],
+  );
+  const photoEligibilityById = useMemo(
+    () =>
+      new Map(
+        classifyTimedPhotoEligibility(
+          routeTrack,
+          (route?.photos ?? []).map((photo) => ({
+            id: photo.id,
+            takenAt: photo.taken_at,
+          })),
+        ).map((result) => [result.photoId, result]),
+      ),
+    [route?.photos, routeTrack],
+  );
+  const updatePhotoMutation = useMutation({
+    mutationFn: ({
+      photoId,
+      changes,
+    }: {
+      photoId: number;
+      changes: { title?: string; taken_at?: string | null };
+    }) =>
+      zodiosAPI.route_photos_partial_update(changes, {
+        params: { id: routeId, photo_pk: photoId },
+      }),
+  });
 
   useEffect(() => {
     if (!route) return;
@@ -84,7 +146,16 @@ function PhotoEditor() {
       });
       return next;
     });
-  }, [route]);
+    setTakenAtDrafts((current) => {
+      const next = { ...current };
+      route.photos.forEach((photo) => {
+        if (!(photo.id in next)) {
+          next[photo.id] = formatPhotoTakenAt(photo, browserTimeZone);
+        }
+      });
+      return next;
+    });
+  }, [browserTimeZone, route]);
 
   useEffect(() => {
     if (!route || !user || route.owner === user || redirectedRef.current) return;
@@ -104,16 +175,19 @@ function PhotoEditor() {
     [],
   );
 
-  const hasDirtyTitle = useMemo(
+  const hasDirtyPhoto = useMemo(
     () =>
       Boolean(
         route?.photos.some(
-          (photo) => (titleDrafts[photo.id] ?? "") !== (photo.title ?? ""),
+          (photo) =>
+            (titleDrafts[photo.id] ?? "") !== (photo.title ?? "") ||
+            (takenAtDrafts[photo.id] ?? "") !==
+              formatPhotoTakenAt(photo, browserTimeZone),
         ),
       ),
-    [route, titleDrafts],
+    [browserTimeZone, route, takenAtDrafts, titleDrafts],
   );
-  const hasUnsavedWork = queue.length > 0 || hasDirtyTitle;
+  const hasUnsavedWork = queue.length > 0 || hasDirtyPhoto;
 
   useBlocker({
     shouldBlockFn: () => {
@@ -150,20 +224,40 @@ function PhotoEditor() {
     await queryClient.invalidateQueries({ queryKey: ["routes"] });
   };
 
-  const saveTitle = async (photo: PhotoDto) => {
+  const savePhoto = async (photo: PhotoDto) => {
     const title = (titleDrafts[photo.id] ?? "").trim();
+    const localTakenAt = takenAtDrafts[photo.id] ?? "";
+    const originalLocalTakenAt = formatPhotoTakenAt(photo, browserTimeZone);
+    const interpretationTimeZone = photo.taken_at_timezone ?? browserTimeZone;
+    const changes: { title?: string; taken_at?: string | null } = {};
+    if (title !== (photo.title ?? "")) changes.title = title;
+    if (localTakenAt !== originalLocalTakenAt && localTakenAt) {
+      try {
+        changes.taken_at = zonedLocalDateTimeToIso(localTakenAt, interpretationTimeZone);
+      } catch (conversionError) {
+        setPageError((conversionError as Error).message);
+        return;
+      }
+    }
+    if (localTakenAt !== originalLocalTakenAt && !localTakenAt) {
+      changes.taken_at = null;
+    }
     setBusyPhotoId(photo.id);
     setPageError(null);
     try {
-      await zodiosAPI.route_photos_partial_update(
-        { title },
-        { params: { id: routeId, photo_pk: photo.id } },
-      );
+      const updated = await updatePhotoMutation.mutateAsync({
+        photoId: photo.id,
+        changes,
+      });
       setTitleDrafts((current) => ({ ...current, [photo.id]: title }));
+      setTakenAtDrafts((current) => ({
+        ...current,
+        [photo.id]: formatPhotoTakenAt(updated, interpretationTimeZone),
+      }));
       await refreshRoute();
-      enqueueSnackbar("Photo title saved", "success");
+      enqueueSnackbar("Photo changes saved", "success");
     } catch (mutationError) {
-      setPageError((mutationError as Error).message || "Could not save the photo title.");
+      setPageError((mutationError as Error).message || "Could not save the photo changes.");
     } finally {
       setBusyPhotoId(null);
     }
@@ -181,6 +275,24 @@ function PhotoEditor() {
       enqueueSnackbar("Photo deleted", "success");
     } catch (mutationError) {
       setPageError((mutationError as Error).message || "Could not delete the photo.");
+    } finally {
+      setBusyPhotoId(null);
+    }
+  };
+
+  const clearPhotoTime = async (photo: PhotoDto) => {
+    setBusyPhotoId(photo.id);
+    setPageError(null);
+    try {
+      await updatePhotoMutation.mutateAsync({
+        photoId: photo.id,
+        changes: { taken_at: null },
+      });
+      setTakenAtDrafts((current) => ({ ...current, [photo.id]: "" }));
+      await refreshRoute();
+      enqueueSnackbar("Photo date and time cleared", "success");
+    } catch (mutationError) {
+      setPageError((mutationError as Error).message || "Could not clear the photo time.");
     } finally {
       setBusyPhotoId(null);
     }
@@ -391,8 +503,13 @@ function PhotoEditor() {
         >
           {route.photos.map((photo) => {
             const draft = titleDrafts[photo.id] ?? "";
-            const titleDirty = draft !== (photo.title ?? "");
+            const takenAtDraft = takenAtDrafts[photo.id] ?? "";
+            const photoDirty =
+              draft !== (photo.title ?? "") ||
+              takenAtDraft !==
+                formatPhotoTakenAt(photo, browserTimeZone);
             const busy = busyPhotoId === photo.id;
+            const eligibility = photoEligibilityById.get(photo.id);
             return (
               <Paper key={photo.id} variant="outlined" sx={{ p: 1.5 }}>
                 <Box
@@ -423,6 +540,42 @@ function PhotoEditor() {
                     </span>
                   </Tooltip>
                 </Stack>
+                {eligibility && (
+                  <Fade
+                    in
+                    key={
+                      eligibility.status === "eligible"
+                        ? eligibility.status
+                        : eligibility.reason
+                    }
+                  >
+                    <Box sx={{ mt: 1 }}>
+                      <Chip
+                        size="small"
+                        label={
+                          eligibility.status === "eligible"
+                            ? "Included in playback"
+                            : "Excluded from playback"
+                        }
+                        color={
+                          eligibility.status === "eligible"
+                            ? "success"
+                            : "warning"
+                        }
+                      />
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        sx={{ mt: 0.5 }}
+                      >
+                        {eligibility.status === "eligible"
+                          ? "This photo will appear automatically during route playback."
+                          : ELIGIBILITY_EXPLANATIONS[eligibility.reason]}
+                      </Typography>
+                    </Box>
+                  </Fade>
+                )}
                 <TextField
                   label="Title (optional)"
                   value={draft}
@@ -438,14 +591,49 @@ function PhotoEditor() {
                   sx={{ mt: 1 }}
                   disabled={busy}
                 />
-                <Button
+                <TextField
+                  label="Date and time taken"
+                  type="datetime-local"
+                  value={takenAtDraft}
+                  onChange={(event) =>
+                    setTakenAtDrafts((current) => ({
+                      ...current,
+                      [photo.id]: event.target.value,
+                    }))
+                  }
+                  slotProps={{
+                    htmlInput: { step: 1 },
+                    inputLabel: { shrink: true },
+                  }}
+                  helperText={
+                    photo.taken_at_timezone
+                      ? `Interpreted in ${photo.taken_at_timezone}`
+                      : `Interpreted in ${browserTimeZone} (your browser timezone; photo and route timezone unavailable)`
+                  }
                   size="small"
-                  onClick={() => void saveTitle(photo)}
-                  disabled={!titleDirty || busy}
+                  fullWidth
                   sx={{ mt: 1 }}
-                >
-                  {busy ? "Saving…" : "Save title"}
-                </Button>
+                  disabled={busy}
+                />
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    onClick={() => void savePhoto(photo)}
+                    disabled={!photoDirty || busy}
+                  >
+                    {busy ? "Saving…" : "Save changes"}
+                  </Button>
+                  {photo.taken_at && (
+                    <Button
+                      size="small"
+                      color="inherit"
+                      onClick={() => void clearPhotoTime(photo)}
+                      disabled={busy}
+                    >
+                      Clear date/time
+                    </Button>
+                  )}
+                </Stack>
               </Paper>
             );
           })}

@@ -4,6 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 
 export const ROUTES_QUERY_KEY = ["routes"] as const;
 
+/**
+ * Fetches the route list, scoped to the current authentication state.
+ * Used by the routes index page to render the available routes.
+ */
 export function useRoutes() {
   const user = useStore((state) => state.user);
   const userIsAuthenticated = useStore((state) => state.userIsAuthenticated);

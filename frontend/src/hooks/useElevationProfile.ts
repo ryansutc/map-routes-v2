@@ -3,33 +3,14 @@ import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import Graphic from "@arcgis/core/Graphic";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import Point from "@arcgis/core/geometry/Point";
-import MapView from "@arcgis/core/views/MapView";
-import SceneView from "@arcgis/core/views/SceneView";
-import type { FeatureCollection } from "geojson";
-import type GeoJSON from "geojson";
+import type MapView from "@arcgis/core/views/MapView";
+import type SceneView from "@arcgis/core/views/SceneView";
+import type { RouteTrack, TrackProfilePoint } from "@/domain/timedTrack";
 
-export type ProfilePoint = {
-  distance: number;
-  elevation: number;
-  lon: number;
-  lat: number;
-};
-
-function haversineMeters(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+export type ProfilePoint = Pick<
+  TrackProfilePoint,
+  "distance" | "elevation" | "lon" | "lat"
+>;
 
 const HOVER_LAYER_ID = "elevationHoverLayer";
 
@@ -40,9 +21,16 @@ const hoverSymbol = new SimpleMarkerSymbol({
   style: "circle",
 });
 
+/**
+ * Builds elevation-chart data and keeps its hovered point in sync with the map.
+ * Used by the route detail page to connect the elevation profile to its ArcGIS view.
+ *
+ * @param track - Route track whose profile points supply elevation and coordinates.
+ * @param view - Active map view, or `null` before the view is ready.
+ */
 export function useElevationProfile(
-  geojson: FeatureCollection | null | undefined,
-  view: MapView | SceneView | null
+  track: RouteTrack,
+  view: MapView | SceneView | null,
 ): {
   profilePoints: ProfilePoint[];
   hasElevation: boolean;
@@ -64,39 +52,12 @@ export function useElevationProfile(
   }, [view]);
 
   const { profilePoints, hasElevation } = useMemo(() => {
-    if (!geojson) return { profilePoints: [], hasElevation: false };
+    const points = [...track.profilePoints];
 
-    const feature = geojson.features.find(
-      (f: GeoJSON.Feature) => f.geometry?.type === "LineString"
-    );
-    if (!feature || feature.geometry.type !== "LineString") {
-      return { profilePoints: [], hasElevation: false };
-    }
-
-    const coords = feature.geometry.coordinates as [number, number, number?][];
-    // Built with an explicit loop rather than map() + an outer accumulator:
-    // the running total makes the callback impure, which React Compiler flags.
-    const points: ProfilePoint[] = [];
-    let cumDist = 0;
-    for (let i = 0; i < coords.length; i++) {
-      const coord = coords[i]!;
-      if (i > 0) {
-        const prev = coords[i - 1]!;
-        cumDist += haversineMeters(prev[1], prev[0], coord[1], coord[0]);
-      }
-      points.push({
-        distance: cumDist,
-        elevation: coord[2] ?? 0,
-        lon: coord[0],
-        lat: coord[1],
-      });
-    }
-
-    const hasElev =
-      points.length > 0 && points.some((p) => p.elevation !== 0);
+    const hasElev = points.length > 0 && points.some((p) => p.elevation !== 0);
 
     return { profilePoints: points, hasElevation: hasElev };
-  }, [geojson]);
+  }, [track]);
 
   const onHover = (index: number) => {
     const layer = layerRef.current;
@@ -108,7 +69,7 @@ export function useElevationProfile(
       new Graphic({
         geometry: new Point({ longitude: pt.lon, latitude: pt.lat }),
         symbol: hoverSymbol,
-      })
+      }),
     );
   };
 

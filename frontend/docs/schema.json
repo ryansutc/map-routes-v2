@@ -199,7 +199,7 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/components/schemas/Route"
+                                        "$ref": "#/components/schemas/RouteList"
                                     }
                                 }
                             }
@@ -409,7 +409,7 @@
         "/api/route/{id}/photos/{photo_pk}/": {
             "patch": {
                 "operationId": "route_photos_partial_update",
-                "description": "Change only the optional title of a photo.",
+                "description": "Change only the optional title and aware taken-at time of a photo.",
                 "parameters": [
                     {
                         "in": "path",
@@ -435,7 +435,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/PatchedPhotoTitleUpdateRequest"
+                                "$ref": "#/components/schemas/PatchedPhotoUpdateRequest"
                             }
                         }
                     }
@@ -635,7 +635,8 @@
                     "geojson": {},
                     "date": {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "distance_m": {
                         "type": "number",
@@ -672,13 +673,18 @@
                     "track_point_count"
                 ]
             },
-            "PatchedPhotoTitleUpdateRequest": {
+            "PatchedPhotoUpdateRequest": {
                 "type": "object",
-                "description": "Serializer restricted to changing a photo's optional title.",
+                "description": "Serializer restricted to an optional title and aware taken-at time.",
                 "properties": {
                     "title": {
                         "type": "string",
                         "maxLength": 255
+                    },
+                    "taken_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
                     }
                 }
             },
@@ -736,12 +742,24 @@
                         "type": "boolean",
                         "description": "Return True if the photo has GPS coordinates.",
                         "readOnly": true
+                    },
+                    "taken_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "taken_at_timezone": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Return the local IANA zone used to interpret owner-entered photo time.",
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "has_gps",
                     "id",
                     "route_id",
+                    "taken_at_timezone",
                     "url"
                 ]
             },
@@ -773,7 +791,7 @@
             },
             "Route": {
                 "type": "object",
-                "description": "Serializer for reading Route instances, including nested photos.",
+                "description": "Serializer for route detail, including canonical GeoJSON and nested photos.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -785,7 +803,114 @@
                     },
                     "activity_date": {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "activity_type": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActivityTypeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "distance": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "avg_pace": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "elevation_gain": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "arcgis_item_id": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "track_point_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string"
+                    },
+                    "route_link": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "owner": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true
+                    },
+                    "is_public": {
+                        "type": "boolean"
+                    },
+                    "photos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Photo"
+                        },
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "geojson": {
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "distance",
+                    "id",
+                    "owner",
+                    "photos",
+                    "updated_at"
+                ]
+            },
+            "RouteCreate": {
+                "type": "object",
+                "description": "Serializer for creating Route instances from parsed GPX data.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "activity_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "activity_type": {
                         "oneOf": [
@@ -832,6 +957,158 @@
                         "nullable": true
                     },
                     "geojson": {
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string"
+                    },
+                    "route_link": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "is_public": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "distance",
+                    "id"
+                ]
+            },
+            "RouteCreateRequest": {
+                "type": "object",
+                "description": "Serializer for creating Route instances from parsed GPX data.",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "activity_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "activity_type": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActivityTypeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "distance": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "avg_pace": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "elevation_gain": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "arcgis_item_id": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "track_point_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "geojson": {
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string"
+                    },
+                    "route_link": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "is_public": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "distance"
+                ]
+            },
+            "RouteList": {
+                "type": "object",
+                "description": "Serializer for route collections without the canonical GeoJSON payload.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "activity_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "activity_type": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActivityTypeEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "distance": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "avg_pace": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "elevation_gain": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "arcgis_item_id": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "track_point_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
                         "nullable": true
                     },
                     "notes": {
@@ -868,168 +1145,12 @@
                     }
                 },
                 "required": [
-                    "activity_date",
                     "created_at",
                     "distance",
                     "id",
                     "owner",
                     "photos",
                     "updated_at"
-                ]
-            },
-            "RouteCreate": {
-                "type": "object",
-                "description": "Serializer for creating Route instances from parsed GPX data.",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "title": {
-                        "type": "string",
-                        "maxLength": 255
-                    },
-                    "activity_date": {
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "activity_type": {
-                        "oneOf": [
-                            {
-                                "$ref": "#/components/schemas/ActivityTypeEnum"
-                            },
-                            {
-                                "$ref": "#/components/schemas/BlankEnum"
-                            }
-                        ]
-                    },
-                    "distance": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "duration": {
-                        "type": "integer",
-                        "maximum": 9223372036854775807,
-                        "minimum": -9223372036854775808,
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "avg_pace": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
-                        "nullable": true
-                    },
-                    "elevation_gain": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
-                        "nullable": true
-                    },
-                    "arcgis_item_id": {
-                        "type": "string",
-                        "maxLength": 32
-                    },
-                    "track_point_count": {
-                        "type": "integer",
-                        "maximum": 9223372036854775807,
-                        "minimum": -9223372036854775808,
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "geojson": {
-                        "nullable": true
-                    },
-                    "notes": {
-                        "type": "string"
-                    },
-                    "route_link": {
-                        "type": "string",
-                        "maxLength": 500
-                    },
-                    "is_public": {
-                        "type": "boolean"
-                    }
-                },
-                "required": [
-                    "activity_date",
-                    "distance",
-                    "id"
-                ]
-            },
-            "RouteCreateRequest": {
-                "type": "object",
-                "description": "Serializer for creating Route instances from parsed GPX data.",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "maxLength": 255
-                    },
-                    "activity_date": {
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "activity_type": {
-                        "oneOf": [
-                            {
-                                "$ref": "#/components/schemas/ActivityTypeEnum"
-                            },
-                            {
-                                "$ref": "#/components/schemas/BlankEnum"
-                            }
-                        ]
-                    },
-                    "distance": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "duration": {
-                        "type": "integer",
-                        "maximum": 9223372036854775807,
-                        "minimum": -9223372036854775808,
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "avg_pace": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
-                        "nullable": true
-                    },
-                    "elevation_gain": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,2})?$",
-                        "nullable": true
-                    },
-                    "arcgis_item_id": {
-                        "type": "string",
-                        "maxLength": 32
-                    },
-                    "track_point_count": {
-                        "type": "integer",
-                        "maximum": 9223372036854775807,
-                        "minimum": -9223372036854775808,
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "geojson": {
-                        "nullable": true
-                    },
-                    "notes": {
-                        "type": "string"
-                    },
-                    "route_link": {
-                        "type": "string",
-                        "maxLength": 500
-                    },
-                    "is_public": {
-                        "type": "boolean"
-                    }
-                },
-                "required": [
-                    "activity_date",
-                    "distance"
                 ]
             }
         },

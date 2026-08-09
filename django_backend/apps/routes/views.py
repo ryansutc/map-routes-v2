@@ -16,12 +16,13 @@ from rest_framework.views import APIView
 from apps.shared_utils.error_utils import print_debug_error
 
 from .arcgis import get_token, share_item_public, upload_geojson
-from .gpx_utils import parse_gpx
+from .gpx_utils import geometry_only_geojson, parse_gpx
 from .models import Route
 from .serializers import (
     ParseGpxRequestSerializer,
     ParseGpxResponseSerializer,
     RouteCreateSerializer,
+    RouteListSerializer,
     RouteSerializer,
     RouteUpdateSerializer,
 )
@@ -46,22 +47,16 @@ class RouteListCreateView(generics.ListCreateAPIView):
         """Return the write serializer for POST, read serializer otherwise."""
         if self.request.method == "POST":
             return RouteCreateSerializer
-        return RouteSerializer
+        return RouteListSerializer
 
     def get_queryset(self) -> QuerySet[Route]:
         """Return routes owned by the user plus all public routes."""
         user = self.request.user
         if user.is_authenticated:
-            return (
-                Route.objects.filter(Q(owner=user.email) | Q(is_public=True))
-                .prefetch_related("photos")
-                .order_by("-activity_date")
-            )
-        return (
-            Route.objects.filter(is_public=True)
-            .prefetch_related("photos")
-            .order_by("-activity_date")
-        )
+            queryset = Route.objects.filter(Q(owner=user.email) | Q(is_public=True))
+        else:
+            queryset = Route.objects.filter(is_public=True)
+        return queryset.defer("geojson").prefetch_related("photos").order_by("-activity_date")
 
     def perform_create(self, serializer: RouteCreateSerializer) -> None:
         """Save the new route with the requesting user as owner."""
@@ -131,7 +126,7 @@ class ParseGpxView(APIView):
 
         try:
             token = get_token(username, password)
-            geojson_str = json.dumps(parsed["geojson"])
+            geojson_str = json.dumps(geometry_only_geojson(parsed["geojson"]))
             item_id = upload_geojson(token, username, geojson_str, title=title)
             share_item_public(token, username, item_id)
         except Exception as exc:
@@ -157,7 +152,11 @@ class ParseGpxView(APIView):
 def _count_geojson_coords(geojson: dict) -> int:
     """Return the total number of coordinate points across all LineString/MultiLineString features."""
     count = 0
-    features = geojson.get("features", [geojson]) if geojson.get("type") == "FeatureCollection" else [geojson]
+    features = (
+        geojson.get("features", [geojson])
+        if geojson.get("type") == "FeatureCollection"
+        else [geojson]
+    )
     for feature in features:
         geom = feature.get("geometry") or {}
         if geom.get("type") == "LineString":

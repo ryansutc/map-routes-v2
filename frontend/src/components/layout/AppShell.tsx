@@ -27,7 +27,7 @@ export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   // Subscribe field-by-field: a bare useStore() would re-render the whole shell
-  // on every transient store change (e.g. animationProgress at ~20fps).
+  // on every transient store change (e.g. animationDistanceProgress at ~20fps).
   const user = useStore((s) => s.user);
   const userIsAuthenticated = useStore((s) => s.userIsAuthenticated);
   const setUser = useStore((s) => s.setUser);

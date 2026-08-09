@@ -8,13 +8,19 @@ import RouteInfoContainer, {
 import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery, { PhotoLightbox } from "@/components/routes/PhotoGallery";
 import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
+import type {
+  PhotoSessionController,
+  TimedPhotoPresenter,
+} from "@/domain/timedPhotoPlayback";
+import { buildRouteTrack, type RouteTrack } from "@/domain/timedTrack";
 import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useMapInteractionLock } from "@/hooks/useMapInteractionLock";
 import { useRoute } from "@/hooks/useRoute.tsx";
+import { useRoutePhotoSessions } from "@/hooks/useRoutePhotoSessions";
 import { useStore } from "@/state/store";
-import Map from "@arcgis/core/Map";
-import MapView from "@arcgis/core/views/MapView";
-import SceneView from "@arcgis/core/views/SceneView";
+import type Map from "@arcgis/core/Map";
+import type MapView from "@arcgis/core/views/MapView";
+import type SceneView from "@arcgis/core/views/SceneView";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import EditIcon from "@mui/icons-material/Edit";
 import MapIcon from "@mui/icons-material/Map";
@@ -26,7 +32,6 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type { FeatureCollection } from "geojson";
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -49,17 +54,23 @@ export const Route = createFileRoute("/routes/$routeId")({
 });
 
 type RouteItem = NonNullable<ReturnType<typeof useRoute>["data"]>;
+const EMPTY_ROUTE_PHOTOS: RouteItem["photos"] = [];
 
 interface RouteMapOverlaysProps {
   map: Map | null;
   view: MapView | SceneView | null;
   routeItem: RouteItem | undefined;
+  routeTrack: RouteTrack;
   error: Error | null;
   isLoading: boolean;
   isPreview: boolean;
   isAnimating: boolean;
   onPhotoClick: (index: number) => void;
   onPlayingChange: (isPlaying: boolean) => void;
+  timedPhotoPresenter: TimedPhotoPresenter;
+  onPhotoSessionControllerChange: (
+    controller: PhotoSessionController | null,
+  ) => void;
 }
 
 /** Everything layered on top of the ESRI view for the route detail page. */
@@ -67,12 +78,15 @@ function RouteMapOverlays({
   map,
   view,
   routeItem,
+  routeTrack,
   error,
   isLoading,
   isPreview,
   isAnimating,
   onPhotoClick,
   onPlayingChange,
+  timedPhotoPresenter,
+  onPhotoSessionControllerChange,
 }: RouteMapOverlaysProps) {
   const ready = map && view && !error && !isLoading && routeItem;
 
@@ -98,17 +112,19 @@ function RouteMapOverlays({
           />
         </>
       )}
-      {/* Kept mounted across preview/fullscreen toggles — unmounting would
-          drop the animation layer and refetch the route GeoJSON. */}
+      {/* Kept mounted across preview/fullscreen toggles so the active playback
+          session and its animation layer survive the layout change. */}
       <Box sx={{ display: isPreview ? "none" : "contents" }}>
         {ready && <Toggle3d disabled={isAnimating} />}
         {map && view && (
           <RouteAnimationController
             map={map}
-            view={view}
-            arcgisItemId={routeItem?.arcgis_item_id}
+            track={routeTrack}
+            photos={routeItem?.photos ?? []}
+            timedPhotoPresenter={timedPhotoPresenter}
             activityDurationSec={routeItem?.duration ?? null}
-            onPlayingChange={onPlayingChange}
+            onSessionActiveChange={onPlayingChange}
+            onPhotoSessionControllerChange={onPhotoSessionControllerChange}
           />
         )}
       </Box>
@@ -123,14 +139,17 @@ function RouteDetail() {
   const { data: routeItem, isLoading, error, isError } = useRoute(routeId);
   const user = useStore((state) => state.user);
   const isOwner = routeItem?.owner === user;
+  const routeTrack = useMemo(
+    () => buildRouteTrack(routeItem?.geojson),
+    [routeItem?.geojson],
+  );
 
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
   const [fullscreenRequested, setFullscreenRequested] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
-    null,
-  );
+  const routePhotos = routeItem?.photos ?? EMPTY_ROUTE_PHOTOS;
+  const photoSessions = useRoutePhotoSessions(routePhotos);
   const navigate = useNavigate();
 
   // The map preview and the fullscreen map are different places in the tree,
@@ -154,10 +173,9 @@ function RouteDetail() {
     [mapHost],
   );
 
-  // Fullscreen only exists at mobile widths -- leaving them would otherwise
-  // strand the header. Derived rather than reset from an effect so that
-  // crossing the breakpoint doesn't trigger a cascading render.
-  const isFullscreenMap = isMobile && fullscreenRequested;
+  // An active desktop session that crosses the mobile breakpoint must stay on
+  // an interactive map surface; the preview never hosts active playback.
+  const isFullscreenMap = isMobile && (fullscreenRequested || isAnimating);
 
   const isPreview = isMobile && !isFullscreenMap;
   useMapInteractionLock(view, isPreview || isAnimating);
@@ -174,10 +192,7 @@ function RouteDetail() {
   };
 
   const { profilePoints, hasElevation, onHover, onHoverEnd } =
-    useElevationProfile(
-      routeItem?.geojson as FeatureCollection | null | undefined,
-      view,
-    );
+    useElevationProfile(routeTrack, view);
 
   const handleMapClick = (e: __esri.ViewClickEvent) => {
     const coords = `${
@@ -202,29 +217,27 @@ function RouteDetail() {
       onLoad={handleMapLoad}
       onReady={handleMapReady}
       onUnload={handleMapUnload}
+      interactionLocked={isAnimating}
     >
       <RouteMapOverlays
         map={map}
         view={view}
         routeItem={routeItem}
+        routeTrack={routeTrack}
         error={isError ? error : null}
         isLoading={isLoading}
         isPreview={isPreview}
         isAnimating={isAnimating}
-        onPhotoClick={setSelectedPhotoIndex}
+        onPhotoClick={photoSessions.onPhotoClick}
         onPlayingChange={setIsAnimating}
+        timedPhotoPresenter={photoSessions.presenter}
+        onPhotoSessionControllerChange={photoSessions.onControllerChange}
       />
     </MapContainer>
   );
 
-  // While the animation plays the map is fully locked: gray out the ESRI
-  // widgets, but leave our own overlays (the animation controls) live.
-  const lockedMapSx = isAnimating
-    ? { "& .esri-ui": { opacity: 0.45, pointerEvents: "none" } }
-    : undefined;
-
   const mapSlot = (
-    <Box sx={{ width: "100%", height: "100%", ...lockedMapSx }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <div ref={attachMapSlot} style={{ width: "100%", height: "100%" }} />
     </Box>
   );
@@ -248,7 +261,7 @@ function RouteDetail() {
           <Box sx={{ px: 2, pb: 1 }}>
             <PhotoGallery
               photos={routeItem.photos}
-              onPhotoClick={setSelectedPhotoIndex}
+              onPhotoClick={photoSessions.onPhotoClick}
             />
             {isOwner && (
               <Button
@@ -274,10 +287,8 @@ function RouteDetail() {
     <>
       {createPortal(mapTree, mapHost)}
       <PhotoLightbox
-        photos={routeItem?.photos ?? []}
-        index={selectedPhotoIndex}
-        onIndexChange={setSelectedPhotoIndex}
-        onClose={() => setSelectedPhotoIndex(null)}
+        photos={routePhotos}
+        {...photoSessions.lightbox}
       />
 
       {isMobile && isFullscreenMap && (
@@ -304,6 +315,7 @@ function RouteDetail() {
             <IconButton
               aria-label="Back to route details"
               onClick={() => setFullscreenRequested(false)}
+              disabled={isAnimating}
               size="small"
             >
               <ArrowBackIcon />

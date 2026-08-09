@@ -1,7 +1,6 @@
 """View for uploading photos to a route."""
 
 import io
-from datetime import datetime
 from typing import Any
 
 from drf_spectacular.utils import extend_schema
@@ -17,21 +16,10 @@ from apps.shared_utils.error_utils import print_debug_error
 
 from .cloudinary_utils import delete_photo, upload_photo
 from .models import Photo, Route
-from .serializers import PhotoSerializer, PhotoTitleUpdateSerializer
+from .photo_timestamps import extract_taken_at, timezone_for_photo
+from .serializers import PhotoSerializer, PhotoTitleUpdateSerializer, PhotoUpdateSerializer
 
 MAX_PHOTOS_PER_ROUTE = 20
-
-
-def _extract_taken_at(exif_data: dict) -> datetime | None:
-    """Return the datetime a photo was taken from EXIF, or None if absent."""
-    for tag_id, value in exif_data.items():
-        tag = TAGS.get(tag_id, tag_id)
-        if tag in ("DateTimeOriginal", "DateTime"):
-            try:
-                return datetime.strptime(value, "%Y:%m:%d %H:%M:%S")
-            except (ValueError, TypeError):
-                return None
-    return None
 
 
 def _extract_gps(exif_data: dict) -> tuple[float | None, float | None]:
@@ -105,7 +93,8 @@ class RoutePhotoView(APIView):
             lat, lng = _extract_gps(exif_data)
             lat = round(lat, 6) if lat is not None else None
             lng = round(lng, 6) if lng is not None else None
-            taken_at = _extract_taken_at(exif_data)
+            timezone_name = timezone_for_photo(lat, lng, route.geojson)
+            taken_at = extract_taken_at(exif_data, timezone_name)
         except Exception:
             lat, lng, taken_at = None, None, None
 
@@ -127,18 +116,7 @@ class RoutePhotoView(APIView):
             title=title,
         )
 
-        return Response(
-            {
-                "id": photo.id,
-                "url": photo.url,
-                "title": photo.title,
-                "latitude": photo.latitude,
-                "longitude": photo.longitude,
-                "taken_at": photo.taken_at,
-                "has_gps": lat is not None and lng is not None,
-            },
-            status=201,
-        )
+        return Response(PhotoSerializer(photo).data, status=201)
 
 
 class RoutePhotoDetailView(APIView):
@@ -161,13 +139,13 @@ class RoutePhotoDetailView(APIView):
         except Photo.DoesNotExist:
             return Response({"detail": "Photo not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    @extend_schema(request=PhotoTitleUpdateSerializer, responses={200: PhotoSerializer})
+    @extend_schema(request=PhotoUpdateSerializer, responses={200: PhotoSerializer})
     def patch(self, request: Request, pk: int, photo_pk: int) -> Response:
-        """Change only the optional title of a photo."""
+        """Change only the optional title and aware taken-at time of a photo."""
         photo = self._get_owned_photo(request, pk, photo_pk)
         if isinstance(photo, Response):
             return photo
-        serializer = PhotoTitleUpdateSerializer(photo, data=request.data)
+        serializer = PhotoUpdateSerializer(photo, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(PhotoSerializer(photo).data)

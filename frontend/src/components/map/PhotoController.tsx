@@ -2,8 +2,8 @@ import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 
 import type { PhotoDto } from "@/types/api";
-import MapView from "@arcgis/core/views/MapView";
-import SceneView from "@arcgis/core/views/SceneView";
+import type MapView from "@arcgis/core/views/MapView";
+import type SceneView from "@arcgis/core/views/SceneView";
 import { useEffect } from "react";
 
 function PhotoController({

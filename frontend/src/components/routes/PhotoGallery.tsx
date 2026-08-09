@@ -1,7 +1,8 @@
 import { schemas } from "@/generatedtypes/django_generated";
-import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
+import { resolvePhotoUrl } from "@/utils/dropboxImgHelpers";
 import {
   Box,
+  Button,
   Dialog,
   DialogContent,
   IconButton,
@@ -9,25 +10,38 @@ import {
   ImageListItem,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import type { z } from "zod";
 
 type Photo = z.infer<typeof schemas.Photo>;
 
-function resolveUrl(url: string): string {
-  return dropboxShareUrlToDirectDownload(url) || url;
-}
+const navigationButtonSx = {
+  position: "absolute",
+  color: "white",
+  bgcolor: "rgba(0,0,0,0.45)",
+  zIndex: 2,
+  fontSize: 20,
+  "&:hover": { bgcolor: "rgba(0,0,0,0.65)" },
+} as const;
 
 export function PhotoLightbox({
   photos,
   index,
   onIndexChange,
   onClose,
+  onImageLoad,
+  onImageError,
+  onStopPlayback,
+  navigationEnabled = true,
 }: {
   photos: Photo[];
   index: number | null;
   onIndexChange: (index: number) => void;
   onClose: () => void;
+  onImageLoad?: () => void;
+  onImageError?: () => void;
+  onStopPlayback?: () => void;
+  navigationEnabled?: boolean;
 }) {
   const open = index !== null && photos.length > 0;
 
@@ -40,17 +54,6 @@ export function PhotoLightbox({
     [index, onIndexChange, photos.length],
   );
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") prev();
-      else if (e.key === "ArrowRight") next();
-      else if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [next, onClose, open, prev]);
-
   if (!open || index === null) return null;
   const current = photos[index];
   if (!current) return null;
@@ -62,75 +65,120 @@ export function PhotoLightbox({
       maxWidth="lg"
       fullWidth
       aria-label="Photo lightbox"
+      onKeyDown={(event) => {
+        if (!navigationEnabled) return;
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          prev();
+        } else if (event.key === "ArrowRight") {
+          event.preventDefault();
+          next();
+        }
+      }}
+      slotProps={{
+        paper: {
+          sx: {
+            m: { xs: 0, sm: 4 },
+            width: { xs: "100%", sm: "calc(100% - 64px)" },
+            height: { xs: "100%", sm: "auto" },
+            maxHeight: { xs: "100%", sm: "calc(100% - 64px)" },
+          },
+        },
+      }}
     >
       <DialogContent
         sx={{
-          position: "relative",
           p: 0,
           bgcolor: "black",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: 400,
+          flexDirection: "column",
+          minHeight: { xs: 0, sm: 400 },
+          height: { xs: "100%", sm: "auto" },
         }}
       >
-        <IconButton
-          onClick={onClose}
-          size="small"
+        <Box
           sx={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            color: "white",
-            zIndex: 1,
-            fontSize: 18,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1,
+            p: 1,
+            flexShrink: 0,
           }}
-          aria-label="Close"
         >
-          ✕
-        </IconButton>
+          {onStopPlayback ? (
+            <Button
+              onClick={onStopPlayback}
+              size="small"
+              variant="contained"
+              color="error"
+            >
+              Stop playback
+            </Button>
+          ) : (
+            <Box />
+          )}
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{ color: "white", fontSize: 18 }}
+            aria-label="Close"
+          >
+            ✕
+          </IconButton>
+        </Box>
 
-        {photos.length > 1 && (
-          <>
+        <Box
+          sx={{
+            position: "relative",
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {navigationEnabled && photos.length > 1 && (
             <IconButton
               onClick={prev}
               sx={{
-                position: "absolute",
+                ...navigationButtonSx,
                 left: 8,
-                color: "white",
-                zIndex: 1,
-                fontSize: 20,
               }}
               aria-label="Previous photo"
             >
               ‹
             </IconButton>
+          )}
+          <Box
+            component="img"
+            key={current.id}
+            src={resolvePhotoUrl(current.url)}
+            alt={current.title ?? `Photo ${index + 1}`}
+            onLoad={onImageLoad}
+            onError={onImageError}
+            sx={{
+              display: "block",
+              maxWidth: "100%",
+              maxHeight: { xs: "100%", sm: "80vh" },
+              objectFit: "contain",
+            }}
+          />
+          {navigationEnabled && photos.length > 1 && (
             <IconButton
               onClick={next}
               sx={{
-                position: "absolute",
-                right: 48,
-                color: "white",
-                zIndex: 1,
-                fontSize: 20,
+                ...navigationButtonSx,
+                right: 8,
               }}
               aria-label="Next photo"
             >
               ›
             </IconButton>
-          </>
-        )}
+          )}
+        </Box>
 
-        <Box sx={{ width: "100%", textAlign: "center", p: 1 }}>
-          <img
-            src={resolveUrl(current.url)}
-            alt={current.title ?? `Photo ${index + 1}`}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "80vh",
-              objectFit: "contain",
-            }}
-          />
+        <Box sx={{ width: "100%", textAlign: "center", px: 1, pb: 1 }}>
           {current.title && (
             <Typography
               variant="caption"
@@ -166,20 +214,35 @@ export default function PhotoGallery({
         {photos.map((photo, i) => (
           <ImageListItem
             key={photo.id}
-            sx={{ cursor: "pointer", overflow: "hidden", borderRadius: 1 }}
-            onClick={() => onPhotoClick(i)}
+            sx={{ overflow: "hidden", borderRadius: 1 }}
           >
-            <img
-              src={resolveUrl(photo.url)}
-              alt={photo.title ?? `Photo ${i + 1}`}
-              loading="lazy"
-              style={{
-                width: "100%",
-                height: 80,
-                objectFit: "cover",
+            <Box
+              component="button"
+              type="button"
+              aria-label={`Open ${photo.title ?? `photo ${i + 1}`}`}
+              onClick={() => onPhotoClick(i)}
+              sx={{
                 display: "block",
+                width: "100%",
+                height: "100%",
+                p: 0,
+                border: 0,
+                cursor: "pointer",
+                bgcolor: "transparent",
               }}
-            />
+            >
+              <img
+                src={resolvePhotoUrl(photo.url)}
+                alt={photo.title ?? `Photo ${i + 1}`}
+                loading="lazy"
+                style={{
+                  width: "100%",
+                  height: 80,
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            </Box>
           </ImageListItem>
         ))}
       </ImageList>

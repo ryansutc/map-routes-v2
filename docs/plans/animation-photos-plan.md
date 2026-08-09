@@ -1,6 +1,10 @@
 # Timestamped Route Animation Photos — Implementation Plan
 
-**Status:** Proposed; ready for issue decomposition after spec review  
+**Status:** Issue-backed; ready for implementation
+
+**Tracking issue:**
+[#41 — Timestamped route animation photos](https://github.com/ryansutc/map-routes-v2/issues/41)
+
 **Behavioral source of truth:**
 [Timestamped Route Animation Photos — Feature Specification](../specs/timestamped-route-animation-photos.md)  
 **Architecture decisions:**
@@ -85,50 +89,77 @@ Version the persisted Zustand store:
 
 The strict compatibility rules are defined by the legacy ADR.
 
-## Work Packages
+## Implementation Issues
 
-Each work package is intended to become one GitHub issue or a small issue group.
-Issues should link spec requirements rather than copy them.
+The original eight work packages mapped closely to the implementation, but the
+published issue graph uses narrower vertical slices where a package contained
+independently reviewable behavior:
 
-| Work package | Deliverable | Primary traceability |
-| --- | --- | --- |
-| WP1 — Timed route API | New GPX uploads preserve segments/timestamps; ArcGIS gets geometry only; route lists become lightweight | RAP-DATA-001–019, RAP-COMPAT-001–003 |
-| WP2 — TimedTrack domain | Pure validation, capability, time/distance interpolation, stops, gaps, and large-track coverage | RAP-TIME-001–012, RAP-STOP-001–005, RAP-GAP-001–006, RAP-PERF-001–004/008 |
-| WP3 — Recorded-time playback | Canonical GeoJSON input, playback state machine, target duration, legacy modes, separate progress channels | RAP-MODE-001–013, RAP-STATE-001–010, RAP-COMPAT-004–006 |
-| WP4 — Stops and live modes | Skip-stops, constant-speed mapping, live setting rebases, persisted preference migration | RAP-STOP-006–012, RAP-MODE-014–022 |
-| WP5 — Photo time correctness | Serialized aware times, EXIF offsets, offline timezone inference, owner correction UI | RAP-PHOTO-001–013 |
-| WP6 — Basic timed-photo slice | Eligibility, one event, pause/load/display/resume, constant-speed event mapping | RAP-EVENT-001–010, RAP-DISPLAY-001–009 |
-| WP7 — Interaction and resilience | Grouping, manual takeover, explicit stop, composed pauses, preload/failure handling | RAP-EVENT-011–016, RAP-STATE-011–019, RAP-PERF-005–006 |
-| WP8 — Diagnostics and hardening | Owner eligibility feedback, legacy explanations, mobile, accessibility, cleanup, regression verification | RAP-UI-001–010, RAP-PERF-007, RAP-COMPAT-004–006 |
+- WP1 became issues #42 and #43 so the canonical timed-route contract does not
+  gate the independent route-list payload improvement.
+- WP7 became issues #49 and #50 so automatic grouping/loading resilience can
+  land before manual lightbox coordination.
+- WP8 became issues #51 and #52 so eligibility explanations can land before the
+  final cross-interface hardening pass.
 
-### Dependency order
+The remaining work packages map one-to-one to issues. The issue graph is now the
+implementation sequence; the former WP names below preserve the design history
+only.
+
+| Issue | Vertical slice | Former WP | Blocked by | Primary traceability |
+| --- | --- | --- | --- | --- |
+| [#42](https://github.com/ryansutc/map-routes-v2/issues/42) | Preserve canonical timed routes from GPX upload through route detail | WP1 | None | RAP-DATA-001–017/019, RAP-COMPAT-001–003 |
+| [#43](https://github.com/ryansutc/map-routes-v2/issues/43) | Keep route collection responses lightweight | WP1 | None | RAP-DATA-017–019, RAP-PERF-007 |
+| [#44](https://github.com/ryansutc/map-routes-v2/issues/44) | Build the TimedTrack domain model | WP2 | #42 | RAP-TIME-001–009, RAP-STOP-001–005, RAP-GAP-001–006, RAP-PERF-001–004/008 |
+| [#45](https://github.com/ryansutc/map-routes-v2/issues/45) | Play timestamp-capable routes in recorded time | WP3 | #44 | RAP-TIME-010–012, RAP-MODE-001–013, RAP-STATE-001–010, RAP-COMPAT-004–006 |
+| [#46](https://github.com/ryansutc/map-routes-v2/issues/46) | Support stop-aware playback and live setting changes | WP4 | #45 | RAP-STOP-006–012, RAP-MODE-014–022 |
+| [#47](https://github.com/ryansutc/map-routes-v2/issues/47) | Store and correct trustworthy photo timestamps | WP5 | None | RAP-PHOTO-001–013 |
+| [#48](https://github.com/ryansutc/map-routes-v2/issues/48) | Display one eligible timed photo during playback | WP6 | #46, #47 | RAP-EVENT-001–010, RAP-DISPLAY-001–003/007–009 |
+| [#49](https://github.com/ryansutc/map-routes-v2/issues/49) | Group timed photos and tolerate image failures | WP7 | #48 | RAP-EVENT-011–016, RAP-DISPLAY-004–007, RAP-PERF-005–006 |
+| [#50](https://github.com/ryansutc/map-routes-v2/issues/50) | Coordinate manual lightbox interaction with playback | WP7 | #49 | RAP-STATE-011–019 and cleanup aspects of RAP-STATE-003–010 |
+| [#51](https://github.com/ryansutc/map-routes-v2/issues/51) | Explain timed-photo eligibility to owners and viewers | WP8 | #48 | RAP-MODE-016–017, RAP-UI-006–009 |
+| [#52](https://github.com/ryansutc/map-routes-v2/issues/52) | Harden timed-photo playback across supported interfaces | WP8 | #43, #46, #49, #50, #51 | RAP-UI-001–005/010 and remaining performance/compatibility verification |
+
+### Execution order
+
+GitHub's native blocking relationships are the live source of truth. Work the
+frontier: select an open, unassigned sub-issue whose blockers are all closed.
+The initial frontier is #42, #43, and #47.
+
+The main feature path is:
 
 ~~~text
-WP1 --> WP2 --> WP3 --> WP4
-  |       |               |
-  v       +---------------+--> WP6 --> WP7 --> WP8
- WP5 ---------------------+
+#42 --> #44 --> #45 --> #46 --> #48 --> #49 --> #50
+                              ^            |
+#47 --------------------------+            +--> #52
+                                   #48 --> #51 --> #52
+#43 ---------------------------------------------> #52
 ~~~
 
-WP1 and WP5 can proceed independently. WP2 depends on the agreed timed GeoJSON
-contract, but its pure fixtures can be developed before the backend is merged.
-WP6 requires the track cursor from WP3/WP4 and trustworthy photo times from WP5.
+#52 is the final integration issue. In addition to its transitive dependencies,
+it is directly blocked by #43, #46, #49, #50, and #51 so the GitHub frontier
+does not expose final hardening before every required integration surface is
+ready.
 
-### Primary files by work package
+### Primary files by implementation issue
 
-- **WP1:** django_backend/apps/routes/gpx_utils.py, views.py, serializers.py,
-  test_routes.py, and generated frontend schema artifacts.
-- **WP2:** new frontend timed-track utilities/tests and
-  frontend/src/hooks/useElevationProfile.ts.
-- **WP3/WP4:** frontend/src/hooks/useRouteAnimation.ts, animation utilities and
-  tests, RouteAnimationController, RouteAnimationControls,
-  AnimationSettingsPopover, ElevationProfile, and the Zustand store.
-- **WP5:** backend photo views/serializers/tests, the photo editor, and generated
-  API types.
-- **WP6/WP7:** new photo-event utilities, a route-photo-playback coordinator,
-  PhotoGallery/PhotoLightbox, and routes/$routeId.tsx.
-- **WP8:** route/photo settings UI plus map, elevation, mobile, and cleanup
-  integration tests.
+- **#42:** GPX parsing, route creation/detail serialization, ArcGIS upload,
+  route API tests, and generated frontend schema artifacts.
+- **#43:** Route list/detail serializers, list consumers, API tests, and
+  generated frontend schema artifacts.
+- **#44:** New frontend timed-track utilities/tests and elevation-profile data
+  derivation.
+- **#45/#46:** Route animation hooks and utilities, controllers and controls,
+  animation settings, elevation synchronization, and the Zustand store.
+- **#47:** Backend photo extraction/views/serializers/tests, the owner photo
+  editor, timezone lookup adapter, and generated API types.
+- **#48/#49:** Photo-event utilities, the route-photo playback coordinator,
+  automatic lightbox behavior, and the route detail screen.
+- **#50:** Lightbox session ownership, manual gallery interaction, animation
+  stop/resume coordination, and lifecycle cleanup tests.
+- **#51:** Route animation settings and owner-facing photo eligibility UI.
+- **#52:** Map, elevation, desktop/mobile, accessibility, performance, and
+  cleanup integration coverage.
 
 ## Implementation Constraints
 
@@ -143,16 +174,16 @@ WP6 requires the track cursor from WP3/WP4 and trustworthy photo times from WP5.
 - Use session identifiers so stale image loads or timers cannot resume a newer
   playback run.
 - Keep timezone lookup behind a backend adapter. Evaluate dependency size,
-  hosting memory, historical DST behavior, and Python compatibility in WP5.
+  hosting memory, historical DST behavior, and Python compatibility in #47.
 - Regenerate API contracts; do not hand-maintain divergent response types.
-- Use spec acceptance scenarios AS-01 through AS-14 as the cross-package
+- Use spec acceptance scenarios AS-01 through AS-14 as the cross-issue
   verification matrix.
 
 ## Principal Risks
 
 | Risk | Mitigation |
 | --- | --- |
-| Timed GeoJSON inflates API payloads | Split list/detail serializers in WP1 |
+| Timed GeoJSON inflates API payloads | Split list/detail serializers in #43 |
 | Stop detection becomes quadratic | Linear utility plus a large synthetic-track test |
 | Time progress desynchronizes elevation | Separate distance progress per the route-data ADR |
 | Pause reasons resume too early | Composable pause leases and state-machine tests |
@@ -192,16 +223,21 @@ Testing ownership:
 - Manual verification covers ArcGIS rendering, actual image loading, responsive
   layout, keyboard/focus behavior, and visual elevation synchronization.
 
-## Issue Handoff
+## Working the Plan
 
-Before implementation:
-
-1. Review and accept the feature specification.
-2. Confirm both ADRs remain accepted.
-3. Create issues from WP1–WP8 with linked requirement IDs and acceptance
-   scenarios.
-4. Add issue URLs to the work-package table.
+1. Use #41 only to track completion of the feature; implementation happens in
+   its sub-issues.
+2. Choose a frontier issue using its native GitHub blockers. Do not start a
+   blocked issue merely because its prerequisite code appears nearly complete.
+3. Treat the issue acceptance criteria as the review boundary and use the linked
+   requirement IDs and acceptance scenarios for behavioral detail.
+4. Preserve the architecture and implementation constraints in this plan while
+   keeping each issue independently testable and reviewable.
+5. Run the verification appropriate to the issue before closing it. Record any
+   browser/map checks that cannot be automated.
+6. After an issue closes, re-evaluate the GitHub frontier and take the next open,
+   unassigned issue whose blockers have cleared.
 
 Implementation is complete when the specification's completion standard is met,
-all linked issues are closed, and the verification commands pass.
-
+issues #42–#52 are closed, #52's final verification passes, and the tracking
+issue #41 can be closed.

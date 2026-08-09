@@ -44,6 +44,7 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
     }
   }, [queryClient, setUser, setUserIsAuthenticated, userIsAuthenticated]);
 
+  // TODO: Fixme into a snackbar and let the content render
   if (error) {
     const errorMessage =
       typeof error === "string"

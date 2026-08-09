@@ -1,96 +1,193 @@
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
 import {
-  useRouteAnimation,
-  type AnimationPlaybackMode,
-} from "@/hooks/useRouteAnimation";
+  availablePlaybackModes,
+  isAnimationSessionActive,
+  resolvePlaybackMode,
+  type RoutePlaybackMode,
+  type TargetRouteDurationSec,
+} from "@/domain/routeAnimation";
+import { planTimedPhotoEvents } from "@/domain/timedPhotoEvents";
+import {
+  createTimedPhotoPlaybackCoordinator,
+  type PhotoSessionController,
+  type TimedPhotoPresenter,
+} from "@/domain/timedPhotoPlayback";
+import type { RouteTrack } from "@/domain/timedTrack";
+import { useRouteAnimation } from "@/hooks/useRouteAnimation";
 import { useStore } from "@/state/store";
-import Map from "@arcgis/core/Map";
-import MapView from "@arcgis/core/views/MapView";
-import SceneView from "@arcgis/core/views/SceneView";
-import { useEffect, useRef } from "react";
+import type Map from "@arcgis/core/Map";
+import { useEffect, useMemo, useRef } from "react";
+
+type RoutePhotoTiming = {
+  id: number;
+  taken_at?: string | null;
+};
 
 interface RouteAnimationControllerProps {
   map: Map | null;
-  view: MapView | SceneView | null;
-  arcgisItemId?: string | null;
+  track: RouteTrack;
+  photos: readonly RoutePhotoTiming[];
+  timedPhotoPresenter: TimedPhotoPresenter;
   activityDurationSec: number | null;
-  /** Notified when playback starts/stops so the page can lock map interaction. */
-  onPlayingChange?: (isPlaying: boolean) => void;
+  /** Notified for the full active session, including composed pauses. */
+  onSessionActiveChange?: (isActive: boolean) => void;
+  onPhotoSessionControllerChange?: (
+    controller: PhotoSessionController | null,
+  ) => void;
 }
 
 export function RouteAnimationController({
   map,
-  view,
-  arcgisItemId,
+  track,
+  photos,
+  timedPhotoPresenter,
   activityDurationSec,
-  onPlayingChange,
+  onSessionActiveChange,
+  onPhotoSessionControllerChange,
 }: RouteAnimationControllerProps) {
-  const pointsPerSecond = useStore((state) => state.animationSpeed);
-  const playbackMode = useStore((state) => state.animationPlaybackMode);
-  const setPointsPerSecond = useStore((state) => state.setAnimationSpeed);
-  const setPlaybackMode = useStore((state) => state.setAnimationPlaybackMode);
-  const setAnimationProgress = useStore((state) => state.setAnimationProgress);
-
-  const { isPlaying, progress, pointCount, play, stop } = useRouteAnimation(
-    map,
-    view,
-    arcgisItemId,
-    { pointsPerSecond, playbackMode },
+  const targetDurationSec = useStore((state) => state.animationDurationSec);
+  const preferredPlaybackMode = useStore(
+    (state) => state.animationPlaybackMode,
   );
+  const setTargetDurationSec = useStore(
+    (state) => state.setAnimationDurationSec,
+  );
+  const setPreferredPlaybackMode = useStore(
+    (state) => state.setAnimationPlaybackMode,
+  );
+  const skipDetectedStops = useStore((state) => state.skipDetectedStops);
+  const setSkipDetectedStops = useStore((state) => state.setSkipDetectedStops);
+  const showTimedPhotos = useStore((state) => state.showTimedPhotos);
+  const setShowTimedPhotos = useStore((state) => state.setShowTimedPhotos);
+  const setAnimationDistanceProgress = useStore(
+    (state) => state.setAnimationDistanceProgress,
+  );
+  const playbackMode = resolvePlaybackMode(track, preferredPlaybackMode);
 
-  const progressRef = useRef(progress);
+  const {
+    state,
+    playbackProgress,
+    distanceProgress,
+    pointCount,
+    play,
+    stop,
+    photoPlaybackEngine,
+  } = useRouteAnimation(map, track, {
+      targetDurationSec,
+      playbackMode,
+      skipDetectedStops,
+    });
+  const isSessionActive = isAnimationSessionActive(state);
+  const timedPhotoEvents = useMemo(
+    () =>
+      track.kind === "timed"
+        ? planTimedPhotoEvents(
+            track,
+            photos.map((photo) => ({
+              id: photo.id,
+              takenAt: photo.taken_at,
+            })),
+          )
+        : [],
+    [photos, track],
+  );
+  const photoCoordinatorRef = useRef<ReturnType<
+    typeof createTimedPhotoPlaybackCoordinator
+  > | null>(null);
+  const showTimedPhotosRef = useRef(showTimedPhotos);
+  const timedPhotoGroupingSettingsRef = useRef({
+    playbackMode,
+    skipDetectedStops,
+    targetDurationSec,
+  });
 
   useEffect(() => {
-    progressRef.current = progress;
-  }, [progress]);
+    showTimedPhotosRef.current = showTimedPhotos;
+    photoCoordinatorRef.current?.setEnabled(showTimedPhotos);
+  }, [showTimedPhotos]);
 
   useEffect(() => {
-    onPlayingChange?.(isPlaying);
-  }, [isPlaying, onPlayingChange]);
+    const groupingSettings = {
+      playbackMode,
+      skipDetectedStops,
+      targetDurationSec,
+    };
+    timedPhotoGroupingSettingsRef.current = groupingSettings;
+    photoCoordinatorRef.current?.setGroupingSettings(groupingSettings);
+  }, [playbackMode, skipDetectedStops, targetDurationSec]);
 
-  // Publish progress so sibling views (the elevation profile) can render a
-  // cursor in step with the map marker. Reset on unmount so navigating away
-  // mid-playback can't leave a stale cursor behind.
   useEffect(() => {
-    setAnimationProgress(progress);
-  }, [progress, setAnimationProgress]);
+    if (track.kind !== "timed") return;
+    const coordinator = createTimedPhotoPlaybackCoordinator({
+      track,
+      events: timedPhotoEvents,
+      engine: photoPlaybackEngine,
+      presenter: timedPhotoPresenter,
+      enabled: showTimedPhotosRef.current,
+      groupingSettings: timedPhotoGroupingSettingsRef.current,
+    });
+    photoCoordinatorRef.current = coordinator;
+    onPhotoSessionControllerChange?.(coordinator);
+    return () => {
+      photoCoordinatorRef.current = null;
+      onPhotoSessionControllerChange?.(null);
+      coordinator.destroy();
+    };
+  }, [
+    onPhotoSessionControllerChange,
+    photoPlaybackEngine,
+    timedPhotoEvents,
+    timedPhotoPresenter,
+    track,
+  ]);
+
+  useEffect(() => {
+    onSessionActiveChange?.(isSessionActive);
+  }, [isSessionActive, onSessionActiveChange]);
+
+  // Elevation is spatial, so publish marker distance rather than the selected
+  // playback timeline. Reset on unmount to avoid a stale cursor after routing.
+  useEffect(() => {
+    setAnimationDistanceProgress(distanceProgress);
+  }, [distanceProgress, setAnimationDistanceProgress]);
 
   useEffect(
     () => () => {
-      setAnimationProgress(0);
+      setAnimationDistanceProgress(0);
     },
-    [setAnimationProgress],
+    [setAnimationDistanceProgress],
   );
 
-  const handleSpeedChange = (pps: number) => {
-    setPointsPerSecond(pps);
-    if (isPlaying) {
-      stop();
-      window.setTimeout(() => play(progressRef.current), 0);
-    }
+  const handleDurationChange = (duration: TargetRouteDurationSec) => {
+    setTargetDurationSec(duration);
   };
 
-  const handlePlaybackModeChange = (mode: AnimationPlaybackMode) => {
-    setPlaybackMode(mode);
-    if (isPlaying) {
-      stop();
-      window.setTimeout(() => play(progressRef.current), 0);
-    }
+  const handlePlaybackModeChange = (mode: RoutePlaybackMode) => {
+    setPreferredPlaybackMode(mode);
   };
 
   return (
     <RouteAnimationControls
-      arcgisItemId={arcgisItemId}
-      isPlaying={isPlaying}
-      progress={progress}
+      state={state}
+      playbackProgress={playbackProgress}
       pointCount={pointCount}
-      pointsPerSecond={pointsPerSecond}
+      targetDurationSec={targetDurationSec}
       playbackMode={playbackMode}
+      availablePlaybackModes={availablePlaybackModes(track)}
+      timestampCapable={track.kind === "timed"}
+      skipDetectedStops={skipDetectedStops}
+      showTimedPhotos={showTimedPhotos}
+      timedPhotoCounts={{
+        eligible: timedPhotoEvents.length,
+        total: photos.length,
+      }}
       activityDurationSec={activityDurationSec}
-      onPlay={() => play()}
+      onPlay={play}
       onStop={stop}
-      onSpeedChange={handleSpeedChange}
+      onDurationChange={handleDurationChange}
       onPlaybackModeChange={handlePlaybackModeChange}
+      onSkipDetectedStopsChange={setSkipDetectedStops}
+      onShowTimedPhotosChange={setShowTimedPhotos}
     />
   );
 }

@@ -122,7 +122,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Route'
+                  $ref: '#/components/schemas/RouteList'
           description: ''
     post:
       operationId: route_create
@@ -133,13 +133,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RouteWriteRequest'
+              $ref: '#/components/schemas/RouteCreateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/RouteWriteRequest'
+              $ref: '#/components/schemas/RouteCreateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/RouteWriteRequest'
+              $ref: '#/components/schemas/RouteCreateRequest'
         required: true
       security:
       - jwtAuth: []
@@ -148,7 +148,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RouteWrite'
+                $ref: '#/components/schemas/RouteCreate'
           description: ''
   /api/route/{id}/:
     get:
@@ -172,38 +172,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Route'
           description: ''
-    put:
-      operationId: route_update
-      description: API view to retrieve, update, or delete a single route.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - route
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RouteWriteRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RouteWriteRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/RouteWriteRequest'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RouteWrite'
-          description: ''
     patch:
       operationId: route_partial_update
       description: API view to retrieve, update, or delete a single route.
@@ -219,13 +187,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedRouteWriteRequest'
+              $ref: '#/components/schemas/PatchedRouteUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedRouteWriteRequest'
+              $ref: '#/components/schemas/PatchedRouteUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedRouteWriteRequest'
+              $ref: '#/components/schemas/PatchedRouteUpdateRequest'
       security:
       - jwtAuth: []
       responses:
@@ -233,7 +201,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RouteWrite'
+                $ref: '#/components/schemas/Route'
           description: ''
     delete:
       operationId: route_destroy
@@ -267,7 +235,63 @@ paths:
       security:
       - jwtAuth: []
       responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+          description: ''
+  /api/route/{id}/photos/{photo_pk}/:
+    patch:
+      operationId: route_photos_partial_update
+      description: Change only the optional title and aware taken-at time of a photo.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: photo_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - route
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPhotoUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
         '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+          description: ''
+    delete:
+      operationId: route_photos_destroy
+      description: Delete the hosted image first, then its database record.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: photo_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - route
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
           description: No response body
   /api/route/parse-gpx/:
     post:
@@ -356,9 +380,6 @@ components:
       required:
       - email
       - password
-    NullEnum:
-      enum:
-      - null
     ParseGpxRequestRequest:
       type: object
       description: Serializer for the multipart file upload accepted by ParseGpxView.
@@ -378,6 +399,7 @@ components:
         date:
           type: string
           format: date-time
+          nullable: true
         distance_m:
           type: number
           format: double
@@ -405,61 +427,29 @@ components:
       - elevation_gain_m
       - geojson
       - track_point_count
-    PatchedRouteWriteRequest:
+    PatchedPhotoUpdateRequest:
       type: object
-      description: Serializer for creating and updating Route instances.
+      description: Serializer restricted to an optional title and aware taken-at time.
       properties:
         title:
           type: string
-          nullable: true
           maxLength: 255
-        activity_date:
+        taken_at:
           type: string
           format: date-time
+          nullable: true
+    PatchedRouteUpdateRequest:
+      type: object
+      description: Serializer restricted to owner-managed route information.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
         activity_type:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/ActivityTypeEnum'
-          - $ref: '#/components/schemas/BlankEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        distance:
-          type: number
-          format: double
-        duration:
-          type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
-          nullable: true
-        avg_pace:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
-          nullable: true
-        elevation_gain:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
-          nullable: true
-        arcgis_item_id:
-          type: string
-          nullable: true
-          maxLength: 32
-        track_point_count:
-          type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
-          nullable: true
-        geojson:
-          nullable: true
+          $ref: '#/components/schemas/ActivityTypeEnum'
         notes:
           type: string
-          nullable: true
-        route_link:
-          type: string
-          nullable: true
-          maxLength: 500
         is_public:
           type: boolean
     Photo:
@@ -471,7 +461,6 @@ components:
           readOnly: true
         title:
           type: string
-          nullable: true
           maxLength: 255
         url:
           type: string
@@ -491,10 +480,21 @@ components:
           type: boolean
           description: Return True if the photo has GPS coordinates.
           readOnly: true
+        taken_at:
+          type: string
+          format: date-time
+          nullable: true
+        taken_at_timezone:
+          type: string
+          nullable: true
+          description: Return the local IANA zone used to interpret owner-entered
+            photo time.
+          readOnly: true
       required:
       - has_gps
       - id
       - route_id
+      - taken_at_timezone
       - url
     RegisterRequest:
       type: object
@@ -518,24 +518,23 @@ components:
       - password
     Route:
       type: object
-      description: Serializer for reading Route instances, including nested photos.
+      description: Serializer for route detail, including canonical GeoJSON and nested
+        photos.
       properties:
         id:
           type: integer
           readOnly: true
         title:
           type: string
-          nullable: true
           maxLength: 255
         activity_date:
           type: string
           format: date-time
-        activity_type:
           nullable: true
+        activity_type:
           oneOf:
           - $ref: '#/components/schemas/ActivityTypeEnum'
           - $ref: '#/components/schemas/BlankEnum'
-          - $ref: '#/components/schemas/NullEnum'
         distance:
           type: number
           format: double
@@ -557,7 +556,6 @@ components:
           nullable: true
         arcgis_item_id:
           type: string
-          nullable: true
           maxLength: 32
         track_point_count:
           type: integer
@@ -565,14 +563,10 @@ components:
           minimum: -9223372036854775808
           format: int64
           nullable: true
-        geojson:
-          nullable: true
         notes:
           type: string
-          nullable: true
         route_link:
           type: string
-          nullable: true
           maxLength: 500
         owner:
           type: string
@@ -589,33 +583,37 @@ components:
           type: string
           format: date-time
           readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        geojson:
+          nullable: true
       required:
-      - activity_date
       - created_at
       - distance
       - id
       - owner
       - photos
-    RouteWrite:
+      - updated_at
+    RouteCreate:
       type: object
-      description: Serializer for creating and updating Route instances.
+      description: Serializer for creating Route instances from parsed GPX data.
       properties:
         id:
           type: integer
           readOnly: true
         title:
           type: string
-          nullable: true
           maxLength: 255
         activity_date:
           type: string
           format: date-time
-        activity_type:
           nullable: true
+        activity_type:
           oneOf:
           - $ref: '#/components/schemas/ActivityTypeEnum'
           - $ref: '#/components/schemas/BlankEnum'
-          - $ref: '#/components/schemas/NullEnum'
         distance:
           type: number
           format: double
@@ -637,7 +635,6 @@ components:
           nullable: true
         arcgis_item_id:
           type: string
-          nullable: true
           maxLength: 32
         track_point_count:
           type: integer
@@ -649,34 +646,29 @@ components:
           nullable: true
         notes:
           type: string
-          nullable: true
         route_link:
           type: string
-          nullable: true
           maxLength: 500
         is_public:
           type: boolean
       required:
-      - activity_date
       - distance
       - id
-    RouteWriteRequest:
+    RouteCreateRequest:
       type: object
-      description: Serializer for creating and updating Route instances.
+      description: Serializer for creating Route instances from parsed GPX data.
       properties:
         title:
           type: string
-          nullable: true
           maxLength: 255
         activity_date:
           type: string
           format: date-time
-        activity_type:
           nullable: true
+        activity_type:
           oneOf:
           - $ref: '#/components/schemas/ActivityTypeEnum'
           - $ref: '#/components/schemas/BlankEnum'
-          - $ref: '#/components/schemas/NullEnum'
         distance:
           type: number
           format: double
@@ -698,7 +690,6 @@ components:
           nullable: true
         arcgis_item_id:
           type: string
-          nullable: true
           maxLength: 32
         track_point_count:
           type: integer
@@ -710,16 +701,91 @@ components:
           nullable: true
         notes:
           type: string
-          nullable: true
         route_link:
           type: string
-          nullable: true
           maxLength: 500
         is_public:
           type: boolean
       required:
-      - activity_date
       - distance
+    RouteList:
+      type: object
+      description: Serializer for route collections without the canonical GeoJSON
+        payload.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        activity_date:
+          type: string
+          format: date-time
+          nullable: true
+        activity_type:
+          oneOf:
+          - $ref: '#/components/schemas/ActivityTypeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        distance:
+          type: number
+          format: double
+        duration:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        avg_pace:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        elevation_gain:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+        arcgis_item_id:
+          type: string
+          maxLength: 32
+        track_point_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        notes:
+          type: string
+        route_link:
+          type: string
+          maxLength: 500
+        owner:
+          type: string
+          format: email
+          readOnly: true
+        is_public:
+          type: boolean
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Photo'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - distance
+      - id
+      - owner
+      - photos
+      - updated_at
   securitySchemes:
     jwtAuth:
       type: http

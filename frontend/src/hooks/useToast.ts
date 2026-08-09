@@ -1,5 +1,9 @@
 import { useToastStore, type ToastSeverity } from "@/store/toastStore";
 
+/**
+ * Exposes convenience functions for adding general and error notifications.
+ * Used by route editing screens and map-layer error handling.
+ */
 export function useToast() {
   const enqueue = useToastStore((s) => s.enqueue);
 

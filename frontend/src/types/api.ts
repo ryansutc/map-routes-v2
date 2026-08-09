@@ -9,6 +9,7 @@ import { z } from "zod";
 
 export type PhotoDto = z.infer<typeof schemas.Photo>;
 export type ParseGpxResponse = z.infer<typeof schemas.ParseGpxResponse>;
+export type RouteListResponseDto = z.infer<typeof schemas.RouteList>;
 export type RouteResponseDto = z.infer<typeof schemas.Route>;
 export type RouteWriteDto = z.infer<typeof schemas.RouteCreate>;
 export type LoginModel = z.infer<typeof schemas.LoginRequest>;

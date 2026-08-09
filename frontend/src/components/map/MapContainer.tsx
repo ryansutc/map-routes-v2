@@ -1,10 +1,15 @@
 import { useStore } from "@/state/store";
+import esriConfig from "@arcgis/core/config";
 import ElevationLayer from "@arcgis/core/layers/ElevationLayer";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
 
 import React, { useEffect, useRef } from "react";
+
+// Configure ArcGIS only when the map adapter is loaded, keeping the SDK out of
+// application entry points that do not render a map.
+esriConfig.assetsPath = "https://js.arcgis.com/4.33/@arcgis/core/assets";
 
 interface MapContainerProps {
   children?: React.ReactNode;
@@ -15,6 +20,8 @@ interface MapContainerProps {
   onLoad: (map: Map, view: SceneView | MapView) => void;
   onReady: () => void;
   onUnload: () => void;
+  /** Prevent direct interaction with the map surface while overlays stay usable. */
+  interactionLocked?: boolean;
   viewProperties: { center: [number, number]; zoom: number };
 }
 
@@ -29,12 +36,29 @@ const MapContainer = (props: MapContainerProps) => {
     onLoad,
     onReady,
     onUnload,
+    interactionLocked = false,
     viewProperties,
   } = props;
 
   const viewMode = useStore((state) => state.viewMode);
 
   const mapDiv = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mapSurface = mapDiv.current;
+    if (!mapSurface) return;
+    mapSurface.inert = interactionLocked;
+    if (
+      interactionLocked &&
+      document.activeElement instanceof HTMLElement &&
+      mapSurface.contains(document.activeElement)
+    ) {
+      document.activeElement.blur();
+    }
+    return () => {
+      mapSurface.inert = false;
+    };
+  }, [interactionLocked]);
 
   useEffect(() => {
     // Initialize or destroy the ESRI Map/View Instances
@@ -104,7 +128,11 @@ const MapContainer = (props: MapContainerProps) => {
   return (
     <div style={{ height: "100%", width: "100%", position: "relative" }}>
       <div
-        style={{ height: "100%", width: "100%" }}
+        style={{
+          height: "100%",
+          width: "100%",
+          pointerEvents: interactionLocked ? "none" : undefined,
+        }}
         ref={mapDiv}
         id={attachToId}
       />
