@@ -21,6 +21,11 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 
+export type TimedPhotoCounts = Readonly<{
+  eligible: number;
+  total: number;
+}>;
+
 interface Props {
   targetDurationSec: TargetRouteDurationSec;
   playbackMode: RoutePlaybackMode;
@@ -28,6 +33,7 @@ interface Props {
   timestampCapable: boolean;
   skipDetectedStops: boolean;
   showTimedPhotos: boolean;
+  timedPhotoCounts: TimedPhotoCounts;
   /** Activity duration in seconds from the route record. */
   activityDurationSec: number | null | undefined;
   onDurationChange: (duration: TargetRouteDurationSec) => void;
@@ -56,6 +62,7 @@ export default function AnimationSettingsPopover({
   timestampCapable,
   skipDetectedStops,
   showTimedPhotos,
+  timedPhotoCounts,
   activityDurationSec,
   onDurationChange,
   onPlaybackModeChange,
@@ -142,6 +149,10 @@ export default function AnimationSettingsPopover({
                 Recorded point timestamps are unavailable for this route.
               </FormHelperText>
             </Collapse>
+            <FormHelperText>
+              {timedPhotoCounts.eligible} of {timedPhotoCounts.total} photos will
+              appear.
+            </FormHelperText>
           </FormControl>
           <FormControl size="small" fullWidth>
             <InputLabel id="playback-mode-label">Mode</InputLabel>

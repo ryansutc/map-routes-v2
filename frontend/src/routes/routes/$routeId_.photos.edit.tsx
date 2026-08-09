@@ -1,5 +1,10 @@
 import { zodiosAPI } from "@/api/axiosClient";
 import { axiosInstance } from "@/api/axiosInstance";
+import {
+  classifyTimedPhotoEligibility,
+  type TimedPhotoExclusionReason,
+} from "@/domain/timedPhotoEvents";
+import { buildRouteTrack } from "@/domain/timedTrack";
 import { routeQueryKey, useRoute } from "@/hooks/useRoute";
 import { useToast } from "@/hooks/useToast";
 import { useStore } from "@/state/store";
@@ -14,6 +19,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Fade,
   IconButton,
   Paper,
   Stack,
@@ -38,6 +44,17 @@ export const Route = createFileRoute("/routes/$routeId_/photos/edit")({
 });
 
 const MAX_PHOTOS = 20;
+
+const ELIGIBILITY_EXPLANATIONS: Record<TimedPhotoExclusionReason, string> = {
+  "legacy-route":
+    "This route does not have complete recorded point timestamps, so timed photos are unavailable.",
+  "missing-or-unresolved-time":
+    "This photo needs a date and time with a resolved timezone.",
+  "before-route": "This photo was taken before the recorded route began.",
+  "after-route": "This photo was taken after the recorded route ended.",
+  "unknown-gap":
+    "This photo was taken during a gap between recorded track segments.",
+};
 
 type QueuedPhoto = {
   id: string;
@@ -89,6 +106,23 @@ function PhotoEditor() {
   const browserTimeZone = useMemo(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     [],
+  );
+  const routeTrack = useMemo(
+    () => buildRouteTrack(route?.geojson),
+    [route?.geojson],
+  );
+  const photoEligibilityById = useMemo(
+    () =>
+      new Map(
+        classifyTimedPhotoEligibility(
+          routeTrack,
+          (route?.photos ?? []).map((photo) => ({
+            id: photo.id,
+            takenAt: photo.taken_at,
+          })),
+        ).map((result) => [result.photoId, result]),
+      ),
+    [route?.photos, routeTrack],
   );
   const updatePhotoMutation = useMutation({
     mutationFn: ({
@@ -475,6 +509,7 @@ function PhotoEditor() {
               takenAtDraft !==
                 formatPhotoTakenAt(photo, browserTimeZone);
             const busy = busyPhotoId === photo.id;
+            const eligibility = photoEligibilityById.get(photo.id);
             return (
               <Paper key={photo.id} variant="outlined" sx={{ p: 1.5 }}>
                 <Box
@@ -505,6 +540,42 @@ function PhotoEditor() {
                     </span>
                   </Tooltip>
                 </Stack>
+                {eligibility && (
+                  <Fade
+                    in
+                    key={
+                      eligibility.status === "eligible"
+                        ? eligibility.status
+                        : eligibility.reason
+                    }
+                  >
+                    <Box sx={{ mt: 1 }}>
+                      <Chip
+                        size="small"
+                        label={
+                          eligibility.status === "eligible"
+                            ? "Included in playback"
+                            : "Excluded from playback"
+                        }
+                        color={
+                          eligibility.status === "eligible"
+                            ? "success"
+                            : "warning"
+                        }
+                      />
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        sx={{ mt: 0.5 }}
+                      >
+                        {eligibility.status === "eligible"
+                          ? "This photo will appear automatically during route playback."
+                          : ELIGIBILITY_EXPLANATIONS[eligibility.reason]}
+                      </Typography>
+                    </Box>
+                  </Fade>
+                )}
                 <TextField
                   label="Title (optional)"
                   value={draft}

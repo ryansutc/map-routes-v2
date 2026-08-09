@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildRouteTrack, type TimedTrack } from "./timedTrack";
 import {
+  buildRouteTrack,
+  type RouteTrack,
+  type TimedTrack,
+} from "./timedTrack";
+import {
+  classifyTimedPhotoEligibility,
   groupTimedPhotoEvents,
   planTimedPhotoEvents,
   TIMED_PHOTO_GROUP_WINDOW_MS,
@@ -50,6 +55,20 @@ function timedTrack(): TimedTrack {
   return track;
 }
 
+function legacyTrack(): RouteTrack {
+  return buildRouteTrack({
+    type: "Feature",
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [0, 0],
+        [0.001, 0],
+      ],
+    },
+    properties: {},
+  });
+}
+
 function stoppedTrack(): TimedTrack {
   const track = buildRouteTrack({
     type: "FeatureCollection",
@@ -77,6 +96,68 @@ function stoppedTrack(): TimedTrack {
   if (track.kind !== "timed") throw new Error("Expected a timed track");
   return track;
 }
+
+describe("classifyTimedPhotoEligibility", () => {
+  it("reports every timed-route exclusion reason without losing input order", () => {
+    const results = classifyTimedPhotoEligibility(timedTrack(), [
+      { id: 1, takenAt: null },
+      { id: 2, takenAt: "not-a-date" },
+      { id: 3, takenAt: "2026-01-01T00:03:30" },
+      { id: 4, takenAt: "2025-12-31T23:59:59Z" },
+      { id: 5, takenAt: "2026-01-01T00:04:01Z" },
+      { id: 6, takenAt: "2026-01-01T00:02:30Z" },
+    ]);
+
+    expect(results).toEqual([
+      {
+        status: "excluded",
+        photoId: 1,
+        reason: "missing-or-unresolved-time",
+      },
+      {
+        status: "excluded",
+        photoId: 2,
+        reason: "missing-or-unresolved-time",
+      },
+      {
+        status: "excluded",
+        photoId: 3,
+        reason: "missing-or-unresolved-time",
+      },
+      { status: "excluded", photoId: 4, reason: "before-route" },
+      { status: "excluded", photoId: 5, reason: "after-route" },
+      { status: "excluded", photoId: 6, reason: "unknown-gap" },
+    ]);
+  });
+
+  it("classifies every photo on a legacy route with the legacy reason", () => {
+    expect(
+      classifyTimedPhotoEligibility(legacyTrack(), [
+        { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+        { id: 2, takenAt: null },
+      ]),
+    ).toEqual([
+      { status: "excluded", photoId: 1, reason: "legacy-route" },
+      { status: "excluded", photoId: 2, reason: "legacy-route" },
+    ]);
+  });
+
+  it("includes exact route and segment boundaries with resolved cursors", () => {
+    const results = classifyTimedPhotoEligibility(timedTrack(), [
+      { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+      { id: 2, takenAt: "2026-01-01T00:02:01Z" },
+      { id: 3, takenAt: "2026-01-01T00:03:00Z" },
+      { id: 4, takenAt: "2026-01-01T00:04:00Z" },
+    ]);
+
+    expect(results.every((result) => result.status === "eligible")).toBe(true);
+    expect(
+      results.map((result) =>
+        result.status === "eligible" ? result.event.cursor.segmentIndex : null,
+      ),
+    ).toEqual([0, 0, 1, 1]);
+  });
+});
 
 describe("planTimedPhotoEvents", () => {
   it("excludes missing, invalid, out-of-range, and strict-gap timestamps", () => {

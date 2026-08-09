@@ -133,7 +133,7 @@ function daysInMonth(year: number, month: number): number {
   return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
-function parseAbsoluteTimestamp(value: unknown): number | null {
+export function parseAbsoluteTimestamp(value: unknown): number | null {
   if (typeof value !== "string") return null;
   const match = ABSOLUTE_TIMESTAMP_PATTERN.exec(value);
   if (!match) return null;
