@@ -1,10 +1,15 @@
 import { useStore } from "@/state/store";
+import esriConfig from "@arcgis/core/config";
 import ElevationLayer from "@arcgis/core/layers/ElevationLayer";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
 
 import React, { useEffect, useRef } from "react";
+
+// Configure ArcGIS only when the map adapter is loaded, keeping the SDK out of
+// application entry points that do not render a map.
+esriConfig.assetsPath = "https://js.arcgis.com/4.33/@arcgis/core/assets";
 
 interface MapContainerProps {
   children?: React.ReactNode;

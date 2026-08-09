@@ -15,7 +15,7 @@ import {
 import type { RouteTrack } from "@/domain/timedTrack";
 import { useRouteAnimation } from "@/hooks/useRouteAnimation";
 import { useStore } from "@/state/store";
-import Map from "@arcgis/core/Map";
+import type Map from "@arcgis/core/Map";
 import { useEffect, useMemo, useRef } from "react";
 
 type RoutePhotoTiming = {
