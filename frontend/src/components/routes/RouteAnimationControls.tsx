@@ -1,4 +1,6 @@
-import AnimationSettingsPopover from "@/components/AnimationSettingsPopover";
+import AnimationSettingsPopover, {
+  type TimedPhotoCounts,
+} from "@/components/AnimationSettingsPopover";
 import {
   isAnimationSessionActive,
   type AnimationLifecycleState,
@@ -25,6 +27,7 @@ interface RouteAnimationControlsProps {
   timestampCapable: boolean;
   skipDetectedStops: boolean;
   showTimedPhotos: boolean;
+  timedPhotoCounts: TimedPhotoCounts;
   activityDurationSec: number | null;
   onPlay: () => void;
   onStop: () => void;
@@ -44,6 +47,7 @@ export function RouteAnimationControls({
   timestampCapable,
   skipDetectedStops,
   showTimedPhotos,
+  timedPhotoCounts,
   activityDurationSec,
   onPlay,
   onStop,
@@ -101,6 +105,7 @@ export function RouteAnimationControls({
           timestampCapable={timestampCapable}
           skipDetectedStops={skipDetectedStops}
           showTimedPhotos={showTimedPhotos}
+          timedPhotoCounts={timedPhotoCounts}
           activityDurationSec={activityDurationSec}
           onDurationChange={onDurationChange}
           onPlaybackModeChange={onPlaybackModeChange}

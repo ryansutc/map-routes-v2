@@ -177,6 +177,10 @@ export function RouteAnimationController({
       timestampCapable={track.kind === "timed"}
       skipDetectedStops={skipDetectedStops}
       showTimedPhotos={showTimedPhotos}
+      timedPhotoCounts={{
+        eligible: timedPhotoEvents.length,
+        total: photos.length,
+      }}
       activityDurationSec={activityDurationSec}
       onPlay={play}
       onStop={stop}

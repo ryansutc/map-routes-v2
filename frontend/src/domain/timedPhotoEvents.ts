@@ -1,4 +1,9 @@
-import type { TimedTrack, TrackCursor } from "./timedTrack";
+import {
+  parseAbsoluteTimestamp,
+  type RouteTrack,
+  type TimedTrack,
+  type TrackCursor,
+} from "./timedTrack";
 
 export type TimedPhotoInput = {
   id: number;
@@ -11,20 +16,31 @@ export type TimedPhotoEvent = {
   cursor: TrackCursor;
 };
 
+export type TimedPhotoExclusionReason =
+  | "legacy-route"
+  | "missing-or-unresolved-time"
+  | "before-route"
+  | "after-route"
+  | "unknown-gap";
+
+export type TimedPhotoEligibility =
+  | {
+      status: "eligible";
+      photoId: number;
+      event: TimedPhotoEvent;
+    }
+  | {
+      status: "excluded";
+      photoId: number;
+      reason: TimedPhotoExclusionReason;
+    };
+
 export const TIMED_PHOTO_GROUP_WINDOW_MS = 2_000;
 
 export type TimedPhotoEventGroup = {
   events: readonly TimedPhotoEvent[];
   photoIds: readonly number[];
 };
-
-const ABSOLUTE_TIMESTAMP_PATTERN = /(?:Z|[+-]\d{2}:\d{2})$/i;
-
-function parseAbsoluteTimestamp(value: string | null | undefined) {
-  if (!value || !ABSOLUTE_TIMESTAMP_PATTERN.test(value)) return null;
-  const timestampMs = Date.parse(value);
-  return Number.isFinite(timestampMs) ? timestampMs : null;
-}
 
 function isStrictlyInsideGap(track: TimedTrack, timestampMs: number) {
   let low = 0;
@@ -39,6 +55,65 @@ function isStrictlyInsideGap(track: TimedTrack, timestampMs: number) {
 }
 
 /**
+ * Classifies every photo through the same eligibility rules used by playback.
+ * Results preserve input order so owner-facing callers can index or render them.
+ */
+export function classifyTimedPhotoEligibility(
+  track: RouteTrack,
+  photos: readonly TimedPhotoInput[],
+): readonly TimedPhotoEligibility[] {
+  return photos.map((photo) => {
+    if (track.kind === "legacy") {
+      return {
+        status: "excluded",
+        photoId: photo.id,
+        reason: "legacy-route",
+      };
+    }
+
+    const takenAtMs = parseAbsoluteTimestamp(photo.takenAt);
+    if (takenAtMs === null) {
+      return {
+        status: "excluded",
+        photoId: photo.id,
+        reason: "missing-or-unresolved-time",
+      };
+    }
+    if (takenAtMs < track.startedAtMs) {
+      return {
+        status: "excluded",
+        photoId: photo.id,
+        reason: "before-route",
+      };
+    }
+    if (takenAtMs > track.endedAtMs) {
+      return {
+        status: "excluded",
+        photoId: photo.id,
+        reason: "after-route",
+      };
+    }
+    if (isStrictlyInsideGap(track, takenAtMs)) {
+      return {
+        status: "excluded",
+        photoId: photo.id,
+        reason: "unknown-gap",
+      };
+    }
+
+    return {
+      status: "eligible",
+      photoId: photo.id,
+      event: {
+        photoId: photo.id,
+        takenAtMs,
+        cursor: track.atTimestamp(takenAtMs),
+      },
+    };
+  });
+}
+
+/**
  * Maps trustworthy photo timestamps to exact track cursors once per route.
  * Callers schedule the resulting sorted list with a forward event cursor.
  */
@@ -46,24 +121,9 @@ export function planTimedPhotoEvents(
   track: TimedTrack,
   photos: readonly TimedPhotoInput[],
 ): readonly TimedPhotoEvent[] {
-  const events: TimedPhotoEvent[] = [];
-
-  for (const photo of photos) {
-    const takenAtMs = parseAbsoluteTimestamp(photo.takenAt);
-    if (
-      takenAtMs === null ||
-      takenAtMs < track.startedAtMs ||
-      takenAtMs > track.endedAtMs ||
-      isStrictlyInsideGap(track, takenAtMs)
-    ) {
-      continue;
-    }
-    events.push({
-      photoId: photo.id,
-      takenAtMs,
-      cursor: track.atTimestamp(takenAtMs),
-    });
-  }
+  const events = classifyTimedPhotoEligibility(track, photos).flatMap(
+    (result) => (result.status === "eligible" ? [result.event] : []),
+  );
 
   events.sort(
     (first, second) =>
