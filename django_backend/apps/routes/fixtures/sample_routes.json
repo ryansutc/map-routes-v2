@@ -8,7 +8,7 @@
       "activity_type": "Cycling",
       "distance": "32.4",
       "notes": "Mountain Bike Ride from the Ferry to Gibsons, BC through the foothills of the mountains.",
-      "route_link": "https://www.dropbox.com/scl/fi/jy6km3pstsyq8fvixksqe/Sunshine_coast_ferry_bike_ride.gpx?rlkey=etd3jvuse6tq5568nz354ffne&dl=0",
+      "route_link": "",
       "owner": "test@example.com",
       "is_public": true,
       "created_at": "2026-04-12T20:30:00Z",
@@ -349,32 +349,6 @@
       "is_public": true,
       "created_at": "2025-12-21T23:00:00Z",
       "updated_at": "2025-12-21T23:00:00Z"
-    }
-  },
-  {
-    "model": "routes.photo",
-    "pk": 100,
-    "fields": {
-      "title": "Sunshine Coast",
-      "url": "https://dropbox.com/scl/fi/gh6ljlfaiieheragzjmaq/cambodia.jpg?rlkey=9fmsr7tknzw6btli9ofn8lkue&dl=0",
-      "latitude": 49.3017,
-      "longitude": -123.1411,
-      "route": 100,
-      "uploaded_at": "2026-04-12T20:30:00Z",
-      "taken_at": null
-    }
-  },
-  {
-    "model": "routes.photo",
-    "pk": 101,
-    "fields": {
-      "title": "Well Good Trail",
-      "url": "https://www.dropbox.com/scl/fi/27yhbphnf3u4ps05zc641/wellgood_burke.jpg?rlkey=qhuxdp171f2bjksc4tbjmyd65&dl=0",
-      "latitude": 49.3234167,
-      "longitude": -122.7287528,
-      "route": 100,
-      "uploaded_at": "2026-04-12T20:30:00Z",
-      "taken_at": null
     }
   },
   {
