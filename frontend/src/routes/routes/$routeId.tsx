@@ -57,8 +57,8 @@ type RouteItem = NonNullable<ReturnType<typeof useRoute>["data"]>;
 const EMPTY_ROUTE_PHOTOS: RouteItem["photos"] = [];
 
 interface RouteMapOverlaysProps {
-  map: Map | null;
-  view: MapView | SceneView | null;
+  getMap: () => Map | null;
+  getView: () => MapView | SceneView | null;
   routeItem: RouteItem | undefined;
   routeTrack: RouteTrack;
   error: Error | null;
@@ -75,8 +75,8 @@ interface RouteMapOverlaysProps {
 
 /** Everything layered on top of the ESRI view for the route detail page. */
 function RouteMapOverlays({
-  map,
-  view,
+  getMap,
+  getView,
   routeItem,
   routeTrack,
   error,
@@ -88,6 +88,12 @@ function RouteMapOverlays({
   timedPhotoPresenter,
   onPhotoSessionControllerChange,
 }: RouteMapOverlaysProps) {
+  const map = getMap();
+  const view = getView();
+  const layers = useMemo(
+    () => (routeItem?.arcgis_item_id ? [routeItem.arcgis_item_id] : []),
+    [routeItem],
+  );
   const ready = map && view && !error && !isLoading && routeItem;
 
   return (
@@ -97,18 +103,15 @@ function RouteMapOverlays({
       {ready && (
         <>
           <LayerController
-            map={map}
-            // @ts-expect-error value can be undefined
-            layers={
-              (routeItem.arcgis_item_id && [routeItem.arcgis_item_id]) ?? []
-            }
-            view={view}
+            getMap={getMap}
+            getView={getView}
+            layers={layers}
             showZoomToExtent={!isPreview}
           />
           <PhotoController
-            map={map}
+            getMap={getMap}
+            getView={getView}
             photos={routeItem.photos || []}
-            view={view}
             onPhotoClick={onPhotoClick}
           />
         </>
@@ -119,7 +122,7 @@ function RouteMapOverlays({
         {ready && <Toggle3d disabled={isAnimating} />}
         {map && view && (
           <RouteAnimationController
-            map={map}
+            getMap={getMap}
             track={routeTrack}
             photos={routeItem?.photos ?? []}
             timedPhotoPresenter={timedPhotoPresenter}
@@ -185,6 +188,8 @@ function RouteDetail() {
     setMap(map);
     setView(view);
   };
+  const getMap = useCallback(() => map, [map]);
+  const getView = useCallback(() => view, [view]);
 
   const handleMapReady = () => {};
   const handleMapUnload = () => {};
@@ -222,8 +227,8 @@ function RouteDetail() {
       showZoom={!isPreview}
     >
       <RouteMapOverlays
-        map={map}
-        view={view}
+        getMap={getMap}
+        getView={getView}
         routeItem={routeItem}
         routeTrack={routeTrack}
         error={isError ? error : null}
