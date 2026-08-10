@@ -22,6 +22,8 @@ interface MapContainerProps {
   onUnload: () => void;
   /** Prevent direct interaction with the map surface while overlays stay usable. */
   interactionLocked?: boolean;
+  /** Show ArcGIS's built-in zoom buttons. */
+  showZoom?: boolean;
   viewProperties: { center: [number, number]; zoom: number };
 }
 
@@ -37,12 +39,19 @@ const MapContainer = (props: MapContainerProps) => {
     onReady,
     onUnload,
     interactionLocked = false,
+    showZoom = true,
     viewProperties,
   } = props;
 
   const viewMode = useStore((state) => state.viewMode);
 
   const mapDiv = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<MapView | SceneView | null>(null);
+
+  const setZoomVisibility = (view: MapView | SceneView, visible: boolean) => {
+    const zoom = view.ui.find("zoom");
+    if (zoom && "visible" in zoom) zoom.visible = visible;
+  };
 
   useEffect(() => {
     const mapSurface = mapDiv.current;
@@ -90,6 +99,8 @@ const MapContainer = (props: MapContainerProps) => {
         }
 
         newView.ui.move("zoom", "top-right");
+        setZoomVisibility(newView, showZoom);
+        viewRef.current = newView;
 
         if (onClick) {
           newView.on("click", onClick);
@@ -120,6 +131,10 @@ const MapContainer = (props: MapContainerProps) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode]);
+
+  useEffect(() => {
+    if (viewRef.current) setZoomVisibility(viewRef.current, showZoom);
+  }, [showZoom]);
 
   // The inner div belongs to ESRI alone — it appends `.esri-view-root` there
   // and mutates it outside React's knowledge. Overlay children are rendered as

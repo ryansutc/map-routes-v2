@@ -218,6 +218,7 @@ function RouteDetail() {
       onReady={handleMapReady}
       onUnload={handleMapUnload}
       interactionLocked={isAnimating}
+      showZoom={!isPreview}
     >
       <RouteMapOverlays
         map={map}
