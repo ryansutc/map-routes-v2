@@ -14,6 +14,7 @@ import {
 } from "@/domain/routeAnimation";
 import type { RouteTrack } from "@/domain/timedTrack";
 import { addRouteAnimationLayer } from "@/components/map/mapLayerOrder";
+import { routeAnimationProgress } from "@/state/routeAnimationProgress";
 
 const ANIMATION_LAYER_ID = "routeAnimationLayer";
 const DEFAULT_LINE_COLOR: [number, number, number, number] = [
@@ -96,6 +97,19 @@ export function useRouteAnimation(
   }, [engine, playbackMode, skipDetectedStops, targetDurationSec]);
 
   useEffect(() => () => engine.destroy(), [engine]);
+
+  useEffect(() => {
+    // Frame snapshots keep the map marker and lightweight elevation cursor on
+    // the same spatial distance without involving application-store middleware.
+    routeAnimationProgress.publish(engine.getSnapshot().distanceProgress);
+    const unsubscribe = engine.subscribeToFrames((frameSnapshot) => {
+      routeAnimationProgress.publish(frameSnapshot.distanceProgress);
+    });
+    return () => {
+      unsubscribe();
+      routeAnimationProgress.reset();
+    };
+  }, [engine]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;

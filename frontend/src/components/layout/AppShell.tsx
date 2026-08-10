@@ -26,8 +26,7 @@ const TOGGLE_BORDER_COLOR = "rgba(255,255,255,0.5)";
 export default function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  // Subscribe field-by-field: a bare useStore() would re-render the whole shell
-  // on every transient store change (e.g. animationDistanceProgress at ~20fps).
+  // Subscribe field-by-field so unrelated application updates stay local.
   const user = useStore((s) => s.user);
   const userIsAuthenticated = useStore((s) => s.userIsAuthenticated);
   const setUser = useStore((s) => s.setUser);

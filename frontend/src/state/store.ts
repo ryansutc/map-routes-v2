@@ -45,12 +45,6 @@ type MapRouteState = {
   setSkipDetectedStops: (skipDetectedStops: boolean) => void;
   showTimedPhotos: boolean;
   setShowTimedPhotos: (showTimedPhotos: boolean) => void;
-  /**
-   * Live route-animation progress (0–1). Transient: updated ~20x/sec while
-   * playback runs and never persisted. Always subscribe with a selector.
-   */
-  animationDistanceProgress: number;
-  setAnimationDistanceProgress: (animationDistanceProgress: number) => void;
 };
 
 type PersistedAnimationState = {
@@ -102,7 +96,6 @@ export const useStore = create<MapRouteState>()(
           animationPlaybackMode: "recorded" as RoutePlaybackMode,
           skipDetectedStops: true,
           showTimedPhotos: true,
-          animationDistanceProgress: 0,
         } as MapRouteState,
         (set) => ({
           setPage: (page: PageType) => set({ page }, undefined, "page/setPage"),
@@ -152,13 +145,6 @@ export const useStore = create<MapRouteState>()(
           },
           setShowTimedPhotos: (showTimedPhotos: boolean) => {
             set({ showTimedPhotos }, undefined, "animation/setShowTimedPhotos");
-          },
-          setAnimationDistanceProgress: (animationDistanceProgress: number) => {
-            set(
-              { animationDistanceProgress },
-              undefined,
-              "animation/setAnimationDistanceProgress",
-            );
           },
         }),
       ),

@@ -59,15 +59,11 @@ export function RouteAnimationController({
   const setSkipDetectedStops = useStore((state) => state.setSkipDetectedStops);
   const showTimedPhotos = useStore((state) => state.showTimedPhotos);
   const setShowTimedPhotos = useStore((state) => state.setShowTimedPhotos);
-  const setAnimationDistanceProgress = useStore(
-    (state) => state.setAnimationDistanceProgress,
-  );
   const playbackMode = resolvePlaybackMode(track, preferredPlaybackMode);
 
   const {
     state,
     playbackProgress,
-    distanceProgress,
     pointCount,
     play,
     stop,
@@ -144,19 +140,6 @@ export function RouteAnimationController({
   useEffect(() => {
     onSessionActiveChange?.(isSessionActive);
   }, [isSessionActive, onSessionActiveChange]);
-
-  // Elevation is spatial, so publish marker distance rather than the selected
-  // playback timeline. Reset on unmount to avoid a stale cursor after routing.
-  useEffect(() => {
-    setAnimationDistanceProgress(distanceProgress);
-  }, [distanceProgress, setAnimationDistanceProgress]);
-
-  useEffect(
-    () => () => {
-      setAnimationDistanceProgress(0);
-    },
-    [setAnimationDistanceProgress],
-  );
 
   const handleDurationChange = (duration: TargetRouteDurationSec) => {
     setTargetDurationSec(duration);
