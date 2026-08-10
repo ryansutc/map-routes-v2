@@ -103,6 +103,7 @@ function RouteMapOverlays({
               (routeItem.arcgis_item_id && [routeItem.arcgis_item_id]) ?? []
             }
             view={view}
+            showZoomToExtent={!isPreview}
           />
           <PhotoController
             map={map}

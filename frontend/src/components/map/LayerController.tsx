@@ -3,20 +3,37 @@ import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import type MapView from "@arcgis/core/views/MapView";
 import type SceneView from "@arcgis/core/views/SceneView";
-import { useEffect } from "react";
+import Home from "@arcgis/core/widgets/Home";
+import { useEffect, useRef } from "react";
 import { useToast } from "@/hooks/useToast";
 function LayerController({
   map,
   layers,
   view,
+  showZoomToExtent = true,
 }: {
   map: __esri.Map | null;
   view: MapView | SceneView | null;
   layers: string[];
+  showZoomToExtent?: boolean;
 }) {
   const { enqueueError } = useToast();
+  const zoomToExtentRef = useRef<Home | null>(null);
+  const showZoomToExtentRef = useRef(showZoomToExtent);
+
   useEffect(() => {
-    if (map && view && view) {
+    showZoomToExtentRef.current = showZoomToExtent;
+    if (zoomToExtentRef.current) {
+      zoomToExtentRef.current.visible = showZoomToExtent;
+    }
+  }, [showZoomToExtent]);
+
+  useEffect(() => {
+    let disposed = false;
+    let zoomToExtent: Home | null = null;
+    let routeExtent: __esri.Extent | null = null;
+
+    if (map && view) {
       layers.forEach((layer) => {
         const renderer = new SimpleRenderer({
           symbol: new SimpleLineSymbol({
@@ -56,13 +73,33 @@ function LayerController({
         featureLayer.when(
           () => {
             featureLayer.queryExtent().then((res) => {
+              if (disposed) return;
+
+              routeExtent = routeExtent
+                ? routeExtent.union(res.extent)
+                : res.extent.clone();
+
+              if (!zoomToExtent) {
+                zoomToExtent = new Home({
+                  view,
+                  viewpoint: { targetGeometry: routeExtent },
+                  label: "Zoom to route",
+                  icon: "zoom-to-object",
+                  visible: showZoomToExtentRef.current,
+                });
+                zoomToExtentRef.current = zoomToExtent;
+                view.ui.add(zoomToExtent, "top-right");
+              } else {
+                zoomToExtent.viewpoint = { targetGeometry: routeExtent };
+              }
+
               if (view && view.ready) {
-                view.goTo(res.extent).catch((error) => {
+                view.goTo(routeExtent).catch((error) => {
                   console.warn("Error during view.goTo:", error);
                 });
               } else {
                 view?.when(() => {
-                  view.goTo(res.extent).catch((error) => {
+                  view.goTo(routeExtent).catch((error) => {
                     console.warn("Error during view.goTo:", error);
                   });
                 });
@@ -79,6 +116,12 @@ function LayerController({
     }
 
     return () => {
+      disposed = true;
+      if (zoomToExtent) {
+        view?.ui.remove(zoomToExtent);
+        zoomToExtent.destroy();
+      }
+      zoomToExtentRef.current = null;
       if (map) {
         // @ts-expect-error layer problem TODO
         layers.forEach((layer) => map.remove(map.findLayerById(layer)));
