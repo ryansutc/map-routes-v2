@@ -8,17 +8,19 @@ import type SceneView from "@arcgis/core/views/SceneView";
 import { useEffect } from "react";
 
 function PhotoController({
-  map,
+  getMap,
+  getView,
   photos,
-  view,
   onPhotoClick,
 }: {
-  map: __esri.Map | null;
-  view: MapView | SceneView | null;
+  getMap: () => __esri.Map | null;
+  getView: () => MapView | SceneView | null;
   photos: PhotoDto[];
   onPhotoClick: (index: number) => void;
 }) {
   useEffect(() => {
+    const map = getMap();
+    const view = getView();
     if (!map || !view || !photos.length) return;
 
     const graphics = photos.flatMap((photo, photoIndex) => {
@@ -72,7 +74,7 @@ function PhotoController({
       clickHandle.remove();
       map.remove(graphicsLayer);
     };
-  }, [map, onPhotoClick, photos, view]);
+  }, [getMap, getView, onPhotoClick, photos]);
 
   return null;
 }

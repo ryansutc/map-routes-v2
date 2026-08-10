@@ -24,7 +24,7 @@ type RoutePhotoTiming = {
 };
 
 interface RouteAnimationControllerProps {
-  map: Map | null;
+  getMap: () => Map | null;
   track: RouteTrack;
   photos: readonly RoutePhotoTiming[];
   timedPhotoPresenter: TimedPhotoPresenter;
@@ -37,7 +37,7 @@ interface RouteAnimationControllerProps {
 }
 
 export function RouteAnimationController({
-  map,
+  getMap,
   track,
   photos,
   timedPhotoPresenter,
@@ -45,6 +45,7 @@ export function RouteAnimationController({
   onSessionActiveChange,
   onPhotoSessionControllerChange,
 }: RouteAnimationControllerProps) {
+  const map = getMap();
   const targetDurationSec = useStore((state) => state.animationDurationSec);
   const preferredPlaybackMode = useStore(
     (state) => state.animationPlaybackMode,

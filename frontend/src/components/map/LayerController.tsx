@@ -4,16 +4,21 @@ import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import type MapView from "@arcgis/core/views/MapView";
 import type SceneView from "@arcgis/core/views/SceneView";
 import Home from "@arcgis/core/widgets/Home";
+import { isAbortError } from "@arcgis/core/core/promiseUtils";
 import { useEffect, useRef } from "react";
 import { useToast } from "@/hooks/useToast";
+
+const isArcGISAbortError = (error: unknown) =>
+  isAbortError(error as __esri.Error);
+
 function LayerController({
-  map,
+  getMap,
+  getView,
   layers,
-  view,
   showZoomToExtent = true,
 }: {
-  map: __esri.Map | null;
-  view: MapView | SceneView | null;
+  getMap: () => __esri.Map | null;
+  getView: () => MapView | SceneView | null;
   layers: string[];
   showZoomToExtent?: boolean;
 }) {
@@ -29,9 +34,12 @@ function LayerController({
   }, [showZoomToExtent]);
 
   useEffect(() => {
+    const map = getMap();
+    const view = getView();
     let disposed = false;
     let zoomToExtent: Home | null = null;
     let routeExtent: __esri.Extent | null = null;
+    const layerViewHandles: Array<{ remove: () => void }> = [];
 
     if (map && view) {
       layers.forEach((layer) => {
@@ -63,50 +71,75 @@ function LayerController({
 
         let loadFailed = false;
 
-        view.on("layerview-create-error", (event) => {
-          if (event.layer === featureLayer && !loadFailed) {
-            enqueueError(`Failed to display map layer "${layer}".`);
-            console.error(`layerview-create-error for layer "${layer}":`, event.error);
-          }
-        });
+        layerViewHandles.push(
+          view.on("layerview-create-error", (event) => {
+            if (
+              event.layer === featureLayer &&
+              !loadFailed &&
+              !isArcGISAbortError(event.error)
+            ) {
+              loadFailed = true;
+              enqueueError(`Failed to display map layer "${layer}".`);
+              console.error(
+                `layerview-create-error for layer "${layer}":`,
+                event.error,
+              );
+            }
+          }),
+        );
 
         featureLayer.when(
           () => {
-            featureLayer.queryExtent().then((res) => {
-              if (disposed) return;
+            featureLayer
+              .queryExtent()
+              .then((res) => {
+                if (disposed) return;
 
-              routeExtent = routeExtent
-                ? routeExtent.union(res.extent)
-                : res.extent.clone();
+                routeExtent = routeExtent
+                  ? routeExtent.union(res.extent)
+                  : res.extent.clone();
 
-              if (!zoomToExtent) {
-                zoomToExtent = new Home({
-                  view,
-                  viewpoint: { targetGeometry: routeExtent },
-                  label: "Zoom to route",
-                  icon: "zoom-to-object",
-                  visible: showZoomToExtentRef.current,
-                });
-                zoomToExtentRef.current = zoomToExtent;
-                view.ui.add(zoomToExtent, "top-right");
-              } else {
-                zoomToExtent.viewpoint = { targetGeometry: routeExtent };
-              }
-
-              if (view && view.ready) {
-                view.goTo(routeExtent).catch((error) => {
-                  console.warn("Error during view.goTo:", error);
-                });
-              } else {
-                view?.when(() => {
-                  view.goTo(routeExtent).catch((error) => {
-                    console.warn("Error during view.goTo:", error);
+                if (!zoomToExtent) {
+                  zoomToExtent = new Home({
+                    view,
+                    viewpoint: { targetGeometry: routeExtent },
+                    label: "Zoom to route",
+                    icon: "zoom-to-object",
+                    visible: showZoomToExtentRef.current,
                   });
-                });
-              }
-            });
+                  zoomToExtentRef.current = zoomToExtent;
+                  view.ui.add(zoomToExtent, "top-right");
+                } else {
+                  zoomToExtent.viewpoint = { targetGeometry: routeExtent };
+                }
+
+                if (view.ready) {
+                  view.goTo(routeExtent).catch((error) => {
+                    if (!isArcGISAbortError(error)) {
+                      console.warn("Error during view.goTo:", error);
+                    }
+                  });
+                } else {
+                  view.when(() => {
+                    view.goTo(routeExtent).catch((error) => {
+                      if (!isArcGISAbortError(error)) {
+                        console.warn("Error during view.goTo:", error);
+                      }
+                    });
+                  });
+                }
+              })
+              .catch((error: unknown) => {
+                if (!disposed && !isArcGISAbortError(error)) {
+                  console.error(
+                    `Failed to query extent for layer "${layer}":`,
+                    error,
+                  );
+                }
+              });
           },
           (error: unknown) => {
+            if (disposed || isArcGISAbortError(error)) return;
             loadFailed = true;
             enqueueError(`Failed to load map layer "${layer}".`);
             console.error(`Layer "${layer}" failed to load:`, error);
@@ -117,6 +150,7 @@ function LayerController({
 
     return () => {
       disposed = true;
+      layerViewHandles.forEach((handle) => handle.remove());
       if (zoomToExtent) {
         view?.ui.remove(zoomToExtent);
         zoomToExtent.destroy();
@@ -129,8 +163,7 @@ function LayerController({
         if (graphicsLayer) map.remove(graphicsLayer);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map]);
+  }, [enqueueError, getMap, getView, layers]);
 
   return null;
 }
