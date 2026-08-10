@@ -8,6 +8,6 @@ import { useMutation } from "@tanstack/react-query";
 export function useParseGpx() {
   return useMutation({
     mutationFn: (file: File) =>
-      zodiosAPI.route_parse_gpx_create({ file }),
+      zodiosAPI.route_parse_gpx_create({ file }, { timeout: 10_000 }),
   });
 }
