@@ -16,6 +16,8 @@ import type { RouteTrack } from "@/domain/timedTrack";
 import { useRouteAnimation } from "@/hooks/useRouteAnimation";
 import { useStore } from "@/state/store";
 import type Map from "@arcgis/core/Map";
+import type MapView from "@arcgis/core/views/MapView";
+import type SceneView from "@arcgis/core/views/SceneView";
 import { useEffect, useMemo, useRef } from "react";
 
 type RoutePhotoTiming = {
@@ -24,8 +26,10 @@ type RoutePhotoTiming = {
 };
 
 interface RouteAnimationControllerProps {
-  map: Map | null;
+  getMap: () => Map | null;
+  getView: () => MapView | SceneView | null;
   track: RouteTrack;
+  activityType?: string;
   photos: readonly RoutePhotoTiming[];
   timedPhotoPresenter: TimedPhotoPresenter;
   activityDurationSec: number | null;
@@ -37,14 +41,18 @@ interface RouteAnimationControllerProps {
 }
 
 export function RouteAnimationController({
-  map,
+  getMap,
+  getView,
   track,
+  activityType,
   photos,
   timedPhotoPresenter,
   activityDurationSec,
   onSessionActiveChange,
   onPhotoSessionControllerChange,
 }: RouteAnimationControllerProps) {
+  const map = getMap();
+  const view = getView();
   const targetDurationSec = useStore((state) => state.animationDurationSec);
   const preferredPlaybackMode = useStore(
     (state) => state.animationPlaybackMode,
@@ -68,11 +76,12 @@ export function RouteAnimationController({
     play,
     stop,
     photoPlaybackEngine,
-  } = useRouteAnimation(map, track, {
-      targetDurationSec,
-      playbackMode,
-      skipDetectedStops,
-    });
+  } = useRouteAnimation(map, view, track, {
+    targetDurationSec,
+    playbackMode,
+    skipDetectedStops,
+    activityType,
+  });
   const isSessionActive = isAnimationSessionActive(state);
   const timedPhotoEvents = useMemo(
     () =>

@@ -1,9 +1,8 @@
-import { formatDate } from "@/utils/datetimeHelpers";
 import { schemas } from "@/generatedtypes/django_generated";
-import { formatDistance } from "@/utils/units";
 import { useStore } from "@/state/store";
+import { formatDate } from "@/utils/datetimeHelpers";
+import { formatDistance, formatElevation } from "@/utils/units";
 import EditIcon from "@mui/icons-material/Edit";
-import { useNavigate } from "@tanstack/react-router";
 import {
   Box,
   Chip,
@@ -14,6 +13,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { useNavigate } from "@tanstack/react-router";
 import type { z } from "zod";
 
 type Route = z.infer<typeof schemas.Route>;
@@ -47,8 +47,17 @@ export default function RouteInfoContainer({
 
   return (
     <Box sx={{ p: 2 }}>
-      <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
-        <Typography variant="h4" component="h1" gutterBottom sx={{ flex: 1, mr: 1 }}>
+      <Stack
+        direction="row"
+        alignItems="flex-start"
+        justifyContent="space-between"
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ flex: 1, mr: 1 }}
+        >
           {routeItem.title ?? "Untitled route"}
         </Typography>
         {isOwner && (
@@ -89,8 +98,14 @@ export default function RouteInfoContainer({
         {formatDate(routeItem.activity_date, "mmm-dd-yyyy")}
       </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        {formatDistance(routeItem.distance, units)}
+        Distance: {formatDistance(routeItem.distance, units)}
       </Typography>
+      {routeItem.elevation_gain && (
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Elevation Gain:{" "}
+          {formatElevation(parseFloat(routeItem.elevation_gain), units)}
+        </Typography>
+      )}
       <Typography variant="body2" color="text.secondary" gutterBottom>
         by {routeItem.owner}
       </Typography>

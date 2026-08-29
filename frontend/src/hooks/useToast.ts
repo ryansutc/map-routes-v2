@@ -1,4 +1,5 @@
 import { useToastStore, type ToastSeverity } from "@/store/toastStore";
+import { useCallback } from "react";
 
 /**
  * Exposes convenience functions for adding general and error notifications.
@@ -7,10 +8,16 @@ import { useToastStore, type ToastSeverity } from "@/store/toastStore";
 export function useToast() {
   const enqueue = useToastStore((s) => s.enqueue);
 
-  const enqueueSnackbar = (message: string, severity?: ToastSeverity) =>
-    enqueue(message, severity);
+  const enqueueSnackbar = useCallback(
+    (message: string, severity?: ToastSeverity) =>
+      enqueue(message, severity),
+    [enqueue],
+  );
 
-  const enqueueError = (message: string) => enqueue(message, "error");
+  const enqueueError = useCallback(
+    (message: string) => enqueue(message, "error"),
+    [enqueue],
+  );
 
   return { enqueueSnackbar, enqueueError };
 }

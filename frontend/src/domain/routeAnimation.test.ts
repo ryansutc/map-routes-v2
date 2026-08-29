@@ -3,6 +3,7 @@ import {
   DEFAULT_TARGET_ROUTE_DURATION_SEC,
   TARGET_ROUTE_DURATIONS_SEC,
   availablePlaybackModes,
+  buildRouteTrailPaths,
   createRouteAnimationEngine,
   isAnimationSessionActive,
   resolvePlaybackMode,
@@ -122,6 +123,56 @@ describe("route playback preferences", () => {
     expect(isAnimationSessionActive("playing")).toBe(true);
     expect(isAnimationSessionActive("paused")).toBe(true);
     expect(isAnimationSessionActive("completed")).toBe(false);
+  });
+});
+
+describe("route animation trail", () => {
+  it("ends at the current position without joining separate route segments", () => {
+    const track = buildRouteTrack({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [0, 0, 10],
+              [1, 0, 20],
+            ],
+          },
+          properties: {},
+        },
+        {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [10, 10, 30],
+              [11, 10, 40],
+            ],
+          },
+          properties: {},
+        },
+      ],
+    });
+
+    expect(
+      buildRouteTrailPaths(track, {
+        coordinate: [10.5, 10, 35],
+        pointIndex: 2,
+        originalElapsedMs: null,
+        cumulativeDistanceM: track.profilePoints[2]!.distance,
+      }),
+    ).toEqual([
+      [
+        [0, 0, 10],
+        [1, 0, 20],
+      ],
+      [
+        [10, 10, 30],
+        [10.5, 10, 35],
+      ],
+    ]);
   });
 });
 

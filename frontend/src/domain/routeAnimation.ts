@@ -127,6 +127,49 @@ function coordinateAtProfilePoint(point: TrackProfilePoint): TrackCoordinate {
     : [point.lon, point.lat, point.elevation];
 }
 
+function mutableCoordinate(coordinate: TrackCoordinate): number[] {
+  return coordinate[2] === undefined
+    ? [coordinate[0], coordinate[1]]
+    : [coordinate[0], coordinate[1], coordinate[2]];
+}
+
+export function buildRouteTrailPaths(
+  track: RouteTrack,
+  position: AnimationPosition | null,
+): number[][][] {
+  if (!position || track.profilePoints.length === 0) return [];
+
+  const finalPointIndex = Math.min(
+    track.profilePoints.length - 1,
+    Math.max(0, position.pointIndex),
+  );
+  const paths: number[][][] = [];
+  let currentSegmentIndex: number | null = null;
+  let currentPath: number[][] | null = null;
+
+  for (let index = 0; index <= finalPointIndex; index += 1) {
+    const point = track.profilePoints[index]!;
+    if (point.segmentIndex !== currentSegmentIndex) {
+      currentSegmentIndex = point.segmentIndex;
+      currentPath = [];
+      paths.push(currentPath);
+    }
+    currentPath!.push(mutableCoordinate(coordinateAtProfilePoint(point)));
+  }
+
+  const currentCoordinate = mutableCoordinate(position.coordinate);
+  const lastCoordinate = currentPath?.at(-1);
+  if (
+    currentPath &&
+    (!lastCoordinate ||
+      currentCoordinate.some((value, index) => value !== lastCoordinate[index]))
+  ) {
+    currentPath.push(currentCoordinate);
+  }
+
+  return paths;
+}
+
 function positionAtProfilePoint(point: TrackProfilePoint): AnimationPosition {
   return {
     coordinate: coordinateAtProfilePoint(point),

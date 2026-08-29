@@ -30,7 +30,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { WizardState } from "./CreateRouteWizard";
 
@@ -74,6 +74,8 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
   const [createdRouteId, setCreatedRouteId] = useState<number | null>(null);
   const [map, setMap] = useState<Map | null>(null);
   const [view, setView] = useState<MapView | SceneView | null>(null);
+  const getMap = useCallback(() => map, [map]);
+  const getView = useCallback(() => view, [view]);
   const photoLayerRef = useRef<GraphicsLayer | null>(null);
 
   const createRoute = useMutation({
@@ -288,6 +290,10 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
   };
 
   const arcgisItemId = wizardState.parsed?.arcgis_item_id;
+  const routeLayers = useMemo(
+    () => (arcgisItemId ? [arcgisItemId] : []),
+    [arcgisItemId],
+  );
   const canPublish = !isPublishing;
 
   return (
@@ -453,7 +459,11 @@ export default function PhotoUploadStep({ wizardState, onBack }: Props) {
           onUnload={() => {}}
         >
           {map && view && arcgisItemId && (
-            <LayerController map={map} view={view} layers={[arcgisItemId]} />
+            <LayerController
+              getMap={getMap}
+              getView={getView}
+              layers={routeLayers}
+            />
           )}
         </MapContainer>
       </Box>

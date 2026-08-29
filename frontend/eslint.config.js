@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import pluginRouter from "@tanstack/eslint-plugin-router";
+import vitest from "@vitest/eslint-plugin";
 import reactDom from "eslint-plugin-react-dom";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
@@ -66,6 +67,17 @@ export default tseslint.config([
     files: ["src/routes/**/*.{ts,tsx}"],
     rules: {
       "react-refresh/only-export-components": "off",
+    },
+  },
+  {
+    files: ["src/**/*.{test,spec}.{ts,tsx}"],
+    ...vitest.configs.recommended,
+    rules: {
+      ...vitest.configs.recommended.rules,
+      // fit(...) → it.only(...)
+      "vitest/no-test-prefixes": "warn",
+      // Warn about it.only(), but preserve it during eslint --fix.
+      "vitest/no-focused-tests": ["warn", { fixable: false }],
     },
   },
 ]);

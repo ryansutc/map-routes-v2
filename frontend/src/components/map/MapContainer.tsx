@@ -1,11 +1,15 @@
 import { useStore } from "@/state/store";
 import esriConfig from "@arcgis/core/config";
+import { isAbortError } from "@arcgis/core/core/promiseUtils";
 import ElevationLayer from "@arcgis/core/layers/ElevationLayer";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
 
 import React, { useEffect, useRef } from "react";
+
+const isArcGISAbortError = (error: unknown) =>
+  isAbortError(error as __esri.Error);
 
 // Configure ArcGIS only when the map adapter is loaded, keeping the SDK out of
 // application entry points that do not render a map.
@@ -70,6 +74,9 @@ const MapContainer = (props: MapContainerProps) => {
   }, [interactionLocked]);
 
   useEffect(() => {
+    let disposed = false;
+    let createdView: MapView | SceneView | null = null;
+
     // Initialize or destroy the ESRI Map/View Instances
     if (mapDiv.current) {
       try {
@@ -98,6 +105,7 @@ const MapContainer = (props: MapContainerProps) => {
           });
         }
 
+        createdView = newView;
         newView.ui.move("zoom", "top-right");
         setZoomVisibility(newView, showZoom);
         viewRef.current = newView;
@@ -113,9 +121,18 @@ const MapContainer = (props: MapContainerProps) => {
 
           onLoad(newMap, newView);
         }
-        newView.when(() => {
-          onReady();
-        });
+        newView.when(
+          () => {
+            if (!disposed) onReady();
+          },
+          (error: unknown) => {
+            if (!disposed && !isArcGISAbortError(error)) {
+              onFail(
+                error instanceof Error ? error.message : String(error),
+              );
+            }
+          },
+        );
       } catch (err: unknown) {
         if (onFail) {
           if (err === "string") {
@@ -127,6 +144,16 @@ const MapContainer = (props: MapContainerProps) => {
       }
     }
     return () => {
+      disposed = true;
+      if (viewRef.current === createdView) viewRef.current = null;
+      if (createdView) {
+        // Detaching releases the shared DOM node and suspends rendering without
+        // immediately invalidating SceneView state that queued frame callbacks
+        // may still read. Destroy on the following frame, after dependent React
+        // effects (widgets, layers, and goTo work) have had a chance to clean up.
+        createdView.container = null;
+        requestAnimationFrame(() => createdView.destroy());
+      }
       onUnload();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
