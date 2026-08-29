@@ -123,7 +123,9 @@ function RouteMapOverlays({
         {map && view && (
           <RouteAnimationController
             getMap={getMap}
+            getView={getView}
             track={routeTrack}
+            activityType={routeItem?.activity_type}
             photos={routeItem?.photos ?? []}
             timedPhotoPresenter={timedPhotoPresenter}
             activityDurationSec={routeItem?.duration ?? null}

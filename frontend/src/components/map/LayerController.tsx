@@ -1,12 +1,13 @@
+import { addRouteLayer } from "@/components/map/mapLayerOrder";
+import { useToast } from "@/hooks/useToast";
+import { isAbortError } from "@arcgis/core/core/promiseUtils";
 import GeoJSONLayer from "@arcgis/core/layers/GeoJSONLayer";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import type MapView from "@arcgis/core/views/MapView";
 import type SceneView from "@arcgis/core/views/SceneView";
 import Home from "@arcgis/core/widgets/Home";
-import { isAbortError } from "@arcgis/core/core/promiseUtils";
 import { useEffect, useRef } from "react";
-import { useToast } from "@/hooks/useToast";
 
 const isArcGISAbortError = (error: unknown) =>
   isAbortError(error as __esri.Error);
@@ -67,7 +68,7 @@ function LayerController({
           elevationInfo: { mode: "on-the-ground" },
         });
 
-        map.add(featureLayer);
+        addRouteLayer(map, featureLayer);
 
         let loadFailed = false;
 
@@ -143,7 +144,7 @@ function LayerController({
             loadFailed = true;
             enqueueError(`Failed to load map layer "${layer}".`);
             console.error(`Layer "${layer}" failed to load:`, error);
-          }
+          },
         );
       });
     }

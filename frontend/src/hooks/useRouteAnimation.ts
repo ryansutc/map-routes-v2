@@ -1,47 +1,47 @@
-import Point from "@arcgis/core/geometry/Point";
-import Polyline from "@arcgis/core/geometry/Polyline";
-import Graphic from "@arcgis/core/Graphic";
-import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
-import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
-import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { ball3D } from "@/components/map/layerSymbols/3dSymbol";
+import { bikeIcon } from "@/components/map/layerSymbols/bikeIcon";
+import { hikerSymbol } from "@/components/map/layerSymbols/hikerIcon";
 import {
+  addRouteAnimationLayers,
+  ROUTE_ANIMATION_MARKER_LAYER_ID,
+  ROUTE_ANIMATION_TRAIL_LAYER_ID,
+} from "@/components/map/mapLayerOrder";
+import {
+  buildRouteTrailPaths,
   createRouteAnimationEngine,
+  isAnimationSessionActive,
   type AnimationPauseReason,
   type RouteAnimationSettings,
   type RoutePlaybackMode,
   type TargetRouteDurationSec,
 } from "@/domain/routeAnimation";
 import type { RouteTrack } from "@/domain/timedTrack";
-import { addRouteAnimationLayer } from "@/components/map/mapLayerOrder";
 import { routeAnimationProgress } from "@/state/routeAnimationProgress";
+import Color from "@arcgis/core/Color";
+import Point from "@arcgis/core/geometry/Point";
+import Polyline from "@arcgis/core/geometry/Polyline";
+import Graphic from "@arcgis/core/Graphic";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import CIMSymbol from "@arcgis/core/symbols/CIMSymbol.js";
+import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
+import {
+  applyCIMSymbolColor,
+  scaleCIMSymbolTo,
+} from "@arcgis/core/symbols/support/cimSymbolUtils.js";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 
-const ANIMATION_LAYER_ID = "routeAnimationLayer";
 const DEFAULT_LINE_COLOR: [number, number, number, number] = [
-  226, 119, 40, 255,
+  160, 160, 160, 60,
 ];
-const DEFAULT_MARKER_COLOR: [number, number, number, number] = [
-  255, 50, 50, 255,
-];
-
 interface AnimationOptions {
   targetDurationSec: TargetRouteDurationSec;
   playbackMode: RoutePlaybackMode;
   skipDetectedStops: boolean;
+  activityType?: string;
   lineColor?: [number, number, number, number];
   lineWidth?: number;
   markerColor?: [number, number, number, number];
   markerSize?: number;
-}
-
-function pathsFromTrack(track: RouteTrack): number[][][] {
-  const paths: number[][][] = [];
-  for (const point of track.profilePoints) {
-    const path = paths[point.segmentIndex] ?? [];
-    path.push([point.lon, point.lat, point.elevation]);
-    paths[point.segmentIndex] = path;
-  }
-  return paths;
 }
 
 /**
@@ -49,11 +49,13 @@ function pathsFromTrack(track: RouteTrack): number[][][] {
  * Used by `RouteAnimationController` to expose playback state and controls.
  *
  * @param map - Map that hosts the animation layer, or `null` until available.
+ * @param view - Active 2D or 3D view used to select the marker symbol.
  * @param track - Route geometry and timing data to animate.
  * @param options - Playback behavior and optional map-symbol styling.
  */
 export function useRouteAnimation(
   map: __esri.Map | null,
+  view: __esri.MapView | __esri.SceneView | null,
   track: RouteTrack,
   options: AnimationOptions,
 ) {
@@ -61,10 +63,11 @@ export function useRouteAnimation(
     targetDurationSec,
     playbackMode,
     skipDetectedStops,
+    activityType,
     lineColor = DEFAULT_LINE_COLOR,
-    lineWidth = 3,
-    markerColor = DEFAULT_MARKER_COLOR,
-    markerSize = 10,
+    lineWidth = 6,
+    markerColor,
+    markerSize,
   } = options;
 
   const initialSettings = useMemo<RouteAnimationSettings>(
@@ -131,12 +134,22 @@ export function useRouteAnimation(
   }, [engine]);
 
   useEffect(() => {
-    if (!map) return;
+    if (!map || !view) return;
 
-    const layer = new GraphicsLayer({ id: ANIMATION_LAYER_ID });
+    const trailLayer = new GraphicsLayer({
+      id: ROUTE_ANIMATION_TRAIL_LAYER_ID,
+      elevationInfo: { mode: "on-the-ground" },
+    });
+    const markerLayer = new GraphicsLayer({
+      id: ROUTE_ANIMATION_MARKER_LAYER_ID,
+      elevationInfo: {
+        mode: view.type === "3d" ? "relative-to-ground" : "on-the-ground",
+      },
+      screenSizePerspectiveEnabled: false,
+    });
     const staticLineGraphic = new Graphic({
       geometry: new Polyline({
-        paths: pathsFromTrack(track),
+        paths: [],
         spatialReference: { wkid: 4326 },
       }),
       symbol: new SimpleLineSymbol({
@@ -145,26 +158,56 @@ export function useRouteAnimation(
         cap: "round",
         join: "round",
       }),
+      visible: false,
     });
+    const markerSymbol =
+      view.type === "3d"
+        ? ball3D.clone()
+        : new CIMSymbol({
+            data: {
+              type: "CIMSymbolReference",
+              symbol: activityType === "Cycling" ? bikeIcon : hikerSymbol,
+            },
+          });
+    if (markerSymbol.type === "cim") {
+      if (markerColor) {
+        const [red, green, blue, alpha] = markerColor;
+        applyCIMSymbolColor(
+          markerSymbol,
+          new Color([red, green, blue, alpha / 255]),
+        );
+      }
+      if (markerSize !== undefined) {
+        scaleCIMSymbolTo(markerSymbol, markerSize);
+      }
+    }
     const markerGraphic = new Graphic({
       geometry: new Point({
         longitude: 0,
         latitude: 0,
         spatialReference: { wkid: 4326 },
       }),
-      symbol: new SimpleMarkerSymbol({
-        color: markerColor,
-        size: markerSize,
-        outline: { color: [255, 255, 255, 200], width: 1.5 },
-      }),
+      symbol: markerSymbol,
       visible: false,
     });
 
-    layer.addMany([staticLineGraphic, markerGraphic]);
-    addRouteAnimationLayer(map, layer);
+    trailLayer.add(staticLineGraphic);
+    markerLayer.add(markerGraphic);
+    addRouteAnimationLayers(map, trailLayer, markerLayer);
 
     const unsubscribe = engine.subscribeToFrames((frameSnapshot) => {
       const position = frameSnapshot.position;
+      const sessionActive = isAnimationSessionActive(frameSnapshot.state);
+      staticLineGraphic.set("visible", sessionActive && !!position);
+      if (sessionActive && position) {
+        staticLineGraphic.set(
+          "geometry",
+          new Polyline({
+            paths: buildRouteTrailPaths(track, position),
+            spatialReference: { wkid: 4326 },
+          }),
+        );
+      }
       markerGraphic.set(
         "visible",
         frameSnapshot.state !== "idle" && !!position,
@@ -182,9 +225,19 @@ export function useRouteAnimation(
 
     return () => {
       unsubscribe();
-      map.remove(layer);
+      map.removeMany([trailLayer, markerLayer]);
     };
-  }, [engine, lineColor, lineWidth, map, markerColor, markerSize, track]);
+  }, [
+    activityType,
+    engine,
+    lineColor,
+    lineWidth,
+    map,
+    markerColor,
+    markerSize,
+    track,
+    view,
+  ]);
 
   return {
     ...snapshot,

@@ -1,5 +1,6 @@
 import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import WebStyleSymbol from "@arcgis/core/symbols/WebStyleSymbol.js";
 import { PHOTO_MARKERS_LAYER_ID } from "./mapLayerOrder";
 
 import type { PhotoDto } from "@/types/api";
@@ -23,6 +24,12 @@ function PhotoController({
     const view = getView();
     if (!map || !view || !photos.length) return;
 
+    const photoSymbol = new WebStyleSymbol({
+      name: "Landmark_POI-Large_3",
+      styleUrl:
+        "https://www.arcgis.com/sharing/rest/content/items/738c8d0e43464829bc816185f11eb954/data",
+    });
+
     const graphics = photos.flatMap((photo, photoIndex) => {
       if (
         typeof photo.longitude !== "number" ||
@@ -42,15 +49,7 @@ function PhotoController({
             ObjectID: photo.id,
             photoIndex,
           },
-          symbol: {
-            type: "simple-marker",
-            color: [40, 119, 226],
-            size: 8,
-            outline: {
-              color: [255, 255, 255],
-              width: 1,
-            },
-          },
+          symbol: photoSymbol,
         }),
       ];
     });
