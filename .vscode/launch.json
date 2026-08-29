@@ -16,6 +16,23 @@
       "cwd": "${workspaceFolder}/django_backend"
     },
     {
+      "name": "Vitest: current file",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--inspect-brk",
+        "${workspaceFolder}/frontend/node_modules/vitest/vitest.mjs",
+        "run",
+        "${file}"
+      ],
+      "cwd": "${workspaceFolder}/frontend",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true
+    },
+    {
       "name": "Launch Chrome Debug",
       "request": "launch",
       "type": "chrome",
