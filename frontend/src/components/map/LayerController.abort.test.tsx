@@ -48,6 +48,7 @@ describe("LayerController cancelled view creation", () => {
     const map = {
       add: vi.fn(),
       findLayerById: vi.fn(() => null),
+      layers: { length: 0 },
       remove: vi.fn(),
     };
     const view = {
