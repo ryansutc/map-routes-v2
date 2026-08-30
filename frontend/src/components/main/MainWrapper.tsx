@@ -1,4 +1,8 @@
 import { zodiosAPI } from "@/api/axiosClient";
+import {
+  clearClientAuthentication,
+  isUnauthorizedError,
+} from "@/auth/clientSession";
 import { ROUTES_QUERY_KEY } from "@/hooks/useRoutes";
 import { useStore } from "@/state/store";
 import { Grid } from "@mui/material";
@@ -29,6 +33,13 @@ export default function MainWrapper({ children }: React.PropsWithChildren) {
           setUserIsAuthenticated(false);
         }
       } catch (e) {
+        if (
+          isUnauthorizedError(e) &&
+          useStore.getState().userIsAuthenticated === undefined
+        ) {
+          clearClientAuthentication();
+          return;
+        }
         console.error("Failed to get user info: ", e);
         setError(e);
         return;

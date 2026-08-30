@@ -18,6 +18,10 @@ import type { MouseEvent, PropsWithChildren } from "react";
 import { useState } from "react";
 
 import { zodiosAPI } from "@/api/axiosClient";
+import {
+  clearClientAuthentication,
+  isUnauthorizedError,
+} from "@/auth/clientSession";
 import { useStore } from "@/state/store";
 import { GOOGLE_LOGIN_URL } from "@/utils/environment";
 
@@ -29,8 +33,6 @@ export default function AppShell({ children }: PropsWithChildren) {
   // Subscribe field-by-field so unrelated application updates stay local.
   const user = useStore((s) => s.user);
   const userIsAuthenticated = useStore((s) => s.userIsAuthenticated);
-  const setUser = useStore((s) => s.setUser);
-  const setUserIsAuthenticated = useStore((s) => s.setUserIsAuthenticated);
   const units = useStore((s) => s.units);
   const setUnits = useStore((s) => s.setUnits);
 
@@ -52,14 +54,13 @@ export default function AppShell({ children }: PropsWithChildren) {
     try {
       await zodiosAPI.auth_logout_create(undefined);
     } catch (e) {
-      console.error("Sign-out request failed:", e);
-      setSignOutError("Sign-out failed. Please try again.");
-      return;
+      if (!isUnauthorizedError(e)) {
+        console.error("Sign-out request failed:", e);
+        setSignOutError("Sign-out failed. Please try again.");
+        return;
+      }
     }
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    setUser(null);
-    setUserIsAuthenticated(false);
+    clearClientAuthentication();
     queryClient.invalidateQueries();
     void navigate({ to: "/routes" });
   };
