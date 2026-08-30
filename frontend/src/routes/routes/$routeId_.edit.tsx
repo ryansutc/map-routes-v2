@@ -1,4 +1,5 @@
 import { zodiosAPI } from "@/api/axiosClient";
+import { DeleteRouteSection } from "@/components/routes/DeleteRouteSection";
 import { ACTIVITY_TYPES, type ActivityType } from "@/components/routes/routeFormOptions";
 import { useRoute, routeQueryKey } from "@/hooks/useRoute";
 import { useToast } from "@/hooks/useToast";
@@ -277,6 +278,15 @@ function RouteInfoEditor() {
           </Button>
         </Stack>
       </Stack>
+
+      <DeleteRouteSection
+        routeId={routeId}
+        routeTitle={route.title ?? "Untitled route"}
+        isOwner={route.owner === user}
+        onBeforeNavigate={() => {
+          allowNavigationRef.current = true;
+        }}
+      />
     </Box>
   );
 }

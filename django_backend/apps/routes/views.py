@@ -1,6 +1,7 @@
 """Views for listing, creating, and managing routes."""
 
 import json
+import logging
 from typing import Any
 
 from django.conf import settings
@@ -15,7 +16,8 @@ from rest_framework.views import APIView
 
 from apps.shared_utils.error_utils import print_debug_error
 
-from .arcgis import get_token, share_item_public, upload_geojson
+from .arcgis import delete_arcgis_item, get_token, share_item_public, upload_geojson
+from .cloudinary_utils import delete_photo
 from .gpx_utils import geometry_only_geojson, parse_gpx
 from .models import Route
 from .serializers import (
@@ -26,6 +28,8 @@ from .serializers import (
     RouteSerializer,
     RouteUpdateSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -87,6 +91,32 @@ class RouteDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
         instance = self.get_queryset().get(pk=instance.pk)
         return Response(RouteSerializer(instance, context=self.get_serializer_context()).data)
+
+    def perform_destroy(self, instance: Route) -> None:
+        """Clean up hosted assets independently, then delete the database route."""
+        for photo in instance.photos.all():
+            if not photo.cloudinary_public_id:
+                continue
+            try:
+                delete_photo(photo.cloudinary_public_id)
+            except Exception:
+                logger.exception(
+                    "Failed to delete Cloudinary photo %s while deleting route %s",
+                    photo.cloudinary_public_id,
+                    instance.pk,
+                )
+
+        if instance.arcgis_item_id:
+            try:
+                delete_arcgis_item(instance.arcgis_item_id)
+            except Exception:
+                logger.exception(
+                    "Failed to delete ArcGIS item %s while deleting route %s",
+                    instance.arcgis_item_id,
+                    instance.pk,
+                )
+
+        super().perform_destroy(instance)
 
     def get_queryset(self) -> QuerySet[Route]:
         """Return routes visible to the requesting user."""

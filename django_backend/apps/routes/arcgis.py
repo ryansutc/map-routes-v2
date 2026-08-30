@@ -1,6 +1,7 @@
 """Utilities for interacting with the ArcGIS Online REST API."""
 
 import requests
+from django.conf import settings
 
 _SHARING_REST = "https://www.arcgis.com/sharing/rest"
 
@@ -62,3 +63,22 @@ def share_item_public(token: str, username: str, item_id: str) -> None:
     data = resp.json()
     if data.get("notSharedWith"):
         raise RuntimeError(f"ArcGIS shareItems failed for item {item_id}")
+
+
+def delete_arcgis_item(item_id: str) -> None:
+    """Delete an ArcGIS Online item owned by the configured account."""
+    username = settings.ARCGIS_USERNAME
+    password = settings.ARCGIS_PASSWORD
+    if not username or not password:
+        raise RuntimeError("ArcGIS credentials not configured.")
+
+    token = get_token(username, password)
+    response = requests.post(
+        f"{_SHARING_REST}/content/users/{username}/deleteItems",
+        data={"items": item_id, "f": "json", "token": token},
+        timeout=15,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not data.get("results") or not data["results"][0].get("success"):
+        raise RuntimeError(f"ArcGIS deleteItems failed for item {item_id}")

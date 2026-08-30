@@ -124,6 +124,84 @@ class EditingApiTests(TestCase):
         self.route.refresh_from_db()
         self.assertEqual(self.route.updated_at, old_updated_at)
 
+    @patch("apps.routes.views.delete_arcgis_item")
+    @patch("apps.routes.views.delete_photo")
+    def test_owner_delete_cleans_up_hosted_assets_and_cascades_photos(
+        self, delete_photo_mock, delete_arcgis_item_mock
+    ):
+        photo = Photo.objects.create(
+            route=self.route,
+            url="https://example.com/photo.jpg",
+            cloudinary_public_id="map-routes/photos/abc",
+        )
+
+        response = self.client.delete(f"/api/route/{self.route.pk}/")
+
+        self.assertEqual(response.status_code, 204)
+        delete_photo_mock.assert_called_once_with("map-routes/photos/abc")
+        delete_arcgis_item_mock.assert_called_once_with("immutable-item")
+        self.assertFalse(Route.objects.filter(pk=self.route.pk).exists())
+        self.assertFalse(Photo.objects.filter(pk=photo.pk).exists())
+
+    @patch("apps.routes.views.delete_arcgis_item")
+    @patch("apps.routes.views.delete_photo")
+    def test_route_delete_skips_missing_hosted_asset_identifiers(
+        self, delete_photo_mock, delete_arcgis_item_mock
+    ):
+        self.route.arcgis_item_id = ""
+        self.route.save(update_fields=["arcgis_item_id"])
+        Photo.objects.create(route=self.route, url="https://example.com/legacy.jpg")
+
+        response = self.client.delete(f"/api/route/{self.route.pk}/")
+
+        self.assertEqual(response.status_code, 204)
+        delete_photo_mock.assert_not_called()
+        delete_arcgis_item_mock.assert_not_called()
+        self.assertFalse(Route.objects.filter(pk=self.route.pk).exists())
+
+    @patch("apps.routes.views.delete_arcgis_item", side_effect=RuntimeError("ArcGIS failed"))
+    @patch("apps.routes.views.delete_photo")
+    def test_route_delete_attempts_every_asset_and_logs_failures(
+        self, delete_photo_mock, delete_arcgis_item_mock
+    ):
+        Photo.objects.create(
+            route=self.route,
+            url="https://example.com/first.jpg",
+            cloudinary_public_id="map-routes/photos/first",
+        )
+        Photo.objects.create(
+            route=self.route,
+            url="https://example.com/second.jpg",
+            cloudinary_public_id="map-routes/photos/second",
+        )
+        delete_photo_mock.side_effect = [RuntimeError("Cloudinary failed"), None]
+
+        with self.assertLogs("apps.routes.views", level="ERROR") as captured:
+            response = self.client.delete(f"/api/route/{self.route.pk}/")
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(
+            [call.args[0] for call in delete_photo_mock.call_args_list],
+            ["map-routes/photos/first", "map-routes/photos/second"],
+        )
+        delete_arcgis_item_mock.assert_called_once_with("immutable-item")
+        logs = "\n".join(captured.output)
+        self.assertIn("map-routes/photos/first", logs)
+        self.assertIn("immutable-item", logs)
+        self.assertFalse(Route.objects.filter(pk=self.route.pk).exists())
+
+    @patch("apps.routes.views.delete_arcgis_item")
+    @patch("apps.routes.views.delete_photo")
+    def test_non_owner_cannot_delete_route(self, delete_photo_mock, delete_arcgis_item_mock):
+        self.client.force_authenticate(self.other_user)
+
+        response = self.client.delete(f"/api/route/{self.route.pk}/")
+
+        self.assertEqual(response.status_code, 403)
+        delete_photo_mock.assert_not_called()
+        delete_arcgis_item_mock.assert_not_called()
+        self.assertTrue(Route.objects.filter(pk=self.route.pk).exists())
+
     def test_photo_title_change_does_not_update_route(self):
         photo = Photo.objects.create(
             route=self.route, url="https://example.com/photo.jpg", title="Old"
