@@ -111,7 +111,7 @@ export default function RouteInfoContainer({
       </Typography>
       {routeItem.created_at && (
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          uploaded {formatDate(routeItem.created_at, "mmm-dd-yyyy")}
+          {formatDate(routeItem.created_at, "mmm-dd-yyyy")}
         </Typography>
       )}
       {routeItem.updated_at &&

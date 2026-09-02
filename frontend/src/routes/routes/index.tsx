@@ -97,7 +97,10 @@ function RoutesIndex() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+    <Box
+      id="mainbox"
+      sx={{ p: { xs: 2, sm: 3 }, maxWidth: "1800px", mx: "auto" }}
+    >
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2}

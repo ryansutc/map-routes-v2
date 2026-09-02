@@ -1,7 +1,7 @@
+import { useStore } from "@/state/store";
 import type { RouteListResponseDto } from "@/types/api";
 import { formatDate } from "@/utils/datetimeHelpers";
 import { formatDistance } from "@/utils/units";
-import { useStore } from "@/state/store";
 import {
   Box,
   Chip,
@@ -17,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
+import { formatDistanceToNow } from "date-fns";
 
 const COLUMNS = ["Title", "Activity", "Date", "Distance", "Visibility"];
 const XL_COLUMNS = ["Uploaded"];
@@ -131,8 +132,13 @@ export default function RouteTableView({
                       variant={route.is_public ? "filled" : "outlined"}
                     />
                   </TableCell>
-                  <TableCell sx={{ display: { xs: "none", xl: "table-cell" } }}>
-                    uploaded {formatDate(route.created_at, "mmm-dd-yyyy")}
+                  <TableCell
+                    sx={{ display: { xs: "none", xl: "table-cell" } }}
+                    title={formatDate(route.created_at, "mmm-dd-yyyy")}
+                  >
+                    {formatDistanceToNow(new Date(route.created_at), {
+                      addSuffix: true,
+                    })}
                   </TableCell>
                 </TableRow>
               );
