@@ -2,7 +2,10 @@ import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import WebStyleSymbol from "@arcgis/core/symbols/WebStyleSymbol.js";
 import { PHOTO_MARKERS_LAYER_ID } from "./mapLayerOrder";
+import { createArcGisPhotoMapAnchor } from "./arcgisPhotoMapAnchor";
+import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 
+import { hasValidPhotoGps } from "@/domain/timedPhotoEvents";
 import type { PhotoDto } from "@/types/api";
 import type MapView from "@arcgis/core/views/MapView";
 import type SceneView from "@arcgis/core/views/SceneView";
@@ -13,11 +16,13 @@ function PhotoController({
   getView,
   photos,
   onPhotoClick,
+  onMapAnchorChange,
 }: {
   getMap: () => __esri.Map | null;
   getView: () => MapView | SceneView | null;
   photos: PhotoDto[];
   onPhotoClick: (index: number) => void;
+  onMapAnchorChange?: (anchor: PhotoMapAnchor | null) => void;
 }) {
   useEffect(() => {
     const map = getMap();
@@ -31,10 +36,7 @@ function PhotoController({
     });
 
     const graphics = photos.flatMap((photo, photoIndex) => {
-      if (
-        typeof photo.longitude !== "number" ||
-        typeof photo.latitude !== "number"
-      ) {
+      if (!hasValidPhotoGps(photo)) {
         return [];
       }
 
@@ -60,6 +62,11 @@ function PhotoController({
     });
 
     map.add(graphicsLayer);
+    const graphicsByPhotoId = new Map(
+      graphics.map((graphic) => [graphic.attributes!.ObjectID as number, graphic]),
+    );
+    const mapAnchor = createArcGisPhotoMapAnchor(view, graphicsByPhotoId);
+    onMapAnchorChange?.(mapAnchor);
 
     const clickHandle = view.on("click", async (event) => {
       const response = await view.hitTest(event, { include: graphicsLayer });
@@ -70,10 +77,12 @@ function PhotoController({
     });
 
     return () => {
+      onMapAnchorChange?.(null);
+      mapAnchor.destroy();
       clickHandle.remove();
       map.remove(graphicsLayer);
     };
-  }, [getMap, getView, onPhotoClick, photos]);
+  }, [getMap, getView, onMapAnchorChange, onPhotoClick, photos]);
 
   return null;
 }

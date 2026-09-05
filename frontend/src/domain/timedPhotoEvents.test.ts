@@ -5,11 +5,36 @@ import {
   type TimedTrack,
 } from "./timedTrack";
 import {
-  classifyTimedPhotoEligibility,
+  classifyTimedPhotoEligibility as classifyEligibility,
   groupTimedPhotoEvents,
-  planTimedPhotoEvents,
+  planTimedPhotoEvents as planEvents,
   TIMED_PHOTO_GROUP_WINDOW_MS,
+  type TimedPhotoInput,
 } from "./timedPhotoEvents";
+
+type LocatedPhotoInput = Omit<TimedPhotoInput, "latitude" | "longitude">;
+
+function withGps(photos: readonly LocatedPhotoInput[]): TimedPhotoInput[] {
+  return photos.map((photo) => ({
+    ...photo,
+    latitude: 49.3,
+    longitude: -122.5,
+  }));
+}
+
+function classifyTimedPhotoEligibility(
+  track: RouteTrack,
+  photos: readonly LocatedPhotoInput[],
+) {
+  return classifyEligibility(track, withGps(photos));
+}
+
+function planTimedPhotoEvents(
+  track: TimedTrack,
+  photos: readonly LocatedPhotoInput[],
+) {
+  return planEvents(track, withGps(photos));
+}
 
 function timedTrack(): TimedTrack {
   const track = buildRouteTrack({
@@ -98,6 +123,33 @@ function stoppedTrack(): TimedTrack {
 }
 
 describe("classifyTimedPhotoEligibility", () => {
+  it("requires valid GPS coordinates and reports the specific exclusion", () => {
+    const results = classifyEligibility(timedTrack(), [
+      {
+        id: 1,
+        takenAt: "2026-01-01T00:01:00Z",
+        latitude: null,
+        longitude: null,
+      },
+      {
+        id: 2,
+        takenAt: "2026-01-01T00:01:00Z",
+        latitude: 91,
+        longitude: 0,
+      },
+      {
+        id: 3,
+        takenAt: "2026-01-01T00:01:00Z",
+        latitude: 49.3,
+        longitude: -122.5,
+      },
+    ]);
+
+    expect(results.map((result) =>
+      result.status === "eligible" ? result.status : result.reason,
+    )).toEqual(["no-gps-location", "no-gps-location", "eligible"]);
+  });
+
   it("reports every timed-route exclusion reason without losing input order", () => {
     const results = classifyTimedPhotoEligibility(timedTrack(), [
       { id: 1, takenAt: null },

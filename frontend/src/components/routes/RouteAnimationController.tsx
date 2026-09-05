@@ -1,4 +1,5 @@
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
+import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 import {
   availablePlaybackModes,
   isAnimationSessionActive,
@@ -23,6 +24,8 @@ import { useEffect, useMemo, useRef } from "react";
 type RoutePhotoTiming = {
   id: number;
   taken_at?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 interface RouteAnimationControllerProps {
@@ -32,6 +35,7 @@ interface RouteAnimationControllerProps {
   activityType?: string;
   photos: readonly RoutePhotoTiming[];
   timedPhotoPresenter: TimedPhotoPresenter;
+  photoMapAnchor: PhotoMapAnchor | null;
   activityDurationSec: number | null;
   /** Notified for the full active session, including composed pauses. */
   onSessionActiveChange?: (isActive: boolean) => void;
@@ -47,6 +51,7 @@ export function RouteAnimationController({
   activityType,
   photos,
   timedPhotoPresenter,
+  photoMapAnchor,
   activityDurationSec,
   onSessionActiveChange,
   onPhotoSessionControllerChange,
@@ -91,6 +96,8 @@ export function RouteAnimationController({
             photos.map((photo) => ({
               id: photo.id,
               takenAt: photo.taken_at,
+              latitude: photo.latitude,
+              longitude: photo.longitude,
             })),
           )
         : [],
@@ -122,7 +129,7 @@ export function RouteAnimationController({
   }, [playbackMode, skipDetectedStops, targetDurationSec]);
 
   useEffect(() => {
-    if (track.kind !== "timed") return;
+    if (track.kind !== "timed" || !photoMapAnchor) return;
     const coordinator = createTimedPhotoPlaybackCoordinator({
       track,
       events: timedPhotoEvents,
@@ -130,6 +137,7 @@ export function RouteAnimationController({
       presenter: timedPhotoPresenter,
       enabled: showTimedPhotosRef.current,
       groupingSettings: timedPhotoGroupingSettingsRef.current,
+      mapAnchor: photoMapAnchor,
     });
     photoCoordinatorRef.current = coordinator;
     onPhotoSessionControllerChange?.(coordinator);
@@ -141,6 +149,7 @@ export function RouteAnimationController({
   }, [
     onPhotoSessionControllerChange,
     photoPlaybackEngine,
+    photoMapAnchor,
     timedPhotoEvents,
     timedPhotoPresenter,
     track,

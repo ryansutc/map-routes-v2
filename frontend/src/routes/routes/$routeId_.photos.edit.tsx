@@ -50,6 +50,7 @@ const ELIGIBILITY_EXPLANATIONS: Record<TimedPhotoExclusionReason, string> = {
     "This route does not have complete recorded point timestamps, so timed photos are unavailable.",
   "missing-or-unresolved-time":
     "This photo needs a date and time with a resolved timezone.",
+  "no-gps-location": "No GPS location",
   "before-route": "This photo was taken before the recorded route began.",
   "after-route": "This photo was taken after the recorded route ended.",
   "unknown-gap":
@@ -119,6 +120,8 @@ function PhotoEditor() {
           (route?.photos ?? []).map((photo) => ({
             id: photo.id,
             takenAt: photo.taken_at,
+            latitude: photo.latitude,
+            longitude: photo.longitude,
           })),
         ).map((result) => [result.photoId, result]),
       ),
