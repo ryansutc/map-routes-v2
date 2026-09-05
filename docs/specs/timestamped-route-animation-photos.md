@@ -1,7 +1,7 @@
 # Timestamped Route Animation Photos — Feature Specification
 
 **Status:** Draft for review  
-**Last updated:** 2026-08-03  
+**Last updated:** 2026-09-01
 **Related implementation plan:**
 [animation-photos-plan.md](../plans/animation-photos-plan.md)
 
@@ -9,8 +9,9 @@
 
 Route playback should show photos at the point in the recorded activity when
 they were taken. When playback reaches a photo event, the route pauses, the
-photo lightbox opens, each photo remains visible for two seconds, and the route
-resumes afterward.
+photo appears in a compact popup anchored to its permanent GPS photo icon, each
+photo remains visible for two seconds, and the route resumes afterward. The
+viewer may expand an automatic popup into the full manual lightbox.
 
 The feature must use original GPX point timestamps. It must not infer an
 activity timeline from route duration, point index, or distance when those
@@ -56,6 +57,9 @@ normative:
 - Interactive progress-bar seeking or route editing.
 - Changing the normal, manually opened route photo gallery when no animation
   session is active.
+- Automatically moving the map camera to reveal an off-screen photo icon.
+- Automatically displaying photos that do not have a permanent GPS photo icon.
+- Replacing or fully abstracting the ArcGIS photo-marker layer.
 - Depending on a paid network service for timezone lookup.
 
 ## 5. Glossary
@@ -127,12 +131,13 @@ recorded timeline and to the corresponding cumulative route distance.
 
 ### 5.14 Photo event group
 
-One or more photo events displayed in one uninterrupted automatic lightbox
+One or more photo events displayed in one uninterrupted automatic popup
 session.
 
-### 5.15 Automatic lightbox session
+### 5.15 Automatic popup session
 
-A lightbox opened by route playback and controlled by photo event timers.
+A compact map overlay opened by route playback, anchored to a permanent GPS
+photo icon, and controlled by photo event timers.
 
 ### 5.16 Manual lightbox session
 
@@ -392,6 +397,11 @@ The expected canonical feature shape is:
 - **RAP-EVENT-006:** A photo during a detected stop MUST remain eligible.
 - **RAP-EVENT-007:** An ineligible photo MUST remain available in the normal
   route gallery.
+- **RAP-EVENT-017:** A photo MUST have valid GPS coordinates represented by a
+  permanent map photo icon to be eligible for automatic playback.
+- **RAP-EVENT-018:** A photo excluded from automatic playback because it lacks
+  valid GPS coordinates MUST have the specific owner-facing exclusion reason
+  `No GPS location`.
 
 ### 11.2 Exact event position
 
@@ -419,7 +429,7 @@ The expected canonical feature shape is:
 
 ### 12.1 Display timing and loading
 
-- **RAP-DISPLAY-001:** Route playback MUST pause before an automatic lightbox
+- **RAP-DISPLAY-001:** Route playback MUST pause before an automatic popup
   opens.
 - **RAP-DISPLAY-002:** Each automatically displayed photo MUST remain visibly
   loaded for two seconds.
@@ -431,7 +441,7 @@ The expected canonical feature shape is:
 - **RAP-DISPLAY-006:** Image loading MUST have a bounded timeout so a stalled
   request cannot pause playback indefinitely.
 - **RAP-DISPLAY-007:** After the final successfully displayed photo in a group,
-  the lightbox MUST close and route playback MUST resume.
+  the popup MUST close and route playback MUST resume.
 
 ### 12.2 Route boundaries
 
@@ -440,7 +450,26 @@ The expected canonical feature shape is:
 - **RAP-DISPLAY-009:** A photo event at the route end MUST display before the
   playback session becomes completed.
 
-## 13. Playback and Lightbox State Requirements
+### 12.3 Anchoring and visibility
+
+- **RAP-DISPLAY-010:** An automatically displayed photo MUST use a compact map
+  popup anchored to that photo's permanent GPS photo icon.
+- **RAP-DISPLAY-011:** Only one automatic photo popup MUST be visible at a time;
+  visible events in a group MUST appear chronologically at their own icons.
+- **RAP-DISPLAY-012:** A statically eligible photo whose icon is entirely
+  outside the current map viewport when its event is reached MUST be consumed
+  without opening a popup or pausing playback for that photo.
+- **RAP-DISPLAY-013:** Runtime viewport visibility MUST NOT change the static
+  eligible-photo count or owner-facing eligibility status.
+- **RAP-DISPLAY-014:** A mixed group MUST skip off-screen events and proceed
+  immediately to its next visible event; an entirely off-screen group MUST NOT
+  visibly pause playback.
+- **RAP-DISPLAY-015:** Automatic playback MUST NOT move the map camera to reveal
+  an off-screen photo icon.
+- **RAP-DISPLAY-016:** Hovering the popup or moving keyboard focus inside it
+  MUST pause its visible-time timer; leaving it MUST resume the remaining time.
+
+## 13. Playback, Popup, and Lightbox State Requirements
 
 ### 13.1 Animation lifecycle
 
@@ -452,7 +481,8 @@ The expected canonical feature shape is:
 - **RAP-STATE-004:** Photo display, manual gallery viewing, and a hidden document
   MUST be independent pause reasons.
 - **RAP-STATE-005:** Stopping playback MUST reset route progress, hide the marker,
-  close any animation-owned lightbox, cancel timers, and end the session.
+  close any animation-owned popup or lightbox, cancel timers, and end the
+  session.
 - **RAP-STATE-006:** Replaying after stop or completion MUST make all eligible
   photo groups available again.
 - **RAP-STATE-007:** Navigating away or unmounting MUST cancel animation frames,
@@ -467,19 +497,20 @@ The expected canonical feature shape is:
 - **RAP-STATE-010:** Hidden time MUST NOT cause photo events to be skipped or
   photo display time to be consumed.
 
-### 13.3 Automatic lightbox interaction
+### 13.3 Automatic popup interaction
 
-- **RAP-STATE-011:** Manually closing an automatic lightbox MUST consume the
+- **RAP-STATE-011:** Manually closing an automatic popup MUST consume the
   remainder of its current group and resume playback.
 - **RAP-STATE-012:** Consumed photos MUST NOT reopen during the current session.
-- **RAP-STATE-013:** Manual previous/next interaction during an automatic session
-  MUST cancel automatic timers and transfer the lightbox to manual control.
-- **RAP-STATE-014:** After manual takeover, the viewer MUST be able to navigate
-  the full route gallery.
+- **RAP-STATE-013:** Activating the image in an automatic popup MUST cancel
+  automatic timers and open that image in the manual lightbox.
+- **RAP-STATE-014:** After expansion into the manual lightbox, the viewer MUST be
+  able to navigate the full route gallery.
 - **RAP-STATE-015:** Playback MUST remain paused until the manually controlled
   lightbox closes.
-- **RAP-STATE-016:** An animation-paused lightbox MUST provide an explicit
-  `Stop playback` action distinct from close/resume.
+- **RAP-STATE-016:** The automatic popup MUST NOT duplicate the existing
+  animation `Stop` action and MUST NOT cover or prevent interaction with the
+  animation controls.
 
 ### 13.4 Manually opened photos
 
@@ -497,21 +528,36 @@ The expected canonical feature shape is:
   playback.
 - **RAP-UI-003:** The non-interactive mobile map preview MUST NOT start playback
   or automatic photo display.
-- **RAP-UI-004:** The lightbox MUST adapt to supported viewport sizes without
-  obscuring its close, navigation, or stop actions.
-- **RAP-UI-005:** Lightbox actions MUST remain keyboard accessible; Escape MUST
-  perform the session's normal close behavior.
+- **RAP-UI-004:** The automatic popup and manual lightbox MUST adapt to supported
+  viewport sizes without obscuring their actions.
+- **RAP-UI-005:** Popup and lightbox actions MUST remain keyboard accessible;
+  Escape MUST perform the session's normal close behavior.
 - **RAP-UI-006:** Animation settings SHOULD show how many route photos are
   eligible, for example `8 of 10 photos will appear`.
 - **RAP-UI-007:** The owner photo editor MUST show whether each photo is included
   and, when excluded, a specific reason.
 - **RAP-UI-008:** Exclusion reasons MUST distinguish at least legacy route,
-  missing/unresolved time, before route, after route, and unknown gap.
+  missing/unresolved time, no GPS location, before route, after route, and
+  unknown gap.
 - **RAP-UI-009:** Detailed eligibility diagnostics SHOULD remain owner-facing so
   the public route view stays uncluttered.
 - **RAP-UI-010:** Map interaction locking and elevation-hover suppression MUST
   remain active for the complete playback session, including automatic photo
   pauses.
+- **RAP-UI-011:** The automatic popup SHOULD be approximately 240 pixels wide on
+  desktop and 180 pixels wide on mobile, with its image shown in an approximately
+  4:3 area using contain sizing rather than cropping.
+- **RAP-UI-012:** The popup SHOULD appear above its icon, flip below when needed,
+  and clamp within the map viewport while prioritizing a clear animation-control
+  region.
+- **RAP-UI-013:** The automatic popup MUST NOT take focus when it opens. Its
+  image-expansion and close actions MUST be reachable by keyboard.
+- **RAP-UI-014:** Popup anchoring and visibility MUST work for animations started
+  in either 2D or 3D map mode.
+- **RAP-UI-015:** The React popup MUST depend on a narrow map-anchor interface
+  for resolving a photo marker, projecting it to map-container coordinates,
+  determining visibility, and observing repositioning. It MUST NOT depend on
+  ArcGIS popup UI APIs.
 
 ## 15. Performance and Reliability Requirements
 
@@ -599,28 +645,31 @@ that displays the applied timezone.
 
 ### AS-07: Photo eligibility
 
-**Covers:** `RAP-EVENT-001`–`010`, `RAP-UI-006`–`009`
+**Covers:** `RAP-EVENT-001`–`010`, `RAP-EVENT-017`–`018`,
+`RAP-UI-006`–`009`
 
-Given photos before, during, and after a route plus a photo inside an unknown
-gap, when eligibility is calculated, then only resolvable in-range photos are
-scheduled and the owner sees a specific status for every exclusion.
+Given photos before, during, and after a route, a photo inside an unknown gap,
+and a timed photo without GPS, when eligibility is calculated, then only
+resolvable in-range photos with permanent GPS icons are scheduled and the owner
+sees a specific status for every exclusion.
 
 ### AS-08: Automatic group
 
-**Covers:** `RAP-EVENT-011`–`016`, `RAP-DISPLAY-001`–`009`
+**Covers:** `RAP-EVENT-011`–`016`, `RAP-DISPLAY-001`–`016`
 
 Given several events within two seconds of compressed playback, when the first
-event is reached, then one lightbox session shows them chronologically for two
-loaded seconds each, moves the marker to each event position, closes, and
-resumes playback.
+event is reached, then one compact popup at a time shows the visible events at
+their permanent GPS icons for two loaded seconds each, skips off-screen events,
+moves the marker to each event position, closes, and resumes playback.
 
 ### AS-09: Manual takeover and stopping
 
 **Covers:** `RAP-STATE-011`–`019`
 
-Given an automatic lightbox session, when the viewer navigates manually, then
-automatic timers stop and the full gallery becomes manually controlled. Closing
-resumes the prior animation, while `Stop playback` resets it.
+Given an automatic popup session, when the viewer activates its image, then
+automatic timers stop and the full gallery opens in the manual lightbox. Closing
+the lightbox resumes the prior animation, while the existing animation Stop
+control resets it.
 
 ### AS-10: Loading failure
 
@@ -648,11 +697,12 @@ position without replaying consumed groups or resetting to the start.
 
 ### AS-13: Responsive playback and elevation
 
-**Covers:** `RAP-TIME-010`–`012`, `RAP-UI-001`–`010`, `RAP-COMPAT-006`
+**Covers:** `RAP-TIME-010`–`012`, `RAP-UI-001`–`015`, `RAP-COMPAT-006`
 
 Given desktop or mobile fullscreen playback, then timed photos behave
-consistently and the elevation cursor remains aligned to marker distance even
-when recorded-time progress is nonlinear in distance.
+consistently in both 2D and 3D, automatic popups remain inside the map without
+blocking animation controls, and the elevation cursor remains aligned to marker
+distance even when recorded-time progress is nonlinear in distance.
 
 ### AS-14: Long route
 
