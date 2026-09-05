@@ -1,5 +1,6 @@
 import type {
-  AnimationPhotoPresentation,
+  AutomaticPhotoPresentation,
+  ManualPhotoPresentation,
   PhotoSessionController,
   TimedPhotoPresenter,
 } from "@/domain/timedPhotoPlayback";
@@ -20,8 +21,10 @@ export function useRoutePhotoSessions(photos: readonly RoutePhoto[]) {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
     null,
   );
-  const [animationPhoto, setAnimationPhoto] =
-    useState<AnimationPhotoPresentation | null>(null);
+  const [automaticPhoto, setAutomaticPhoto] =
+    useState<AutomaticPhotoPresentation | null>(null);
+  const [manualAnimationPhoto, setManualAnimationPhoto] =
+    useState<ManualPhotoPresentation | null>(null);
   const controllerRef = useRef<PhotoSessionController | null>(null);
   const photoUrls = useMemo(
     () =>
@@ -32,11 +35,22 @@ export function useRoutePhotoSessions(photos: readonly RoutePhoto[]) {
   );
   const presenter = useMemo<TimedPhotoPresenter>(
     () => ({
-      open: setAnimationPhoto,
-      close: (sessionId) =>
-        setAnimationPhoto((current) =>
+      open: (presentation) => {
+        if (presentation.kind === "automatic") {
+          setAutomaticPhoto(presentation);
+          return;
+        }
+        setAutomaticPhoto(null);
+        setManualAnimationPhoto(presentation);
+      },
+      close: (sessionId) => {
+        setAutomaticPhoto((current) =>
           current?.sessionId === sessionId ? null : current,
-        ),
+        );
+        setManualAnimationPhoto((current) =>
+          current?.sessionId === sessionId ? null : current,
+        );
+      },
       preload: (photoIds) => {
         for (const photoId of photoIds) {
           const url = photoUrls.get(photoId);
@@ -65,47 +79,35 @@ export function useRoutePhotoSessions(photos: readonly RoutePhoto[]) {
   );
   const onIndexChange = useCallback(
     (index: number) => {
-      if (!animationPhoto) {
+      if (!manualAnimationPhoto) {
         setSelectedPhotoIndex(index);
         return;
       }
       const photo = photos[index];
       if (!photo) return;
-      if (animationPhoto.kind === "automatic") {
-        animationPhoto.onNavigate(photo.id);
-        return;
-      }
-      setAnimationPhoto((current) =>
-        current?.kind === "manual" &&
-        current.sessionId === animationPhoto.sessionId
+      setManualAnimationPhoto((current) =>
+        current?.sessionId === manualAnimationPhoto.sessionId
           ? { ...current, photoId: photo.id }
           : current,
       );
     },
-    [animationPhoto, photos],
+    [manualAnimationPhoto, photos],
   );
 
   return {
     presenter,
     onControllerChange,
     onPhotoClick,
+    automaticPhoto,
     lightbox: {
-      index: animationPhoto
-        ? photos.findIndex((photo) => photo.id === animationPhoto.photoId)
+      index: manualAnimationPhoto
+        ? photos.findIndex((photo) => photo.id === manualAnimationPhoto.photoId)
         : selectedPhotoIndex,
       onIndexChange,
-      onClose: animationPhoto
-        ? animationPhoto.onDismiss
+      onClose: manualAnimationPhoto
+        ? manualAnimationPhoto.onDismiss
         : () => setSelectedPhotoIndex(null),
-      onImageLoad:
-        animationPhoto?.kind === "automatic"
-          ? animationPhoto.onLoad
-          : undefined,
-      onImageError:
-        animationPhoto?.kind === "automatic"
-          ? animationPhoto.onError
-          : undefined,
-      onStopPlayback: animationPhoto?.onStop,
+      onStopPlayback: manualAnimationPhoto?.onStop,
     },
   };
 }

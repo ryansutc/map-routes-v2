@@ -1,7 +1,9 @@
 import ElevationProfile from "@/components/map/ElevationProfile";
+import { AutomaticPhotoPopup } from "@/components/map/AutomaticPhotoPopup";
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
 import PhotoController from "@/components/map/PhotoController";
+import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 import RouteInfoContainer, {
   RouteInfoSkeleton,
 } from "@/components/map/RouteInfoContainer";
@@ -9,6 +11,7 @@ import Toggle3d from "@/components/map/Toggle3d";
 import PhotoGallery, { PhotoLightbox } from "@/components/routes/PhotoGallery";
 import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
 import type {
+  AutomaticPhotoPresentation,
   PhotoSessionController,
   TimedPhotoPresenter,
 } from "@/domain/timedPhotoPlayback";
@@ -68,6 +71,9 @@ interface RouteMapOverlaysProps {
   onPhotoClick: (index: number) => void;
   onPlayingChange: (isPlaying: boolean) => void;
   timedPhotoPresenter: TimedPhotoPresenter;
+  automaticPhoto: AutomaticPhotoPresentation | null;
+  photoMapAnchor: PhotoMapAnchor | null;
+  onPhotoMapAnchorChange: (anchor: PhotoMapAnchor | null) => void;
   onPhotoSessionControllerChange: (
     controller: PhotoSessionController | null,
   ) => void;
@@ -86,6 +92,9 @@ function RouteMapOverlays({
   onPhotoClick,
   onPlayingChange,
   timedPhotoPresenter,
+  automaticPhoto,
+  photoMapAnchor,
+  onPhotoMapAnchorChange,
   onPhotoSessionControllerChange,
 }: RouteMapOverlaysProps) {
   const map = getMap();
@@ -95,6 +104,11 @@ function RouteMapOverlays({
     [routeItem],
   );
   const ready = map && view && !error && !isLoading && routeItem;
+  const automaticPhotoItem = automaticPhoto
+    ? routeItem?.photos.find(
+        (candidate) => candidate.id === automaticPhoto.photoId,
+      )
+    : undefined;
 
   return (
     <>
@@ -113,6 +127,7 @@ function RouteMapOverlays({
             getView={getView}
             photos={routeItem.photos || []}
             onPhotoClick={onPhotoClick}
+            onMapAnchorChange={onPhotoMapAnchorChange}
           />
         </>
       )}
@@ -128,12 +143,20 @@ function RouteMapOverlays({
             activityType={routeItem?.activity_type}
             photos={routeItem?.photos ?? []}
             timedPhotoPresenter={timedPhotoPresenter}
+            photoMapAnchor={photoMapAnchor}
             activityDurationSec={routeItem?.duration ?? null}
             onSessionActiveChange={onPlayingChange}
             onPhotoSessionControllerChange={onPhotoSessionControllerChange}
           />
         )}
       </Box>
+      {automaticPhoto && photoMapAnchor && automaticPhotoItem && (
+        <AutomaticPhotoPopup
+          photo={automaticPhotoItem}
+          presentation={automaticPhoto}
+          mapAnchor={photoMapAnchor}
+        />
+      )}
     </>
   );
 }
@@ -154,6 +177,8 @@ function RouteDetail() {
   const [view, setView] = useState<MapView | SceneView | null>(null);
   const [fullscreenRequested, setFullscreenRequested] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [photoMapAnchor, setPhotoMapAnchor] =
+    useState<PhotoMapAnchor | null>(null);
   const routePhotos = routeItem?.photos ?? EMPTY_ROUTE_PHOTOS;
   const photoSessions = useRoutePhotoSessions(routePhotos);
   const navigate = useNavigate();
@@ -240,6 +265,9 @@ function RouteDetail() {
         onPhotoClick={photoSessions.onPhotoClick}
         onPlayingChange={setIsAnimating}
         timedPhotoPresenter={photoSessions.presenter}
+        automaticPhoto={photoSessions.automaticPhoto}
+        photoMapAnchor={photoMapAnchor}
+        onPhotoMapAnchorChange={setPhotoMapAnchor}
         onPhotoSessionControllerChange={photoSessions.onControllerChange}
       />
     </MapContainer>

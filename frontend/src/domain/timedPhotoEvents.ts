@@ -8,6 +8,8 @@ import {
 export type TimedPhotoInput = {
   id: number;
   takenAt: string | null | undefined;
+  latitude: number | null | undefined;
+  longitude: number | null | undefined;
 };
 
 export type TimedPhotoEvent = {
@@ -19,6 +21,7 @@ export type TimedPhotoEvent = {
 export type TimedPhotoExclusionReason =
   | "legacy-route"
   | "missing-or-unresolved-time"
+  | "no-gps-location"
   | "before-route"
   | "after-route"
   | "unknown-gap";
@@ -54,6 +57,24 @@ function isStrictlyInsideGap(track: TimedTrack, timestampMs: number) {
   return !!gap && timestampMs < gap.endTimestampMs;
 }
 
+export function hasValidPhotoGps(
+  photo: {
+    latitude?: number | null;
+    longitude?: number | null;
+  },
+) {
+  return (
+    typeof photo.latitude === "number" &&
+    Number.isFinite(photo.latitude) &&
+    photo.latitude >= -90 &&
+    photo.latitude <= 90 &&
+    typeof photo.longitude === "number" &&
+    Number.isFinite(photo.longitude) &&
+    photo.longitude >= -180 &&
+    photo.longitude <= 180
+  );
+}
+
 /**
  * Classifies every photo through the same eligibility rules used by playback.
  * Results preserve input order so owner-facing callers can index or render them.
@@ -68,6 +89,14 @@ export function classifyTimedPhotoEligibility(
         status: "excluded",
         photoId: photo.id,
         reason: "legacy-route",
+      };
+    }
+
+    if (!hasValidPhotoGps(photo)) {
+      return {
+        status: "excluded",
+        photoId: photo.id,
+        reason: "no-gps-location",
       };
     }
 

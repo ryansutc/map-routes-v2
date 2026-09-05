@@ -6,7 +6,7 @@ import {
   type RoutePlaybackMode,
 } from "./routeAnimation";
 import {
-  planTimedPhotoEvents,
+  planTimedPhotoEvents as planEvents,
   type TimedPhotoInput,
 } from "./timedPhotoEvents";
 import {
@@ -21,6 +21,22 @@ import {
   type PhotoTimerClock,
 } from "./timedPhotoPlayback";
 import { buildRouteTrack, type TimedTrack } from "./timedTrack";
+
+type LocatedPhotoInput = Omit<TimedPhotoInput, "latitude" | "longitude">;
+
+function planTimedPhotoEvents(
+  track: TimedTrack,
+  photos: readonly LocatedPhotoInput[],
+) {
+  return planEvents(
+    track,
+    photos.map((photo) => ({
+      ...photo,
+      latitude: 49.3,
+      longitude: -122.5,
+    })),
+  );
+}
 
 function timedTrack(times = [
   "2026-01-01T00:00:00Z",
@@ -141,6 +157,23 @@ function presenterSpy() {
   };
 }
 
+function mapAnchorWithVisiblePhotos(visiblePhotoIds: readonly number[]) {
+  const visible = new Set(visiblePhotoIds);
+  return {
+    getSnapshot: (photoId: number) =>
+      visible.has(photoId)
+        ? {
+            x: 100,
+            y: 100,
+            viewportWidth: 800,
+            viewportHeight: 600,
+            visible: true,
+          }
+        : null,
+    subscribe: () => () => {},
+  };
+}
+
 function setup(
   takenAt: string,
   playbackMode: RoutePlaybackMode = "recorded",
@@ -156,10 +189,11 @@ function setup(
 }
 
 function setupPhotos(
-  photos: readonly TimedPhotoInput[],
+  photos: readonly LocatedPhotoInput[],
   playbackMode: RoutePlaybackMode = "recorded",
   enabled = true,
   track = timedTrack(),
+  visiblePhotoIds = photos.map((photo) => photo.id),
 ) {
   const frames = fakeFrameClock();
   const timers = fakeTimerClock();
@@ -184,6 +218,7 @@ function setupPhotos(
     },
     timerClock: timers.clock,
     preloadScheduler: preloads.scheduler,
+    mapAnchor: mapAnchorWithVisiblePhotos(visiblePhotoIds),
   });
   return { engine, frames, timers, preloads, presentation, coordinator };
 }
@@ -365,6 +400,7 @@ describe("timed photo playback coordinator", () => {
       },
       timerClock: timers.clock,
       preloadScheduler: preloads.scheduler,
+      mapAnchor: mapAnchorWithVisiblePhotos([1, 2, 3]),
     });
 
     engine.play();
@@ -418,6 +454,7 @@ describe("timed photo playback coordinator", () => {
       },
       timerClock: timers.clock,
       preloadScheduler: preloads.scheduler,
+      mapAnchor: mapAnchorWithVisiblePhotos([1, 2, 3]),
     });
 
     engine.play();
@@ -463,6 +500,7 @@ describe("timed photo playback coordinator", () => {
       },
       timerClock: timers.clock,
       preloadScheduler: preloads.scheduler,
+      mapAnchor: mapAnchorWithVisiblePhotos([1, 2, 3]),
     });
 
     preloads.flush();
@@ -501,6 +539,53 @@ describe("timed photo playback coordinator", () => {
 
     expect(presentation.opened.map((photo) => photo.photoId)).toEqual([1]);
     expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("skips off-screen events in a mixed group and shows only visible photos", () => {
+    const { engine, timers, presentation, coordinator } = setupPhotos(
+      [
+        { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+        { id: 2, takenAt: "2026-01-01T00:00:01Z" },
+        { id: 3, takenAt: "2026-01-01T00:00:02Z" },
+      ],
+      "recorded",
+      true,
+      timedTrack(),
+      [2],
+    );
+
+    engine.play();
+
+    expect(presentation.opened.map((photo) => photo.photoId)).toEqual([2]);
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      position: { originalElapsedMs: 1_000 },
+    });
+    finishLoadedPhoto(engine, timers, presentation);
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("consumes an entirely off-screen group without visibly pausing", () => {
+    const { engine, presentation, coordinator } = setupPhotos(
+      [
+        { id: 1, takenAt: "2026-01-01T00:00:00Z" },
+        { id: 2, takenAt: "2026-01-01T00:00:01Z" },
+      ],
+      "recorded",
+      true,
+      timedTrack(),
+      [],
+    );
+
+    engine.play();
+
+    expect(presentation.opened).toHaveLength(0);
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "playing",
+      activePauseReasons: [],
+    });
     coordinator.destroy();
   });
 
@@ -593,27 +678,21 @@ describe("timed photo playback coordinator", () => {
     coordinator.destroy();
   });
 
-  it.each(["automatic", "manual"] as const)(
-    "offers explicit stop from an %s animation lightbox",
-    (kind) => {
-      const { engine, presentation, coordinator } = setup(
-        "2026-01-01T00:00:00Z",
-      );
-      engine.play();
-      if (kind === "automatic") presentation.opened[0]!.onStop();
-      else {
-        presentation.opened[0]!.onNavigate(42);
-        presentation.manualOpened[0]!.onStop();
-      }
+  it("offers explicit stop after an automatic popup expands to the manual lightbox", () => {
+    const { engine, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+    presentation.opened[0]!.onNavigate(42);
+    presentation.manualOpened[0]!.onStop();
 
-      expect(engine.getSnapshot()).toMatchObject({
-        state: "idle",
-        playbackProgress: 0,
-      });
-      expect(presentation.closed).toHaveLength(1);
-      coordinator.destroy();
-    },
-  );
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "idle",
+      playbackProgress: 0,
+    });
+    expect(presentation.closed).toHaveLength(1);
+    coordinator.destroy();
+  });
 
   it("pauses photo loading and visible time while the document is hidden", () => {
     const { engine, timers, presentation, coordinator } = setup(
@@ -631,6 +710,40 @@ describe("timed photo playback coordinator", () => {
     timers.step(999);
     expect(presentation.closed).toHaveLength(0);
     timers.step(1);
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("preserves remaining visible time while popup interaction suspends it", () => {
+    const { engine, timers, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+    presentation.opened[0]!.onLoad();
+    timers.step(800);
+
+    presentation.opened[0]!.onTimerPauseChange(true);
+    timers.step(5_000);
+    expect(engine.getSnapshot().state).toBe("paused");
+
+    presentation.opened[0]!.onTimerPauseChange(false);
+    timers.step(1_199);
+    expect(engine.getSnapshot().state).toBe("paused");
+    timers.step(1);
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
+
+  it("keeps the bounded image-load timeout running during popup interaction", () => {
+    const { engine, timers, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+
+    presentation.opened[0]!.onTimerPauseChange(true);
+    timers.step(AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS);
+
+    expect(presentation.closed).toHaveLength(1);
     expect(engine.getSnapshot().state).toBe("playing");
     coordinator.destroy();
   });
@@ -666,7 +779,6 @@ describe("timed photo playback coordinator", () => {
     stale.onLoad();
     stale.onDismiss();
     stale.onNavigate(42);
-    stale.onStop();
 
     expect(presentation.opened).toHaveLength(2);
     expect(presentation.manualOpened).toHaveLength(0);
@@ -688,7 +800,6 @@ describe("timed photo playback coordinator", () => {
     stale.onLoad();
     stale.onDismiss();
     stale.onNavigate(42);
-    stale.onStop();
     timers.step(AUTOMATIC_PHOTO_LOAD_TIMEOUT_MS);
 
     expect(engine.getSnapshot().state).toBe("playing");

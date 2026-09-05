@@ -2,6 +2,10 @@ import AnimationSettingsPopover, {
   type TimedPhotoCounts,
 } from "@/components/AnimationSettingsPopover";
 import {
+  ANIMATION_CONTROLS_BOTTOM_PX,
+  ANIMATION_CONTROLS_HEIGHT_PX,
+} from "@/components/map/mapOverlayLayout";
+import {
   isAnimationSessionActive,
   type AnimationLifecycleState,
   type RoutePlaybackMode,
@@ -63,7 +67,9 @@ export function RouteAnimationControls({
     <Box
       sx={{
         position: "absolute",
-        bottom: 24,
+        bottom: ANIMATION_CONTROLS_BOTTOM_PX,
+        height: ANIMATION_CONTROLS_HEIGHT_PX,
+        boxSizing: "border-box",
         left: "50%",
         transform: "translateX(-50%)",
         display: "flex",
