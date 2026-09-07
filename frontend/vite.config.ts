@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig(({ mode }) => ({
-  base: mode === "production" ? "/react/" : "/", // Set base path only for production
+  base: "/", // Set base path only for production
   server: {
     // https: {
     //   key: fs.readFileSync(HTTPS_KEY),
