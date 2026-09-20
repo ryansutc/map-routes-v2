@@ -1,5 +1,6 @@
 import ElevationProfile from "@/components/map/ElevationProfile";
 import { AutomaticPhotoPopup } from "@/components/map/AutomaticPhotoPopup";
+import BasemapSelector from "@/components/map/BasemapSelector";
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
 import PhotoController from "@/components/map/PhotoController";
@@ -8,6 +9,11 @@ import RouteInfoContainer, {
   RouteInfoSkeleton,
 } from "@/components/map/RouteInfoContainer";
 import Toggle3d from "@/components/map/Toggle3d";
+import {
+  ARCGIS_BASEMAP_OPTIONS,
+  isArcGISBasemapId,
+  type ArcGISBasemapId,
+} from "@/components/map/arcgisBasemaps";
 import PhotoGallery, { PhotoLightbox } from "@/components/routes/PhotoGallery";
 import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
 import type {
@@ -19,7 +25,9 @@ import { buildRouteTrack, type RouteTrack } from "@/domain/timedTrack";
 import { useElevationProfile } from "@/hooks/useElevationProfile";
 import { useMapInteractionLock } from "@/hooks/useMapInteractionLock";
 import { useRoute } from "@/hooks/useRoute.tsx";
+import { useRouteBasemap } from "@/hooks/useRouteBasemap";
 import { useRoutePhotoSessions } from "@/hooks/useRoutePhotoSessions";
+import { useToast } from "@/hooks/useToast";
 import { useStore } from "@/state/store";
 import type Map from "@arcgis/core/Map";
 import type MapView from "@arcgis/core/views/MapView";
@@ -68,6 +76,9 @@ interface RouteMapOverlaysProps {
   isLoading: boolean;
   isPreview: boolean;
   isAnimating: boolean;
+  isChangingBasemap: boolean;
+  selectedBasemapId: ArcGISBasemapId;
+  onBasemapSelect: (id: string) => void;
   onPhotoClick: (index: number) => void;
   onPlayingChange: (isPlaying: boolean) => void;
   timedPhotoPresenter: TimedPhotoPresenter;
@@ -80,7 +91,7 @@ interface RouteMapOverlaysProps {
 }
 
 /** Everything layered on top of the ESRI view for the route detail page. */
-function RouteMapOverlays({
+export function RouteMapOverlays({
   getMap,
   getView,
   routeItem,
@@ -89,6 +100,9 @@ function RouteMapOverlays({
   isLoading,
   isPreview,
   isAnimating,
+  isChangingBasemap,
+  selectedBasemapId,
+  onBasemapSelect,
   onPhotoClick,
   onPlayingChange,
   timedPhotoPresenter,
@@ -134,7 +148,17 @@ function RouteMapOverlays({
       {/* Kept mounted across preview/fullscreen toggles so the active playback
           session and its animation layer survive the layout change. */}
       <Box sx={{ display: isPreview ? "none" : "contents" }}>
-        {ready && <Toggle3d disabled={isAnimating} />}
+        {ready && !isPreview && (
+          <>
+            <Toggle3d disabled={isAnimating} />
+            <BasemapSelector
+              options={ARCGIS_BASEMAP_OPTIONS}
+              selectedId={selectedBasemapId}
+              disabled={isAnimating || isChangingBasemap}
+              onSelect={onBasemapSelect}
+            />
+          </>
+        )}
         {map && view && (
           <RouteAnimationController
             getMap={getMap}
@@ -181,6 +205,13 @@ function RouteDetail() {
     useState<PhotoMapAnchor | null>(null);
   const routePhotos = routeItem?.photos ?? EMPTY_ROUTE_PHOTOS;
   const photoSessions = useRoutePhotoSessions(routePhotos);
+  const { enqueueError } = useToast();
+  const {
+    selectedId: selectedBasemapId,
+    isChanging: isChangingBasemap,
+    registerMap: registerBasemapMap,
+    select: selectBasemap,
+  } = useRouteBasemap(routeId, enqueueError);
   const navigate = useNavigate();
 
   // The map preview and the fullscreen map are different places in the tree,
@@ -211,9 +242,10 @@ function RouteDetail() {
   const isPreview = isMobile && !isFullscreenMap;
   useMapInteractionLock(view, isPreview || isAnimating);
 
-  const handleMapLoad = (map: Map, view: MapView | SceneView) => {
-    setMap(map);
-    setView(view);
+  const handleMapLoad = (loadedMap: Map, loadedView: MapView | SceneView) => {
+    registerBasemapMap(loadedMap);
+    setMap(loadedMap);
+    setView(loadedView);
   };
   const getMap = useCallback(() => map, [map]);
   const getView = useCallback(() => view, [view]);
@@ -223,6 +255,13 @@ function RouteDetail() {
   const handleFail = (err: string) => {
     console.error(err);
   };
+
+  const handleBasemapSelect = useCallback(
+    (id: string) => {
+      if (isArcGISBasemapId(id)) void selectBasemap(id);
+    },
+    [selectBasemap],
+  );
 
   const { profilePoints, hasElevation, onHover, onHoverEnd } =
     useElevationProfile(routeTrack, view);
@@ -239,7 +278,7 @@ function RouteDetail() {
     <MapContainer
       attachToId="viewDiv"
       mapProperties={{
-        basemap: "satellite",
+        basemap: selectedBasemapId,
       }}
       viewProperties={{
         center: [-122.55, 49.3],
@@ -262,6 +301,9 @@ function RouteDetail() {
         isLoading={isLoading}
         isPreview={isPreview}
         isAnimating={isAnimating}
+        isChangingBasemap={isChangingBasemap}
+        selectedBasemapId={selectedBasemapId}
+        onBasemapSelect={handleBasemapSelect}
         onPhotoClick={photoSessions.onPhotoClick}
         onPlayingChange={setIsAnimating}
         timedPhotoPresenter={photoSessions.presenter}
