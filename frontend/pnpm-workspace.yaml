@@ -1,6 +1,7 @@
 allowBuilds:
   '@vaadin/vaadin-usage-statistics': false
   esbuild: false
+  workerd: false
 
 overrides:
   # @tanstack/eslint-plugin-router still pins @typescript-eslint/utils 8.38,
