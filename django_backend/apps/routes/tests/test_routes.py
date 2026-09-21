@@ -171,7 +171,11 @@ def test_geometry_only_geojson_preserves_segment_geometry_without_times():
     assert all("coordinate_times" in feature["properties"] for feature in canonical["features"])
 
 
-@override_settings(ARCGIS_USERNAME="test-user", ARCGIS_PASSWORD="test-password")
+@override_settings(
+    ARCGIS_USERNAME="test-user",
+    ARCGIS_PASSWORD="test-password",
+    ARCGIS_FOLDER_NAME="production",
+)
 class TimedGpxApiTests(TestCase):
     """Exercise canonical route data from parsing through route detail."""
 
@@ -199,6 +203,7 @@ class TimedGpxApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         canonical = response.data["geojson"]
         hosted = json.loads(upload_mock.call_args.args[2])
+        self.assertEqual(upload_mock.call_args.kwargs["folder_name"], "production")
         self.assertEqual(
             [feature["geometry"] for feature in hosted["features"]],
             [feature["geometry"] for feature in canonical["features"]],

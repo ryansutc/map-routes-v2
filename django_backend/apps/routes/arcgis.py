@@ -1,5 +1,7 @@
 """Utilities for interacting with the ArcGIS Online REST API."""
 
+from urllib.parse import quote
+
 import requests
 from django.conf import settings
 
@@ -26,10 +28,42 @@ def get_token(username: str, password: str) -> str:
     return data["token"]
 
 
-def upload_geojson(token: str, username: str, geojson_str: str, title: str) -> str:
+def get_folder_id(token: str, username: str, folder_name: str) -> str:
+    """Return the ArcGIS folder ID matching an exact folder title."""
+    resp = requests.get(
+        f"{_SHARING_REST}/content/users/{quote(username, safe='')}",
+        params={"f": "json", "token": token},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if "error" in data:
+        raise RuntimeError(f"ArcGIS folder lookup error: {data['error']}")
+
+    folder = next(
+        (folder for folder in data.get("folders", []) if folder.get("title") == folder_name),
+        None,
+    )
+    if folder is None:
+        raise RuntimeError(f"ArcGIS folder not found: {folder_name}")
+    return folder["id"]
+
+
+def upload_geojson(
+    token: str,
+    username: str,
+    geojson_str: str,
+    title: str,
+    folder_name: str = "",
+) -> str:
     """Upload a GeoJSON string as an ArcGIS Online item and return its item ID."""
+    folder_path = ""
+    if folder_name:
+        folder_id = get_folder_id(token, username, folder_name)
+        folder_path = f"/{quote(folder_id, safe='')}"
+
     resp = requests.post(
-        f"{_SHARING_REST}/content/users/{username}/addItem",
+        f"{_SHARING_REST}/content/users/{quote(username, safe='')}{folder_path}/addItem",
         data={
             "title": title,
             "type": "GeoJson",

@@ -157,7 +157,13 @@ class ParseGpxView(APIView):
         try:
             token = get_token(username, password)
             geojson_str = json.dumps(geometry_only_geojson(parsed["geojson"]))
-            item_id = upload_geojson(token, username, geojson_str, title=title)
+            item_id = upload_geojson(
+                token,
+                username,
+                geojson_str,
+                title=title,
+                folder_name=settings.ARCGIS_FOLDER_NAME,
+            )
             share_item_public(token, username, item_id)
         except Exception as exc:
             print_debug_error()
