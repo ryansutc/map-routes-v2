@@ -4,6 +4,14 @@ import cloudinary
 import cloudinary.uploader
 from django.conf import settings
 
+_PHOTO_FOLDER = "map-routes/photos"
+
+
+def _photo_folder() -> str:
+    """Return the base photo folder with an optional environment subfolder."""
+    subfolder = settings.CLOUDINARY_FOLDER_NAME.strip("/")
+    return f"{_PHOTO_FOLDER}/{subfolder}" if subfolder else _PHOTO_FOLDER
+
 
 def _configure() -> None:
     """Configure Cloudinary from Django settings."""
@@ -43,7 +51,7 @@ def upload_photo(file_bytes: bytes, filename: str) -> tuple[str, str]:
 
     result = cloudinary.uploader.upload(
         io.BytesIO(file_bytes),
-        folder="map-routes/photos",
+        folder=_photo_folder(),
         resource_type="image",
     )
     return result["secure_url"], result["public_id"]
