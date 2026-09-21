@@ -16,6 +16,7 @@ export const API_TIMEOUT = parseInt(
   import.meta.env.VITE_API_TIMEOUT || "5000",
   10,
 ); // Default to 5000ms if not set
+export const PHOTO_UPLOAD_TIMEOUT = 15_000;
 export const API_TOKEN = localStorage.getItem("token") || null;
 export const GOOGLE_LOGIN_URL =
   import.meta.env.VITE_GOOGLE_LOGIN_URL ||

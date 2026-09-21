@@ -3,6 +3,7 @@ import { axiosInstance } from "@/api/axiosInstance";
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
 import type { PhotoDto } from "@/types/api";
+import { PHOTO_UPLOAD_TIMEOUT } from "@/utils/environment";
 import Point from "@arcgis/core/geometry/Point";
 import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
@@ -61,7 +62,10 @@ async function uploadPhotoFile(routeId: number, file: File, title?: string): Pro
   const res = await axiosInstance.post<PhotoDto>(
     `/api/route/${routeId}/photos/`,
     formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: PHOTO_UPLOAD_TIMEOUT,
+    },
   );
   return res.data;
 }

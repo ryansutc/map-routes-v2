@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/useToast";
 import { useStore } from "@/state/store";
 import type { PhotoDto } from "@/types/api";
 import { formatDateTimeForZone, zonedLocalDateTimeToIso } from "@/utils/datetimeHelpers";
+import { PHOTO_UPLOAD_TIMEOUT } from "@/utils/environment";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UploadIcon from "@mui/icons-material/Upload";
@@ -73,7 +74,10 @@ async function uploadPhoto(routeId: number, queued: QueuedPhoto): Promise<PhotoD
   const response = await axiosInstance.post<PhotoDto>(
     `/api/route/${routeId}/photos/`,
     formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: PHOTO_UPLOAD_TIMEOUT,
+    },
   );
   return response.data;
 }
