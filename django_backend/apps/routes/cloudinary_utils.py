@@ -1,7 +1,6 @@
 """Cloudinary photo upload helper."""
 
 import cloudinary
-import cloudinary.uploader
 from django.conf import settings
 
 _PHOTO_FOLDER = "map-routes/photos"
@@ -23,6 +22,12 @@ def _configure() -> None:
         # https://help.pythonanywhere.com/pages/403ForbiddenError/
         api_proxy="http://proxy.server:3128",
     )
+
+
+# Cloudinary creates its HTTP connector when this module is imported, so the
+# proxy must be configured before importing the uploader.
+_configure()
+import cloudinary.uploader  # noqa: E402
 
 
 def upload_photo(file_bytes: bytes, filename: str) -> tuple[str, str]:

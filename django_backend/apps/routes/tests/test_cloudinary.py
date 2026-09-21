@@ -3,8 +3,14 @@
 from unittest.mock import patch
 
 from django.test import override_settings
+from urllib3 import ProxyManager
 
-from apps.routes.cloudinary_utils import upload_photo
+from apps.routes.cloudinary_utils import cloudinary, upload_photo
+
+
+def test_cloudinary_uploader_uses_pythonanywhere_proxy():
+    """Build the SDK's import-time HTTP connector with the configured proxy."""
+    assert isinstance(cloudinary.uploader._http, ProxyManager)
 
 
 @override_settings(
