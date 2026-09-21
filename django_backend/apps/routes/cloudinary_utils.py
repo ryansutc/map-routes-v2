@@ -20,6 +20,8 @@ def _configure() -> None:
         api_key=settings.CLOUDINARY_API_KEY,
         api_secret=settings.CLOUDINARY_API_SECRET,
         secure=True,
+        # https://help.pythonanywhere.com/pages/403ForbiddenError/
+        api_proxy="http://proxy.server:3128",
     )
 
 
