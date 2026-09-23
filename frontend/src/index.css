@@ -10,8 +10,8 @@
 } */
 
 #viewDiv {
-  width: 100vw;
-  height: calc(100vh - 180px);
+  width: 100%;
+  height: 100%;
   padding: 0;
   margin: 0;
 }
