@@ -73,20 +73,48 @@ describe("SettingsDialog", () => {
     vi.unstubAllGlobals();
   });
 
-  it("opens from playback at Map Animation in a desktop vertical-tab dialog", async () => {
+  it("opens from playback at Map Animation without animating the scroll", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
     render(<PlaybackEntry />);
     fireEvent.click(screen.getByRole("button", { name: "Playback settings" }));
 
     expect(await screen.findByRole("dialog", { name: "Settings" })).toBeTruthy();
-    expect(
-      screen
-        .getByRole("tablist", { name: "Settings sections" })
-        .getAttribute("aria-orientation"),
-    ).toBe("vertical");
-    expect(
-      screen.getByRole("tab", { name: "Map Animation", selected: true }),
-    ).toBeTruthy();
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.getByRole("heading", { name: "General" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Map Animation" })).toBeTruthy();
     expect(screen.getByLabelText("Target route duration")).toBeTruthy();
+    await waitFor(() =>
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: "auto",
+        block: "start",
+      }),
+    );
+  });
+
+  it("smoothly navigates to a section and briefly highlights it", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    render(<PlaybackEntry />);
+    fireEvent.click(screen.getByRole("button", { name: "Playback settings" }));
+    await screen.findByRole("dialog", { name: "Settings" });
+    scrollIntoView.mockClear();
+
+    fireEvent.click(screen.getByRole("link", { name: "General" }));
+
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    });
+    await waitFor(() =>
+      expect(
+        document.querySelector("#settings-general")?.getAttribute(
+          "data-highlighted",
+        ),
+      ).toBe("true"),
+    );
   });
 
   it("keeps unsupported route preferences enabled and explains the fallback", async () => {
@@ -139,11 +167,14 @@ describe("SettingsDialog", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Settings" });
     expect(dialog.classList.contains("MuiDialog-paperFullScreen")).toBe(true);
-    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByRole("navigation")).toBeNull();
     expect(screen.getByRole("heading", { name: "General" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Map Animation" })).toBeTruthy();
     await waitFor(() =>
-      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" }),
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: "auto",
+        block: "start",
+      }),
     );
   });
 });

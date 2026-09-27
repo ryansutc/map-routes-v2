@@ -40,11 +40,12 @@ interface MapAnimationSettingsProps {
 }
 
 const playbackDescription = {
-  recorded: "Speed follows timestamp of each point. ",
+  recorded:
+    "Speed follows recorded timestamps to preserve changes in travel speed. ",
   indexed:
-    "Steadily moves along tracklog points, regardless of their timestamp. ",
+    "Marches through GPS points at an even rate, regardless of the time or distance between them. ",
   distance:
-    "Steadily moves along the distance of the route, regardless of individual track points. Smooth but does not reflect travel speed. ",
+    "Steadily moves along the route, regardless of individual track points. Smooth but does not reflect travel speed. ",
 };
 
 export function MapAnimationSettings({
@@ -99,6 +100,7 @@ export function MapAnimationSettings({
             ))}
           </Select>
         </Tooltip>
+        <FormHelperText>{`Have animation run for ${targetDurationSec} seconds.`}</FormHelperText>
       </FormControl>
       <FormControl size="small" fullWidth>
         <InputLabel id="settings-playback-mode-label">
@@ -106,7 +108,7 @@ export function MapAnimationSettings({
         </InputLabel>
         <Tooltip
           describeChild
-          title="How the animation will proceed along the route"
+          title="How the animation marker advances along the route."
         >
           <Select<RoutePlaybackMode>
             labelId="settings-playback-mode-label"
@@ -156,7 +158,7 @@ export function MapAnimationSettings({
       <FormControl>
         <Tooltip
           describeChild
-          title="Have photos show in popups based on the time they were taken. Only works for photos with a valid timestamp and one that overlaps with the route time."
+          title="Pause the animation and show geotagged photos when playback reaches the time corresponding with when they were taken. Requires photo to have a valid location and timestamp."
         >
           <FormControlLabel
             control={
