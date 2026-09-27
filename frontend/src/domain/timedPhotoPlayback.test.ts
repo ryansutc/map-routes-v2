@@ -806,4 +806,17 @@ describe("timed photo playback coordinator", () => {
     expect(presentation.manualOpened).toHaveLength(0);
     expect(presentation.closed).toHaveLength(1);
   });
+
+  it("dismisses an automatic popup before completion presentation", () => {
+    const { engine, presentation, coordinator } = setup(
+      "2026-01-01T00:00:00Z",
+    );
+    engine.play();
+
+    coordinator.dismissAutomaticPhoto();
+
+    expect(presentation.closed).toHaveLength(1);
+    expect(engine.getSnapshot().state).toBe("playing");
+    coordinator.destroy();
+  });
 });

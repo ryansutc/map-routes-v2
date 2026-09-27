@@ -18,6 +18,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import type { RefObject } from "react";
 
 interface RouteAnimationControlsProps {
   state: AnimationLifecycleState;
@@ -26,6 +27,8 @@ interface RouteAnimationControlsProps {
   targetDurationSec: TargetRouteDurationSec;
   onPlay: () => void;
   onStop: () => void;
+  completionPresentationActive?: boolean;
+  replayButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
 export function RouteAnimationControls({
@@ -35,6 +38,8 @@ export function RouteAnimationControls({
   targetDurationSec,
   onPlay,
   onStop,
+  completionPresentationActive = false,
+  replayButtonRef,
 }: RouteAnimationControlsProps) {
   const { openSettings } = useSettingsDialog();
   if (pointCount < 2) return null;
@@ -62,8 +67,11 @@ export function RouteAnimationControls({
     >
       <Tooltip title={isActive ? "Stop" : "Replay route"}>
         <IconButton
+          ref={replayButtonRef}
           size="small"
           onClick={isActive ? onStop : onPlay}
+          disabled={completionPresentationActive}
+          aria-label={isActive ? "Stop" : "Replay route"}
           sx={{ color: "white" }}
         >
           {isActive ? <StopIcon /> : <PlayArrowIcon />}
@@ -86,6 +94,7 @@ export function RouteAnimationControls({
             size="small"
             aria-label="Playback settings"
             onClick={() => openSettings("map-animation")}
+            disabled={completionPresentationActive}
             sx={{ color: "white" }}
           >
             <SettingsIcon fontSize="small" />

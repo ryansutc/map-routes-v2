@@ -33,6 +33,7 @@ export type MapAnimationRouteContext = Readonly<{
   availablePlaybackModes: readonly RoutePlaybackMode[];
   effectivePlaybackMode: RoutePlaybackMode;
   timestampCapable: boolean;
+  animationSettingsDisabled?: boolean;
 }>;
 
 interface MapAnimationSettingsProps {
@@ -67,6 +68,7 @@ export function MapAnimationSettings({
   const setShowTimedPhotos = useStore((state) => state.setShowTimedPhotos);
 
   const effectivePlaybackMode = routeContext?.effectivePlaybackMode;
+  const settingsDisabled = routeContext?.animationSettingsDisabled ?? false;
   const preferredModeUnsupported =
     routeContext !== null &&
     !routeContext.availablePlaybackModes.includes(preferredPlaybackMode);
@@ -79,6 +81,12 @@ export function MapAnimationSettings({
       <Typography variant="h6" component="h2">
         Map Animation
       </Typography>
+      {settingsDisabled && (
+        <Typography variant="body2" color="text.secondary">
+          Animation settings are unavailable while route completion is being
+          presented.
+        </Typography>
+      )}
       <FormControl size="small" fullWidth>
         <InputLabel id="settings-duration-label">
           Target route duration
@@ -91,6 +99,7 @@ export function MapAnimationSettings({
             labelId="settings-duration-label"
             label="Target route duration"
             value={targetDurationSec}
+            disabled={settingsDisabled}
             onChange={(event) => setTargetDurationSec(event.target.value)}
           >
             {TARGET_ROUTE_DURATIONS_SEC.map((value) => (
@@ -114,6 +123,7 @@ export function MapAnimationSettings({
             labelId="settings-playback-mode-label"
             label="Preferred playback mode"
             value={preferredPlaybackMode}
+            disabled={settingsDisabled}
             onChange={(event) => setPreferredPlaybackMode(event.target.value)}
           >
             {PLAYBACK_MODES.map((mode) => (
@@ -142,6 +152,7 @@ export function MapAnimationSettings({
             control={
               <Switch
                 checked={skipDetectedStops}
+                disabled={settingsDisabled}
                 onChange={(event) => setSkipDetectedStops(event.target.checked)}
               />
             }
@@ -164,6 +175,7 @@ export function MapAnimationSettings({
             control={
               <Switch
                 checked={showTimedPhotos}
+                disabled={settingsDisabled}
                 onChange={(event) => setShowTimedPhotos(event.target.checked)}
               />
             }

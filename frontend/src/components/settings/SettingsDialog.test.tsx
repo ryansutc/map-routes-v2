@@ -157,6 +157,34 @@ describe("SettingsDialog", () => {
     await waitFor(() => expect(releasePause).toHaveBeenCalledOnce());
   });
 
+  it("disables animation settings during completion presentation", async () => {
+    const context: RouteSettingsContext = {
+      availablePlaybackModes: ["recorded", "distance"],
+      effectivePlaybackMode: "recorded",
+      timestampCapable: true,
+      animationSettingsDisabled: true,
+      acquirePause: vi.fn(() => vi.fn()),
+    };
+    render(<PlaybackEntry context={context} />);
+    fireEvent.click(screen.getByRole("button", { name: "Playback settings" }));
+
+    expect(
+      await screen.findByText(
+        "Animation settings are unavailable while route completion is being presented.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByLabelText("Target route duration")
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
+    expect(
+      (screen.getByRole("switch", {
+        name: "Show timed photos",
+      }) as HTMLInputElement).disabled,
+    ).toBe(true);
+  });
+
   it("uses a full-screen combined view and scrolls to animation on mobile", async () => {
     setMobileViewport(true);
     const scrollIntoView = vi.fn();

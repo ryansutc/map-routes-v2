@@ -165,6 +165,10 @@ export function RouteMapOverlays({
             getView={getView}
             track={routeTrack}
             activityType={routeItem?.activity_type}
+            routeTitle={routeItem?.title}
+            distance={routeItem?.distance}
+            elevationGain={routeItem?.elevation_gain}
+            duration={routeItem?.duration}
             photos={routeItem?.photos ?? []}
             timedPhotoPresenter={timedPhotoPresenter}
             photoMapAnchor={photoMapAnchor}
