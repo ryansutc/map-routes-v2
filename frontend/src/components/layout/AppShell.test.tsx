@@ -114,6 +114,8 @@ describe("AppShell sign out", () => {
       userIsAuthenticated: false,
       units: "metric",
     });
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
     const queryClient = new QueryClient();
 
     render(
@@ -128,10 +130,15 @@ describe("AppShell sign out", () => {
     expect(
       await screen.findByRole("dialog", { name: "Settings" }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("tab", { name: "General", selected: true }),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Miles" }));
+    expect(screen.getByRole("link", { name: "General" })).toBeTruthy();
+    await waitFor(() =>
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: "auto",
+        block: "start",
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "imperial" }));
     expect(useStore.getState().units).toBe("imperial");
     await waitFor(() =>
       expect(localStorage.getItem("map-routes-store")).toContain(
