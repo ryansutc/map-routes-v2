@@ -10,7 +10,6 @@ import {
   buildRouteTrailPaths,
   createRouteAnimationEngine,
   isAnimationSessionActive,
-  type AnimationPauseReason,
   type RouteAnimationSettings,
   type RoutePlaybackMode,
   type TargetRouteDurationSec,
@@ -244,7 +243,7 @@ export function useRouteAnimation(
     pointCount: track.profilePoints.length,
     play: engine.play,
     stop: engine.stop,
-    acquirePause: (reason: AnimationPauseReason) => engine.acquirePause(reason),
+    acquirePause: engine.acquirePause,
     photoPlaybackEngine: engine,
   };
 }

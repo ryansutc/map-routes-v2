@@ -107,4 +107,43 @@ describe("AppShell sign out", () => {
     });
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
+
+  it("opens shared settings at General for signed-out users", async () => {
+    useStore.setState({
+      user: null,
+      userIsAuthenticated: false,
+      units: "metric",
+    });
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AppShell>Routes</AppShell>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByText("km")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Settings" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "General" })).toBeTruthy();
+    await waitFor(() =>
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: "auto",
+        block: "start",
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "imperial" }));
+    expect(useStore.getState().units).toBe("imperial");
+    await waitFor(() =>
+      expect(localStorage.getItem("map-routes-store")).toContain(
+        '"units":"imperial"',
+      ),
+    );
+  });
 });

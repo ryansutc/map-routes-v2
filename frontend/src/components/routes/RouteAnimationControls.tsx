@@ -1,6 +1,4 @@
-import AnimationSettingsPopover, {
-  type TimedPhotoCounts,
-} from "@/components/AnimationSettingsPopover";
+import { useSettingsDialog } from "@/components/settings/SettingsDialog";
 import {
   ANIMATION_CONTROLS_BOTTOM_PX,
   ANIMATION_CONTROLS_HEIGHT_PX,
@@ -8,10 +6,10 @@ import {
 import {
   isAnimationSessionActive,
   type AnimationLifecycleState,
-  type RoutePlaybackMode,
   type TargetRouteDurationSec,
 } from "@/domain/routeAnimation";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import SettingsIcon from "@mui/icons-material/Settings";
 import StopIcon from "@mui/icons-material/Stop";
 import {
   Box,
@@ -26,19 +24,8 @@ interface RouteAnimationControlsProps {
   playbackProgress: number;
   pointCount: number;
   targetDurationSec: TargetRouteDurationSec;
-  playbackMode: RoutePlaybackMode;
-  availablePlaybackModes: readonly RoutePlaybackMode[];
-  timestampCapable: boolean;
-  skipDetectedStops: boolean;
-  showTimedPhotos: boolean;
-  timedPhotoCounts: TimedPhotoCounts;
-  activityDurationSec: number | null;
   onPlay: () => void;
   onStop: () => void;
-  onDurationChange: (duration: TargetRouteDurationSec) => void;
-  onPlaybackModeChange: (mode: RoutePlaybackMode) => void;
-  onSkipDetectedStopsChange: (skip: boolean) => void;
-  onShowTimedPhotosChange: (show: boolean) => void;
 }
 
 export function RouteAnimationControls({
@@ -46,20 +33,10 @@ export function RouteAnimationControls({
   playbackProgress,
   pointCount,
   targetDurationSec,
-  playbackMode,
-  availablePlaybackModes,
-  timestampCapable,
-  skipDetectedStops,
-  showTimedPhotos,
-  timedPhotoCounts,
-  activityDurationSec,
   onPlay,
   onStop,
-  onDurationChange,
-  onPlaybackModeChange,
-  onSkipDetectedStopsChange,
-  onShowTimedPhotosChange,
 }: RouteAnimationControlsProps) {
+  const { openSettings } = useSettingsDialog();
   if (pointCount < 2) return null;
   const isActive = isAnimationSessionActive(state);
 
@@ -104,20 +81,16 @@ export function RouteAnimationControls({
         >
           {targetDurationSec}s
         </Typography>
-        <AnimationSettingsPopover
-          targetDurationSec={targetDurationSec}
-          playbackMode={playbackMode}
-          availablePlaybackModes={availablePlaybackModes}
-          timestampCapable={timestampCapable}
-          skipDetectedStops={skipDetectedStops}
-          showTimedPhotos={showTimedPhotos}
-          timedPhotoCounts={timedPhotoCounts}
-          activityDurationSec={activityDurationSec}
-          onDurationChange={onDurationChange}
-          onPlaybackModeChange={onPlaybackModeChange}
-          onSkipDetectedStopsChange={onSkipDetectedStopsChange}
-          onShowTimedPhotosChange={onShowTimedPhotosChange}
-        />
+        <Tooltip title="Playback settings">
+          <IconButton
+            size="small"
+            aria-label="Playback settings"
+            onClick={() => openSettings("map-animation")}
+            sx={{ color: "white" }}
+          >
+            <SettingsIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
     </Box>
   );

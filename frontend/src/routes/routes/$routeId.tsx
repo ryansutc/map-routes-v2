@@ -168,7 +168,6 @@ export function RouteMapOverlays({
             photos={routeItem?.photos ?? []}
             timedPhotoPresenter={timedPhotoPresenter}
             photoMapAnchor={photoMapAnchor}
-            activityDurationSec={routeItem?.duration ?? null}
             onSessionActiveChange={onPlayingChange}
             onPhotoSessionControllerChange={onPhotoSessionControllerChange}
           />

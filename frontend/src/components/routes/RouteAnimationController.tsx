@@ -1,11 +1,10 @@
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
+import { useSettingsDialog } from "@/components/settings/SettingsDialog";
 import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 import {
   availablePlaybackModes,
   isAnimationSessionActive,
   resolvePlaybackMode,
-  type RoutePlaybackMode,
-  type TargetRouteDurationSec,
 } from "@/domain/routeAnimation";
 import { planTimedPhotoEvents } from "@/domain/timedPhotoEvents";
 import {
@@ -36,7 +35,6 @@ interface RouteAnimationControllerProps {
   photos: readonly RoutePhotoTiming[];
   timedPhotoPresenter: TimedPhotoPresenter;
   photoMapAnchor: PhotoMapAnchor | null;
-  activityDurationSec: number | null;
   /** Notified for the full active session, including composed pauses. */
   onSessionActiveChange?: (isActive: boolean) => void;
   onPhotoSessionControllerChange?: (
@@ -52,7 +50,6 @@ export function RouteAnimationController({
   photos,
   timedPhotoPresenter,
   photoMapAnchor,
-  activityDurationSec,
   onSessionActiveChange,
   onPhotoSessionControllerChange,
 }: RouteAnimationControllerProps) {
@@ -62,17 +59,10 @@ export function RouteAnimationController({
   const preferredPlaybackMode = useStore(
     (state) => state.animationPlaybackMode,
   );
-  const setTargetDurationSec = useStore(
-    (state) => state.setAnimationDurationSec,
-  );
-  const setPreferredPlaybackMode = useStore(
-    (state) => state.setAnimationPlaybackMode,
-  );
   const skipDetectedStops = useStore((state) => state.skipDetectedStops);
-  const setSkipDetectedStops = useStore((state) => state.setSkipDetectedStops);
   const showTimedPhotos = useStore((state) => state.showTimedPhotos);
-  const setShowTimedPhotos = useStore((state) => state.setShowTimedPhotos);
   const playbackMode = resolvePlaybackMode(track, preferredPlaybackMode);
+  const { registerRouteContext } = useSettingsDialog();
 
   const {
     state,
@@ -81,6 +71,7 @@ export function RouteAnimationController({
     play,
     stop,
     photoPlaybackEngine,
+    acquirePause,
   } = useRouteAnimation(map, view, track, {
     targetDurationSec,
     playbackMode,
@@ -88,6 +79,21 @@ export function RouteAnimationController({
     activityType,
   });
   const isSessionActive = isAnimationSessionActive(state);
+  const playbackModes = useMemo(() => availablePlaybackModes(track), [track]);
+  const settingsRouteContext = useMemo(
+    () => ({
+      availablePlaybackModes: playbackModes,
+      effectivePlaybackMode: playbackMode,
+      timestampCapable: track.kind === "timed",
+      acquirePause,
+    }),
+    [acquirePause, playbackMode, playbackModes, track.kind],
+  );
+
+  useEffect(
+    () => registerRouteContext(settingsRouteContext),
+    [registerRouteContext, settingsRouteContext],
+  );
   const timedPhotoEvents = useMemo(
     () =>
       track.kind === "timed"
@@ -159,36 +165,14 @@ export function RouteAnimationController({
     onSessionActiveChange?.(isSessionActive);
   }, [isSessionActive, onSessionActiveChange]);
 
-  const handleDurationChange = (duration: TargetRouteDurationSec) => {
-    setTargetDurationSec(duration);
-  };
-
-  const handlePlaybackModeChange = (mode: RoutePlaybackMode) => {
-    setPreferredPlaybackMode(mode);
-  };
-
   return (
     <RouteAnimationControls
       state={state}
       playbackProgress={playbackProgress}
       pointCount={pointCount}
       targetDurationSec={targetDurationSec}
-      playbackMode={playbackMode}
-      availablePlaybackModes={availablePlaybackModes(track)}
-      timestampCapable={track.kind === "timed"}
-      skipDetectedStops={skipDetectedStops}
-      showTimedPhotos={showTimedPhotos}
-      timedPhotoCounts={{
-        eligible: timedPhotoEvents.length,
-        total: photos.length,
-      }}
-      activityDurationSec={activityDurationSec}
       onPlay={play}
       onStop={stop}
-      onDurationChange={handleDurationChange}
-      onPlaybackModeChange={handlePlaybackModeChange}
-      onSkipDetectedStopsChange={setSkipDetectedStops}
-      onShowTimedPhotosChange={setShowTimedPhotos}
     />
   );
 }
