@@ -2,6 +2,7 @@ import type { RouteListResponseDto } from "@/types/api";
 import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
 import { formatDate } from "@/utils/datetimeHelpers";
 import { formatDistance } from "@/utils/units";
+import { formatCompactDuration } from "@/utils/duration";
 import { useStore } from "@/state/store";
 import {
   Box,
@@ -93,6 +94,11 @@ function RouteCard({ route }: { route: RouteListResponseDto }) {
           <Typography variant="body2" color="text.secondary">
             {formatDistance(route.distance, units)}
           </Typography>
+          {route.duration != null && (
+            <Typography variant="body2" color="text.secondary">
+              Duration: {formatCompactDuration(route.duration)}
+            </Typography>
+          )}
         </CardContent>
       </CardActionArea>
     </Card>

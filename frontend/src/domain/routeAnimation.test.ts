@@ -278,6 +278,52 @@ describe("route animation engine", () => {
     expect(engine.getSnapshot().playbackProgress).toBeCloseTo(0.3);
   });
 
+  it("releases a settings pause without overriding another pause reason", () => {
+    const fake = fakeClock();
+    const engine = createRouteAnimationEngine(
+      timedTrack(),
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
+      fake.clock,
+    );
+    engine.play();
+    fake.step(0);
+    fake.step(2_000);
+    const pausedAt = engine.getSnapshot().playbackProgress;
+
+    const releasePhoto = engine.acquirePause("photo");
+    const releaseSettings = engine.acquirePause("settings-dialog");
+    releaseSettings();
+
+    expect(engine.getSnapshot()).toMatchObject({
+      state: "paused",
+      playbackProgress: pausedAt,
+      activePauseReasons: ["photo"],
+    });
+    releasePhoto();
+    expect(engine.getSnapshot().state).toBe("playing");
+  });
+
+  it("does not start idle or completed playback for a settings pause", () => {
+    const fake = fakeClock();
+    const engine = createRouteAnimationEngine(
+      timedTrack(),
+      { ...defaultSettings, playbackMode: "recorded", targetDurationSec: 10 },
+      fake.clock,
+    );
+
+    const releaseIdleSettings = engine.acquirePause("settings-dialog");
+    releaseIdleSettings();
+    expect(engine.getSnapshot().state).toBe("idle");
+
+    engine.play();
+    fake.step(0);
+    fake.step(10_000);
+    expect(engine.getSnapshot().state).toBe("completed");
+    const releaseCompletedSettings = engine.acquirePause("settings-dialog");
+    releaseCompletedSettings();
+    expect(engine.getSnapshot().state).toBe("completed");
+  });
+
   it("pauses at an exact timed cursor without releasing composed reasons", () => {
     const fake = fakeClock();
     const track = requireTimedTrack(timedTrack());

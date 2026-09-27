@@ -6,12 +6,11 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  ToggleButton,
-  ToggleButtonGroup,
   Toolbar,
   Tooltip,
   Typography,
 } from "@mui/material";
+import SettingsIcon from "@mui/icons-material/Settings";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { MouseEvent, PropsWithChildren } from "react";
@@ -24,17 +23,18 @@ import {
 } from "@/auth/clientSession";
 import { useStore } from "@/state/store";
 import { GOOGLE_LOGIN_URL } from "@/utils/environment";
+import {
+  SettingsDialogProvider,
+  useSettingsDialog,
+} from "@/components/settings/SettingsDialog";
 
-const TOGGLE_BORDER_COLOR = "rgba(255,255,255,0.5)";
-
-export default function AppShell({ children }: PropsWithChildren) {
+function AppShellContent({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   // Subscribe field-by-field so unrelated application updates stay local.
   const user = useStore((s) => s.user);
   const userIsAuthenticated = useStore((s) => s.userIsAuthenticated);
-  const units = useStore((s) => s.units);
-  const setUnits = useStore((s) => s.setUnits);
+  const { openSettings } = useSettingsDialog();
 
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -94,34 +94,16 @@ export default function AppShell({ children }: PropsWithChildren) {
             map-routes
           </Typography>
 
-          <ToggleButtonGroup
-            value={units}
-            exclusive
-            onChange={(_, v) => {
-              if (v) setUnits(v);
-            }}
-            size="small"
-            sx={{ mr: 1 }}
-          >
-            <Tooltip title={units === "metric" ? "" : "Switch to metric (km)"}>
-              <ToggleButton
-                value="metric"
-                sx={{ color: "inherit", borderColor: TOGGLE_BORDER_COLOR }}
-              >
-                km
-              </ToggleButton>
-            </Tooltip>
-            <Tooltip
-              title={units === "imperial" ? "" : "Switch to imperial (mi)"}
+          <Tooltip title="Settings">
+            <IconButton
+              color="inherit"
+              aria-label="Open settings"
+              onClick={() => openSettings("general")}
+              sx={{ mr: 1 }}
             >
-              <ToggleButton
-                value="imperial"
-                sx={{ color: "inherit", borderColor: TOGGLE_BORDER_COLOR }}
-              >
-                mi
-              </ToggleButton>
-            </Tooltip>
-          </ToggleButtonGroup>
+              <SettingsIcon />
+            </IconButton>
+          </Tooltip>
 
           {userIsAuthenticated ? (
             <>
@@ -183,5 +165,13 @@ export default function AppShell({ children }: PropsWithChildren) {
         {children}
       </Box>
     </Box>
+  );
+}
+
+export default function AppShell({ children }: PropsWithChildren) {
+  return (
+    <SettingsDialogProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </SettingsDialogProvider>
   );
 }

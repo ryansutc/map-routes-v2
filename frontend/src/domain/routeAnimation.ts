@@ -19,7 +19,8 @@ export type AnimationLifecycleState =
 export type AnimationPauseReason =
   | "document-hidden"
   | "photo"
-  | "manual-gallery";
+  | "manual-gallery"
+  | "settings-dialog";
 
 export type AnimationPosition = {
   coordinate: TrackCoordinate;
