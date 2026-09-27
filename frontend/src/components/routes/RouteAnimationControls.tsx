@@ -57,7 +57,7 @@ export function RouteAnimationControls({
         px: 2,
         py: 0.5,
         zIndex: 10,
-        minWidth: 200,
+        minWidth: 300,
       }}
     >
       <Tooltip title={isActive ? "Stop" : "Replay route"}>
