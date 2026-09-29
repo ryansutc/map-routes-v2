@@ -10,6 +10,14 @@ from .models import Photo, Route
 from .photo_timestamps import timezone_for_photo
 
 
+def validate_route_title(value: str) -> str:
+    """Trim a route title and reject empty or whitespace-only values."""
+    value = value.strip()
+    if not value:
+        raise serializers.ValidationError("This field may not be blank.")
+    return value
+
+
 class PhotoSerializer(serializers.ModelSerializer):
     """Serializer for the Photo model."""
 
@@ -129,6 +137,11 @@ class RouteCreateSerializer(serializers.ModelSerializer):
             "route_link",
             "is_public",
         ]
+        extra_kwargs = {"title": {"allow_blank": False, "required": True}}
+
+    def validate_title(self, value: str) -> str:
+        """Store a non-empty title without surrounding whitespace."""
+        return validate_route_title(value)
 
 
 class RouteUpdateSerializer(serializers.ModelSerializer):
@@ -157,10 +170,7 @@ class RouteUpdateSerializer(serializers.ModelSerializer):
 
     def validate_title(self, value: str) -> str:
         """Require a non-empty title after trimming whitespace."""
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("This field may not be blank.")
-        return value
+        return validate_route_title(value)
 
     def validate_notes(self, value: str) -> str:
         """Store notes without surrounding whitespace."""

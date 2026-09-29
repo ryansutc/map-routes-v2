@@ -20,6 +20,7 @@ import {
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { ActivityType, WizardState } from "./CreateRouteWizard";
+import { getRouteTitleError, normalizeRouteTitle } from "./routeTitle";
 
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 const ACTIVITY_TYPES: ActivityType[] = [
@@ -76,15 +77,16 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
     disabled: parseGpx.isPending,
   });
 
+  const titleError = getRouteTitleError(title);
   const canAdvance =
-    parseGpx.isSuccess && title.trim() !== "" && activityType !== "";
+    parseGpx.isSuccess && titleError === null && activityType !== "";
 
   const handleNext = () => {
     setSubmitted(true);
     if (!canAdvance) return;
     onNext({
       parsed: parseGpx.data!,
-      title: title.trim(),
+      title: normalizeRouteTitle(title),
       activityType,
       isPublic,
       notes,
@@ -219,8 +221,8 @@ export default function RouteMetadataStep({ wizardState, onNext }: Props) {
         required
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        error={submitted && title.trim() === ""}
-        helperText={submitted && title.trim() === "" ? "Title is required" : ""}
+        error={submitted && titleError !== null}
+        helperText={submitted ? (titleError ?? "") : ""}
         fullWidth
         size="small"
       />

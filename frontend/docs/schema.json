@@ -892,6 +892,7 @@
                     "id",
                     "owner",
                     "photos",
+                    "title",
                     "updated_at"
                 ]
             },
@@ -972,7 +973,8 @@
                 },
                 "required": [
                     "distance",
-                    "id"
+                    "id",
+                    "title"
                 ]
             },
             "RouteCreateRequest": {
@@ -981,6 +983,7 @@
                 "properties": {
                     "title": {
                         "type": "string",
+                        "minLength": 1,
                         "maxLength": 255
                     },
                     "activity_date": {
@@ -1047,7 +1050,8 @@
                     }
                 },
                 "required": [
-                    "distance"
+                    "distance",
+                    "title"
                 ]
             },
             "RouteList": {
@@ -1150,6 +1154,7 @@
                     "id",
                     "owner",
                     "photos",
+                    "title",
                     "updated_at"
                 ]
             }

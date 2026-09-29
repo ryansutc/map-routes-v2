@@ -74,6 +74,27 @@ class EditingApiTests(TestCase):
         self.assertGreater(self.route.updated_at, old_updated_at)
         self.assertIn("updated_at", response.data)
 
+    def test_route_patch_rejects_empty_and_whitespace_only_titles(self):
+        for title in ("", "   \t\n"):
+            with self.subTest(title=repr(title)):
+                response = self.client.patch(
+                    f"/api/route/{self.route.pk}/", {"title": title}, format="json"
+                )
+
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("title", response.data)
+
+        self.route.refresh_from_db()
+        self.assertEqual(self.route.title, "Original")
+
+    def test_route_patch_enforces_title_max_length(self):
+        response = self.client.patch(
+            f"/api/route/{self.route.pk}/", {"title": "x" * 256}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("title", response.data)
+
     def test_route_patch_rejects_immutable_and_unknown_fields(self):
         immutable_values = {
             "activity_date": "2024-01-01T00:00:00Z",

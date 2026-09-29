@@ -116,7 +116,7 @@ export default function RouteTableView({
                       underline="hover"
                       sx={{ textAlign: "left", font: "inherit" }}
                     >
-                      {route.title ?? "Untitled route"}
+                      {route.title}
                     </MuiLink>
                   </TableCell>
                   <TableCell>{route.activity_type}</TableCell>

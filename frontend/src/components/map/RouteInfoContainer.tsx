@@ -58,7 +58,7 @@ export default function RouteInfoContainer({
           gutterBottom
           sx={{ flex: 1, mr: 1 }}
         >
-          {routeItem.title ?? "Untitled route"}
+          {routeItem.title}
         </Typography>
         {isOwner && (
           <Tooltip title="Edit route">

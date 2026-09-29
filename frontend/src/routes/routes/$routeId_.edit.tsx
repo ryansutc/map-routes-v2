@@ -1,7 +1,14 @@
 import { zodiosAPI } from "@/api/axiosClient";
 import { DeleteRouteSection } from "@/components/routes/DeleteRouteSection";
-import { ACTIVITY_TYPES, type ActivityType } from "@/components/routes/routeFormOptions";
-import { useRoute, routeQueryKey } from "@/hooks/useRoute";
+import {
+  ACTIVITY_TYPES,
+  type ActivityType,
+} from "@/components/routes/routeFormOptions";
+import {
+  getRouteTitleError,
+  normalizeRouteTitle,
+} from "@/components/routes/routeTitle";
+import { routeQueryKey, useRoute } from "@/hooks/useRoute";
 import { useToast } from "@/hooks/useToast";
 import { useStore } from "@/state/store";
 import { formatDate } from "@/utils/datetimeHelpers";
@@ -24,7 +31,11 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useBlocker,
+  useNavigate,
+} from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export const Route = createFileRoute("/routes/$routeId_/edit")({
@@ -72,7 +83,7 @@ function RouteInfoEditor() {
       // Hydrate the editor once when the asynchronous route query resolves.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
-        title: route.title ?? "",
+        title: route.title,
         activityType: (route.activity_type ?? "") as ActivityType | "",
         notes: route.notes ?? "",
         isPublic: route.is_public ?? false,
@@ -81,17 +92,22 @@ function RouteInfoEditor() {
   }, [form, route]);
 
   useEffect(() => {
-    if (!route || !user || route.owner === user || redirectedRef.current) return;
+    if (!route || !user || route.owner === user || redirectedRef.current)
+      return;
     redirectedRef.current = true;
     enqueueError("Only the route owner can edit this route.");
-    void navigate({ to: "/routes/$routeId", params: { routeId }, replace: true });
+    void navigate({
+      to: "/routes/$routeId",
+      params: { routeId },
+      replace: true,
+    });
   }, [enqueueError, navigate, route, routeId, user]);
 
   const initial = useMemo<FormState | null>(
     () =>
       route
         ? {
-            title: route.title ?? "",
+            title: route.title,
             activityType: (route.activity_type ?? "") as ActivityType | "",
             notes: route.notes ?? "",
             isPublic: route.is_public ?? false,
@@ -99,7 +115,9 @@ function RouteInfoEditor() {
         : null,
     [route],
   );
-  const isDirty = Boolean(form && initial && JSON.stringify(form) !== JSON.stringify(initial));
+  const isDirty = Boolean(
+    form && initial && JSON.stringify(form) !== JSON.stringify(initial),
+  );
 
   useBlocker({
     shouldBlockFn: () => {
@@ -114,7 +132,7 @@ function RouteInfoEditor() {
     mutationFn: (values: FormState) =>
       zodiosAPI.route_partial_update(
         {
-          title: values.title.trim(),
+          title: normalizeRouteTitle(values.title),
           activity_type: values.activityType as ActivityType,
           notes: values.notes.trim(),
           is_public: values.isPublic,
@@ -126,24 +144,30 @@ function RouteInfoEditor() {
       await queryClient.invalidateQueries({ queryKey: routeQueryKey(routeId) });
       await queryClient.invalidateQueries({ queryKey: ["routes"] });
       enqueueSnackbar("Route updated", "success");
-      await navigate({ to: "/routes/$routeId", params: { routeId }, replace: true });
+      await navigate({
+        to: "/routes/$routeId",
+        params: { routeId },
+        replace: true,
+      });
     },
   });
 
-  const titleValid = Boolean(form?.title.trim()) && (form?.title.trim().length ?? 0) <= 255;
+  const titleError = form ? getRouteTitleError(form.title) : null;
   const activityValid = Boolean(
-    form?.activityType && ACTIVITY_TYPES.includes(form.activityType as ActivityType),
+    form?.activityType &&
+    ACTIVITY_TYPES.includes(form.activityType as ActivityType),
   );
 
   const handleCancel = () => {
-    if (isDirty && !window.confirm("Discard your unsaved route changes?")) return;
+    if (isDirty && !window.confirm("Discard your unsaved route changes?"))
+      return;
     allowNavigationRef.current = true;
     void navigate({ to: "/routes/$routeId", params: { routeId } });
   };
 
   const handleSave = () => {
     setSubmitted(true);
-    if (!form || !titleValid || !activityValid || !isDirty) return;
+    if (!form || titleError !== null || !activityValid || !isDirty) return;
     updateRoute.mutate(form);
   };
 
@@ -156,14 +180,20 @@ function RouteInfoEditor() {
   }
 
   if (error) {
-    return <Alert severity="error">Could not load this route: {error.message}</Alert>;
+    return (
+      <Alert severity="error">Could not load this route: {error.message}</Alert>
+    );
   }
 
   if (!route || route.owner !== user) return null;
 
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", p: { xs: 2, sm: 3 } }}>
-      <Button startIcon={<ArrowBackIcon />} onClick={handleCancel} sx={{ mb: 2 }}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={handleCancel}
+        sx={{ mb: 2 }}
+      >
         Back to route
       </Button>
       <Typography variant="h5" component="h1" gutterBottom>
@@ -176,15 +206,8 @@ function RouteInfoEditor() {
           required
           value={form.title}
           onChange={(event) => setForm({ ...form, title: event.target.value })}
-          error={submitted && !titleValid}
-          helperText={
-            submitted && !form.title.trim()
-              ? "Title is required"
-              : form.title.length > 255
-                ? "Title must be 255 characters or fewer"
-                : ""
-          }
-          slotProps={{ htmlInput: { maxLength: 255 } }}
+          error={submitted && titleError !== null}
+          helperText={submitted ? (titleError ?? "") : ""}
         />
 
         <FormControl error={submitted && !activityValid}>
@@ -194,7 +217,10 @@ function RouteInfoEditor() {
             label="Activity type *"
             value={form.activityType}
             onChange={(event) =>
-              setForm({ ...form, activityType: event.target.value as ActivityType })
+              setForm({
+                ...form,
+                activityType: event.target.value as ActivityType,
+              })
             }
           >
             {ACTIVITY_TYPES.map((activityType) => (
@@ -209,7 +235,9 @@ function RouteInfoEditor() {
           control={
             <Switch
               checked={form.isPublic}
-              onChange={(event) => setForm({ ...form, isPublic: event.target.checked })}
+              onChange={(event) =>
+                setForm({ ...form, isPublic: event.target.checked })
+              }
             />
           }
           label="Public route"
@@ -228,7 +256,8 @@ function RouteInfoEditor() {
             GPX-derived information
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            This information comes from the original GPX file and cannot be changed.
+            This information comes from the original GPX file and cannot be
+            changed.
           </Typography>
           <Box
             sx={{
@@ -247,12 +276,18 @@ function RouteInfoEditor() {
               Duration: {formatDuration(route.duration)}
             </Typography>
             <Typography variant="body2">
-              Average pace: {formatPace(route.avg_pace == null ? null : Number(route.avg_pace), units)}
+              Average pace:{" "}
+              {formatPace(
+                route.avg_pace == null ? null : Number(route.avg_pace),
+                units,
+              )}
             </Typography>
             <Typography variant="body2">
               Elevation gain:{" "}
               {formatElevation(
-                route.elevation_gain == null ? null : Number(route.elevation_gain),
+                route.elevation_gain == null
+                  ? null
+                  : Number(route.elevation_gain),
                 units,
               )}
             </Typography>
@@ -261,7 +296,8 @@ function RouteInfoEditor() {
 
         {updateRoute.isError && (
           <Alert severity="error">
-            {(updateRoute.error as Error).message || "Could not update the route."}
+            {(updateRoute.error as Error).message ||
+              "Could not update the route."}
           </Alert>
         )}
 
@@ -281,7 +317,7 @@ function RouteInfoEditor() {
 
       <DeleteRouteSection
         routeId={routeId}
-        routeTitle={route.title ?? "Untitled route"}
+        routeTitle={route.title}
         isOwner={route.owner === user}
         onBeforeNavigate={() => {
           allowNavigationRef.current = true;
