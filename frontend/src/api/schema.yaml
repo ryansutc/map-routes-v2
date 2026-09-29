@@ -595,6 +595,7 @@ components:
       - id
       - owner
       - photos
+      - title
       - updated_at
     RouteCreate:
       type: object
@@ -654,12 +655,14 @@ components:
       required:
       - distance
       - id
+      - title
     RouteCreateRequest:
       type: object
       description: Serializer for creating Route instances from parsed GPX data.
       properties:
         title:
           type: string
+          minLength: 1
           maxLength: 255
         activity_date:
           type: string
@@ -708,6 +711,7 @@ components:
           type: boolean
       required:
       - distance
+      - title
     RouteList:
       type: object
       description: Serializer for route collections without the canonical GeoJSON
@@ -785,6 +789,7 @@ components:
       - id
       - owner
       - photos
+      - title
       - updated_at
   securitySchemes:
     jwtAuth:
