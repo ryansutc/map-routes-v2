@@ -4,7 +4,9 @@ import { formatDistance, formatElevation } from "@/utils/units";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Box,
+  Fade,
   Unstable_TrapFocus as FocusTrap,
+  Grow,
   IconButton,
   Paper,
   Stack,
@@ -14,6 +16,13 @@ import { useEffect } from "react";
 
 const TITLE_ID = "route-completion-title";
 const MISSING_METRIC = "—";
+const METRIC_REVEAL_DELAY_MS = 800;
+const METRIC_REVEAL_DURATION_MS = 600;
+const METRIC_REVEAL_GAP_MS = 200;
+
+function getMetricRevealDelay(index: number): string {
+  return `${METRIC_REVEAL_DELAY_MS + index * (METRIC_REVEAL_DURATION_MS + METRIC_REVEAL_GAP_MS)}ms`;
+}
 
 type RouteCompletionDialogProps = {
   open: boolean;
@@ -126,7 +135,7 @@ export function RouteCompletionDialog({
             </Typography>
           )}
           <Stack direction="row" sx={{ mt: 3 }}>
-            {metrics.map((metric) => (
+            {metrics.map((metric, index) => (
               <Box
                 key={metric.label}
                 sx={{ flex: 1, minWidth: 0, textAlign: "center", px: 0.5 }}
@@ -134,9 +143,22 @@ export function RouteCompletionDialog({
                 <Typography variant="caption" color="text.secondary">
                   {metric.label}
                 </Typography>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  {metric.value}
-                </Typography>
+
+                <Grow
+                  in={open}
+                  timeout={METRIC_REVEAL_DURATION_MS / 2}
+                  style={{ transitionDelay: getMetricRevealDelay(index) }}
+                >
+                  <Fade
+                    in={open}
+                    timeout={METRIC_REVEAL_DURATION_MS}
+                    style={{ transitionDelay: getMetricRevealDelay(index) }}
+                  >
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      {metric.value}
+                    </Typography>
+                  </Fade>
+                </Grow>
               </Box>
             ))}
           </Stack>
