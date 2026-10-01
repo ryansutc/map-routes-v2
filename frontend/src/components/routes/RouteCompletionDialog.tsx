@@ -4,11 +4,11 @@ import { formatDistance, formatElevation } from "@/utils/units";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Box,
+  Unstable_TrapFocus as FocusTrap,
   IconButton,
   Paper,
   Stack,
   Typography,
-  Unstable_TrapFocus as FocusTrap,
 } from "@mui/material";
 import { useEffect } from "react";
 
@@ -118,7 +118,7 @@ export function RouteCompletionDialog({
             <CloseIcon />
           </IconButton>
           <Typography id={TITLE_ID} variant="h5" component="h2" sx={{ pr: 5 }}>
-            Route complete
+            Route complete! 😊
           </Typography>
           {title && (
             <Typography color="text.secondary" sx={{ mt: 0.5 }}>
