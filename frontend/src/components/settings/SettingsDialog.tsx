@@ -52,10 +52,15 @@ function SectionPanel({ children }: { children: ReactNode }) {
 }
 
 const sectionHighlight = keyframes`
-  from { background-color: rgba(33, 150, 243, 0.18); }
+  from { background-color: rgba(160, 160, 160, 0.18); }
   to { background-color: transparent; }
 `;
-
+/**
+ * The app's main Settings dialog component
+ *
+ * @param param0
+ * @returns
+ */
 function SettingsDialog({
   open,
   initialSection,
