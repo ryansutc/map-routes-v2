@@ -14,7 +14,8 @@
     "schema-json-to-ts": "json2ts -i ./docs/schema.json -o ./src/types/django_api_types.ts",
     "schema": "pnpm run schema-fetch && pnpm run schema-to-zod",
     "test": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "deploy": "pnpm run build && wrangler deploy"
   },
   "dependencies": {
     "@arcgis/core": "^4.33.11",
