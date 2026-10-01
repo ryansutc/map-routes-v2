@@ -135,6 +135,7 @@ export function RouteMapOverlays({
             getView={getView}
             layers={layers}
             showZoomToExtent={!isPreview}
+            disabled={isAnimating}
           />
           <PhotoController
             getMap={getMap}

@@ -30,6 +30,25 @@ export function routeTrackExtent(track: RouteTrack): Extent | null {
   });
 }
 
+/** Fits the canonical route before playback begins. */
+export async function showRouteStartOverview(
+  view: MapView | SceneView | null,
+  track: RouteTrack,
+  reducedMotion: boolean,
+): Promise<void> {
+  const extent = routeTrackExtent(track);
+  if (!view || !extent) return;
+
+  const orientation =
+    view.type === "3d"
+      ? { heading: view.camera.heading, tilt: view.camera.tilt }
+      : { rotation: view.rotation };
+  await view.goTo(
+    { target: extent, ...orientation },
+    { animate: !reducedMotion, duration: OVERVIEW_DURATION_MS },
+  );
+}
+
 /** Fits the canonical route and adds one zoom level of context. */
 export async function showCompletedRouteOverview(
   view: MapView | SceneView | null,

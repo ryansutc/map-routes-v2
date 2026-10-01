@@ -1,7 +1,11 @@
 import { useSettingsDialog } from "@/components/settings/SettingsDialog";
 import {
   ANIMATION_CONTROLS_BOTTOM_PX,
+  ANIMATION_CONTROLS_COLLISION_BREAKPOINT_PX,
   ANIMATION_CONTROLS_HEIGHT_PX,
+  ANIMATION_CONTROLS_MAX_WIDTH_PX,
+  ANIMATION_CONTROLS_MIN_LEFT_PX,
+  BASEMAP_CONTROL_LEFT_PX,
 } from "@/components/map/mapOverlayLayout";
 import {
   isAnimationSessionActive,
@@ -62,7 +66,14 @@ export function RouteAnimationControls({
         px: 2,
         py: 0.5,
         zIndex: 10,
-        minWidth: 300,
+        width: ANIMATION_CONTROLS_MAX_WIDTH_PX,
+        maxWidth: ANIMATION_CONTROLS_MAX_WIDTH_PX,
+        [`@media (max-width: ${ANIMATION_CONTROLS_COLLISION_BREAKPOINT_PX}px)`]: {
+          left: ANIMATION_CONTROLS_MIN_LEFT_PX,
+          right: BASEMAP_CONTROL_LEFT_PX,
+          width: "auto",
+          transform: "none",
+        },
       }}
     >
       <Tooltip title={isActive ? "Stop" : "Replay route"}>

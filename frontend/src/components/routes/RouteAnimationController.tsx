@@ -1,4 +1,7 @@
-import { showCompletedRouteOverview } from "@/components/map/routeCompletionCamera";
+import {
+  showCompletedRouteOverview,
+  showRouteStartOverview,
+} from "@/components/map/routeCompletionCamera";
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
 import { RouteCompletionDialog } from "@/components/routes/RouteCompletionDialog";
 import { useSettingsDialog } from "@/components/settings/SettingsDialog";
@@ -81,6 +84,7 @@ export function RouteAnimationController({
   const replayButtonRef = useRef<HTMLButtonElement>(null);
   const completionStartedRef = useRef(false);
   const completionTransitionIdRef = useRef(0);
+  const playbackStartPendingRef = useRef(false);
 
   const {
     state,
@@ -233,13 +237,24 @@ export function RouteAnimationController({
     [],
   );
 
-  const handlePlay = useCallback(() => {
-    completionStartedRef.current = false;
+  const handlePlay = useCallback(async () => {
+    if (playbackStartPendingRef.current) return;
+    playbackStartPendingRef.current = true;
     completionTransitionIdRef.current += 1;
-    setCompletionDismissed(false);
     setCompletionPhase(null);
+    const reducedMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    try {
+      await showRouteStartOverview(view, track, reducedMotion);
+    } catch {
+      // Camera navigation is best-effort; playback should still start when
+      // ArcGIS rejects or cancels the transition.
+    }
+    playbackStartPendingRef.current = false;
+    completionStartedRef.current = false;
+    setCompletionDismissed(false);
     play();
-  }, [play]);
+  }, [play, track, view]);
 
   const handleCompletionClose = useCallback(() => {
     completionTransitionIdRef.current += 1;

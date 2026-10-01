@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   play: vi.fn(),
   stop: vi.fn(),
   showOverview: vi.fn(),
+  showStartOverview: vi.fn(),
 }));
 
 vi.mock("@/hooks/useRouteAnimation", () => ({
@@ -27,6 +28,7 @@ vi.mock("@/hooks/useRouteAnimation", () => ({
 
 vi.mock("@/components/map/routeCompletionCamera", () => ({
   showCompletedRouteOverview: (...args: unknown[]) => mocks.showOverview(...args),
+  showRouteStartOverview: (...args: unknown[]) => mocks.showStartOverview(...args),
 }));
 
 vi.mock("@/components/settings/SettingsDialog", () => ({
@@ -86,6 +88,7 @@ describe("RouteAnimationController completion presentation", () => {
     mocks.play.mockReset();
     mocks.stop.mockReset();
     mocks.showOverview.mockReset().mockResolvedValue(undefined);
+    mocks.showStartOverview.mockReset().mockResolvedValue(undefined);
     vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false })));
   });
 
@@ -124,7 +127,9 @@ describe("RouteAnimationController completion presentation", () => {
       }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(mocks.showOverview).toHaveBeenCalledOnce();
-    expect(await screen.findByRole("dialog", { name: "Route complete" })).toBeTruthy();
+    expect(
+      await screen.findByRole("dialog", { name: /Route complete/ }),
+    ).toBeTruthy();
     expect(onSessionActiveChange).toHaveBeenLastCalledWith(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Close route summary" }));
@@ -136,9 +141,44 @@ describe("RouteAnimationController completion presentation", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
-    expect(mocks.play).toHaveBeenCalledOnce();
-    expect(await screen.findByRole("dialog", { name: "Route complete" })).toBeTruthy();
+    await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
+    expect(mocks.showStartOverview).toHaveBeenCalledWith(
+      baseProps.getView(),
+      track,
+      false,
+    );
+    expect(
+      await screen.findByRole("dialog", { name: /Route complete/ }),
+    ).toBeTruthy();
     expect(mocks.showOverview).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits for the route extent before starting playback", async () => {
+    let finishCameraMove: () => void = () => undefined;
+    mocks.showStartOverview.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishCameraMove = resolve;
+      }),
+    );
+    render(<RouteAnimationController {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
+    fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
+
+    expect(mocks.showStartOverview).toHaveBeenCalledOnce();
+    expect(mocks.play).not.toHaveBeenCalled();
+
+    finishCameraMove();
+    await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
+  });
+
+  it("starts playback when the route extent navigation fails", async () => {
+    mocks.showStartOverview.mockRejectedValue(new Error("navigation cancelled"));
+    render(<RouteAnimationController {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
+
+    await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
   });
 
   it("does not present completion after Stop returns the session to idle", () => {
@@ -149,7 +189,7 @@ describe("RouteAnimationController completion presentation", () => {
     rerender(<RouteAnimationController {...baseProps} />);
 
     expect(mocks.showOverview).not.toHaveBeenCalled();
-    expect(screen.queryByRole("dialog", { name: "Route complete" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: /Route complete/ })).toBeNull();
   });
 
   it("still opens the summary and unlocks when camera navigation fails", async () => {
@@ -169,7 +209,9 @@ describe("RouteAnimationController completion presentation", () => {
       />,
     );
 
-    expect(await screen.findByRole("dialog", { name: "Route complete" })).toBeTruthy();
+    expect(
+      await screen.findByRole("dialog", { name: /Route complete/ }),
+    ).toBeTruthy();
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() =>
       expect(onSessionActiveChange).toHaveBeenLastCalledWith(false),

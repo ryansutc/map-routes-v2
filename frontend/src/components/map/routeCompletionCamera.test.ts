@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   routeTrackExtent,
   showCompletedRouteOverview,
+  showRouteStartOverview,
 } from "./routeCompletionCamera";
 
 const track = buildRouteTrack({
@@ -73,6 +74,31 @@ describe("completed route camera overview", () => {
       2,
       { zoom: 8, heading: 42, tilt: 63 },
       expect.objectContaining({ animate: true }),
+    );
+  });
+});
+
+describe("route start camera overview", () => {
+  it("fits the route while preserving orientation", async () => {
+    const view = {
+      type: "2d",
+      rotation: 27,
+      goTo: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await showRouteStartOverview(view as never, track, false);
+
+    expect(view.goTo).toHaveBeenCalledExactlyOnceWith(
+      {
+        target: expect.objectContaining({
+          xmin: -123,
+          xmax: -122.5,
+          ymin: 49,
+          ymax: 49.5,
+        }),
+        rotation: 27,
+      },
+      { animate: true, duration: 650 },
     );
   });
 });
