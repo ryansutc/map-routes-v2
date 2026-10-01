@@ -1,4 +1,9 @@
+import {
+  showCompletedRouteOverview,
+  showRouteStartOverview,
+} from "@/components/map/routeCompletionCamera";
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
+import { RouteCompletionDialog } from "@/components/routes/RouteCompletionDialog";
 import { useSettingsDialog } from "@/components/settings/SettingsDialog";
 import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 import {
@@ -18,7 +23,7 @@ import { useStore } from "@/state/store";
 import type Map from "@arcgis/core/Map";
 import type MapView from "@arcgis/core/views/MapView";
 import type SceneView from "@arcgis/core/views/SceneView";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type RoutePhotoTiming = {
   id: number;
@@ -27,11 +32,17 @@ type RoutePhotoTiming = {
   longitude?: number | null;
 };
 
+type CompletionPhase = "transitioning" | "summary";
+
 interface RouteAnimationControllerProps {
   getMap: () => Map | null;
   getView: () => MapView | SceneView | null;
   track: RouteTrack;
   activityType?: string;
+  routeTitle?: string | null;
+  distance?: number | null;
+  elevationGain?: number | string | null;
+  duration?: number | null;
   photos: readonly RoutePhotoTiming[];
   timedPhotoPresenter: TimedPhotoPresenter;
   photoMapAnchor: PhotoMapAnchor | null;
@@ -47,6 +58,10 @@ export function RouteAnimationController({
   getView,
   track,
   activityType,
+  routeTitle,
+  distance,
+  elevationGain,
+  duration,
   photos,
   timedPhotoPresenter,
   photoMapAnchor,
@@ -63,6 +78,13 @@ export function RouteAnimationController({
   const showTimedPhotos = useStore((state) => state.showTimedPhotos);
   const playbackMode = resolvePlaybackMode(track, preferredPlaybackMode);
   const { registerRouteContext } = useSettingsDialog();
+  const [completionPhase, setCompletionPhase] =
+    useState<CompletionPhase | null>(null);
+  const [completionDismissed, setCompletionDismissed] = useState(false);
+  const replayButtonRef = useRef<HTMLButtonElement>(null);
+  const completionStartedRef = useRef(false);
+  const completionTransitionIdRef = useRef(0);
+  const playbackStartPendingRef = useRef(false);
 
   const {
     state,
@@ -79,15 +101,24 @@ export function RouteAnimationController({
     activityType,
   });
   const isSessionActive = isAnimationSessionActive(state);
+  const completionPresentationActive =
+    completionPhase !== null || (state === "completed" && !completionDismissed);
   const playbackModes = useMemo(() => availablePlaybackModes(track), [track]);
   const settingsRouteContext = useMemo(
     () => ({
       availablePlaybackModes: playbackModes,
       effectivePlaybackMode: playbackMode,
       timestampCapable: track.kind === "timed",
+      animationSettingsDisabled: completionPresentationActive,
       acquirePause,
     }),
-    [acquirePause, playbackMode, playbackModes, track.kind],
+    [
+      acquirePause,
+      completionPresentationActive,
+      playbackMode,
+      playbackModes,
+      track.kind,
+    ],
   );
 
   useEffect(
@@ -162,17 +193,96 @@ export function RouteAnimationController({
   ]);
 
   useEffect(() => {
-    onSessionActiveChange?.(isSessionActive);
-  }, [isSessionActive, onSessionActiveChange]);
+    onSessionActiveChange?.(
+      isSessionActive || completionPresentationActive,
+    );
+  }, [completionPresentationActive, isSessionActive, onSessionActiveChange]);
+
+  useEffect(() => {
+    if (state !== "completed") {
+      if (completionStartedRef.current) {
+        completionStartedRef.current = false;
+        completionTransitionIdRef.current += 1;
+      }
+      return;
+    }
+    // handle animation complete transition
+    if (completionDismissed || completionStartedRef.current) return;
+    completionStartedRef.current = true;
+    const transitionId = ++completionTransitionIdRef.current;
+    setCompletionPhase("transitioning");
+    photoCoordinatorRef.current?.dismissAutomaticPhoto();
+    const reducedMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches ?? false;
+
+    const showCompletionSummary = async () => {
+      try {
+        await showCompletedRouteOverview(view, track, reducedMotion);
+      } catch {
+        // Camera navigation is best-effort; the summary still provides a
+        // predictable end to the session when ArcGIS rejects or cancels it.
+      }
+      if (completionTransitionIdRef.current === transitionId) {
+        setCompletionPhase("summary");
+      }
+    };
+    void showCompletionSummary();
+  }, [completionDismissed, state, track, view]);
+
+  useEffect(
+    () => () => {
+      completionTransitionIdRef.current += 1;
+    },
+    [],
+  );
+
+  const handlePlay = useCallback(async () => {
+    if (playbackStartPendingRef.current) return;
+    playbackStartPendingRef.current = true;
+    completionTransitionIdRef.current += 1;
+    setCompletionPhase(null);
+    const reducedMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    try {
+      await showRouteStartOverview(view, track, reducedMotion);
+    } catch {
+      // Camera navigation is best-effort; playback should still start when
+      // ArcGIS rejects or cancels the transition.
+    }
+    playbackStartPendingRef.current = false;
+    completionStartedRef.current = false;
+    setCompletionDismissed(false);
+    play();
+  }, [play, track, view]);
+
+  const handleCompletionClose = useCallback(() => {
+    completionTransitionIdRef.current += 1;
+    setCompletionDismissed(true);
+    setCompletionPhase(null);
+    requestAnimationFrame(() => replayButtonRef.current?.focus());
+  }, []);
 
   return (
-    <RouteAnimationControls
-      state={state}
-      playbackProgress={playbackProgress}
-      pointCount={pointCount}
-      targetDurationSec={targetDurationSec}
-      onPlay={play}
-      onStop={stop}
-    />
+    <>
+      <RouteAnimationControls
+        state={state}
+        playbackProgress={playbackProgress}
+        pointCount={pointCount}
+        targetDurationSec={targetDurationSec}
+        onPlay={handlePlay}
+        onStop={stop}
+        completionPresentationActive={completionPresentationActive}
+        replayButtonRef={replayButtonRef}
+      />
+      <RouteCompletionDialog
+        open={completionPhase === "summary"}
+        title={routeTitle}
+        distance={distance}
+        elevationGain={elevationGain}
+        duration={duration}
+        onClose={handleCompletionClose}
+      />
+    </>
   );
 }

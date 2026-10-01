@@ -4,7 +4,14 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/map/LayerController", () => ({ default: () => null }));
+const mocks = vi.hoisted(() => ({ layerController: vi.fn() }));
+
+vi.mock("@/components/map/LayerController", () => ({
+  default: (props: unknown) => {
+    mocks.layerController(props);
+    return null;
+  },
+}));
 vi.mock("@/components/map/PhotoController", () => ({ default: () => null }));
 vi.mock("@/components/map/Toggle3d", () => ({ default: () => null }));
 vi.mock("@/components/routes/RouteAnimationController", () => ({
@@ -48,6 +55,9 @@ describe("route detail basemap control", () => {
     expect((button as HTMLButtonElement).disabled).toBe(false);
 
     rerender(<RouteMapOverlays {...baseProps} isAnimating />);
+    expect(mocks.layerController).toHaveBeenLastCalledWith(
+      expect.objectContaining({ disabled: true }),
+    );
     expect(
       (screen.getByRole("button", {
         name: "Choose basemap",

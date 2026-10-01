@@ -1,4 +1,5 @@
 import { useStore } from "@/state/store";
+import { DISABLED_MAP_CONTROL_OPACITY } from "@/components/map/mapControlAppearance";
 import { ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
 
 interface Toggle3dProps {
@@ -35,7 +36,7 @@ export default function Toggle3d({ disabled = false }: Toggle3dProps) {
             px: 1.5,
             py: 0.75,
           },
-          opacity: disabled ? 0.7 : 1,
+          opacity: disabled ? DISABLED_MAP_CONTROL_OPACITY : 1,
         }}
       >
         <ToggleButton value="2d" aria-label="2D map view">

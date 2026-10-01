@@ -1,4 +1,9 @@
 import { basemap24 } from "@esri/calcite-ui-icons/js/basemap24";
+import { DISABLED_MAP_CONTROL_OPACITY } from "@/components/map/mapControlAppearance";
+import {
+  BASEMAP_CONTROL_LEFT_PX,
+  BASEMAP_CONTROL_SIZE_PX,
+} from "@/components/map/mapOverlayLayout";
 import CheckIcon from "@mui/icons-material/Check";
 import {
   Box,
@@ -59,13 +64,14 @@ export default function BasemapSelector({
     <Box
       sx={{
         position: "absolute",
-        left: 16,
+        left: BASEMAP_CONTROL_LEFT_PX,
         bottom: 24,
         zIndex: 1000,
-        width: 44,
-        height: 44,
+        width: BASEMAP_CONTROL_SIZE_PX,
+        height: BASEMAP_CONTROL_SIZE_PX,
         backgroundColor: "white",
         borderRadius: "50%",
+        opacity: disabled ? DISABLED_MAP_CONTROL_OPACITY : 1,
       }}
     >
       <Tooltip title="Choose basemap" placement="top">
@@ -77,8 +83,8 @@ export default function BasemapSelector({
             disabled={disabled}
             onClick={handleOpen}
             sx={{
-              width: 44,
-              height: 44,
+              width: BASEMAP_CONTROL_SIZE_PX,
+              height: BASEMAP_CONTROL_SIZE_PX,
               bgcolor: "background.paper",
               boxShadow: 2,
               "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },

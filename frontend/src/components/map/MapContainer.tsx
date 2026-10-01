@@ -1,4 +1,5 @@
 import { useStore } from "@/state/store";
+import { setMapWidgetDisabledAppearance } from "@/components/map/mapControlAppearance";
 import esriConfig from "@arcgis/core/config";
 import { isAbortError } from "@arcgis/core/core/promiseUtils";
 import ElevationLayer from "@arcgis/core/layers/ElevationLayer";
@@ -57,6 +58,13 @@ const MapContainer = (props: MapContainerProps) => {
     if (zoom && "visible" in zoom) zoom.visible = visible;
   };
 
+  const setZoomDisabledAppearance = (
+    view: MapView | SceneView,
+    disabled: boolean,
+  ) => {
+    setMapWidgetDisabledAppearance(view.ui.find("zoom"), disabled);
+  };
+
   useEffect(() => {
     const mapSurface = mapDiv.current;
     if (!mapSurface) return;
@@ -108,6 +116,7 @@ const MapContainer = (props: MapContainerProps) => {
         createdView = newView;
         newView.ui.move("zoom", "top-right");
         setZoomVisibility(newView, showZoom);
+        setZoomDisabledAppearance(newView, interactionLocked);
         viewRef.current = newView;
 
         if (onClick) {
@@ -162,6 +171,12 @@ const MapContainer = (props: MapContainerProps) => {
   useEffect(() => {
     if (viewRef.current) setZoomVisibility(viewRef.current, showZoom);
   }, [showZoom]);
+
+  useEffect(() => {
+    if (viewRef.current) {
+      setZoomDisabledAppearance(viewRef.current, interactionLocked);
+    }
+  }, [interactionLocked]);
 
   // The inner div belongs to ESRI alone — it appends `.esri-view-root` there
   // and mutates it outside React's knowledge. Overlay children are rendered as

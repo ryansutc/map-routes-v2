@@ -2,6 +2,21 @@ export const ANIMATION_CONTROLS_BOTTOM_PX = 24;
 export const ANIMATION_CONTROLS_HEIGHT_PX = 42;
 export const MAP_OVERLAY_GAP_PX = 16;
 
+export const BASEMAP_CONTROL_LEFT_PX = 16;
+export const BASEMAP_CONTROL_SIZE_PX = 44;
+export const ANIMATION_CONTROLS_BASEMAP_GAP_PX = 24;
+export const ANIMATION_CONTROLS_MAX_WIDTH_PX = 300;
+
+export const ANIMATION_CONTROLS_MIN_LEFT_PX =
+  BASEMAP_CONTROL_LEFT_PX +
+  BASEMAP_CONTROL_SIZE_PX +
+  ANIMATION_CONTROLS_BASEMAP_GAP_PX;
+
+// Below this width a centered 300px control would enter the basemap button's
+// safe area, so it instead fills the space between that area and the right edge.
+export const ANIMATION_CONTROLS_COLLISION_BREAKPOINT_PX =
+  ANIMATION_CONTROLS_MIN_LEFT_PX * 2 + ANIMATION_CONTROLS_MAX_WIDTH_PX;
+
 export const ANIMATION_CONTROLS_RESERVED_HEIGHT_PX =
   ANIMATION_CONTROLS_BOTTOM_PX +
   ANIMATION_CONTROLS_HEIGHT_PX +

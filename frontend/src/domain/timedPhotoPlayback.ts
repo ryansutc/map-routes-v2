@@ -105,6 +105,7 @@ export type TimedPhotoPlaybackCoordinator = {
   setEnabled: (enabled: boolean) => void;
   setGroupingSettings: (settings: TimedPhotoGroupingSettings) => void;
   openManualPhoto: (photoId: number) => boolean;
+  dismissAutomaticPhoto: () => void;
   destroy: () => void;
 };
 
@@ -570,6 +571,7 @@ export function createTimedPhotoPlaybackCoordinator({
       openManualSession(createPhotoSessionId(`manual-photo-${photoId}`), photoId);
       return true;
     },
+    dismissAutomaticPhoto: cancelActiveGroup,
     destroy: () => {
       if (destroyed) return;
       unsubscribe();

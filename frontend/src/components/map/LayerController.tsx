@@ -1,4 +1,5 @@
 import { addRouteLayer } from "@/components/map/mapLayerOrder";
+import { setMapWidgetDisabledAppearance } from "@/components/map/mapControlAppearance";
 import { useToast } from "@/hooks/useToast";
 import { isAbortError } from "@arcgis/core/core/promiseUtils";
 import GeoJSONLayer from "@arcgis/core/layers/GeoJSONLayer";
@@ -17,15 +18,18 @@ function LayerController({
   getView,
   layers,
   showZoomToExtent = true,
+  disabled = false,
 }: {
   getMap: () => __esri.Map | null;
   getView: () => MapView | SceneView | null;
   layers: string[];
   showZoomToExtent?: boolean;
+  disabled?: boolean;
 }) {
   const { enqueueError } = useToast();
   const zoomToExtentRef = useRef<Home | null>(null);
   const showZoomToExtentRef = useRef(showZoomToExtent);
+  const disabledRef = useRef(disabled);
 
   useEffect(() => {
     showZoomToExtentRef.current = showZoomToExtent;
@@ -33,6 +37,11 @@ function LayerController({
       zoomToExtentRef.current.visible = showZoomToExtent;
     }
   }, [showZoomToExtent]);
+
+  useEffect(() => {
+    disabledRef.current = disabled;
+    setMapWidgetDisabledAppearance(zoomToExtentRef.current, disabled);
+  }, [disabled]);
 
   useEffect(() => {
     const map = getMap();
@@ -110,6 +119,10 @@ function LayerController({
                   });
                   zoomToExtentRef.current = zoomToExtent;
                   view.ui.add(zoomToExtent, "top-right");
+                  setMapWidgetDisabledAppearance(
+                    zoomToExtent,
+                    disabledRef.current,
+                  );
                 } else {
                   zoomToExtent.viewpoint = { targetGeometry: routeExtent };
                 }

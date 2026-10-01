@@ -71,6 +71,9 @@ describe("BasemapSelector", () => {
       />,
     );
     expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(getComputedStyle(button.parentElement!.parentElement!).opacity).toBe(
+      "0.7",
+    );
     fireEvent.click(button);
     expect(screen.queryByRole("menu")).toBeNull();
   });

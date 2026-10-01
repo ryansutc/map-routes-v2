@@ -12,8 +12,12 @@ const arcgis = vi.hoisted(() => {
 
   class MockView {
     type: "2d" | "3d";
+    zoomContainer = document.createElement("div");
     ui = {
-      find: vi.fn(() => ({ visible: true })),
+      find: vi.fn(() => ({
+        visible: true,
+        container: this.zoomContainer,
+      })),
       move: vi.fn(),
     };
     destroyed = false;
@@ -132,6 +136,28 @@ describe("MapContainer rapid view-mode toggles", () => {
 
     await waitFor(() => expect(onReady).toHaveBeenCalledTimes(2));
     expect(arcgis.views.map((view) => view.type)).toEqual(["2d", "3d", "2d"]);
+  });
+
+  it("dims the zoom widget while map interaction is locked", () => {
+    const props = {
+      attachToId: "locked-map",
+      mapProperties: {},
+      onClick: vi.fn(),
+      onFail: vi.fn(),
+      onLoad: vi.fn(),
+      onReady: vi.fn(),
+      onUnload: vi.fn(),
+      viewProperties: { center: [0, 0] as [number, number], zoom: 1 },
+    };
+    const { rerender } = render(<MapContainer {...props} />);
+
+    expect(arcgis.views[0]!.zoomContainer.style.opacity).toBe("1");
+
+    rerender(<MapContainer {...props} interactionLocked />);
+    expect(arcgis.views[0]!.zoomContainer.style.opacity).toBe("0.7");
+
+    rerender(<MapContainer {...props} />);
+    expect(arcgis.views[0]!.zoomContainer.style.opacity).toBe("1");
   });
 
 });
