@@ -8,322 +8,323 @@ paths:
       operationId: auth_google_retrieve
       description: Redirect to the Google OAuth2 login URL.
       tags:
-      - auth
+        - auth
       security:
-      - jwtAuth: []
-      - {}
+        - jwtAuth: []
+        - {}
       responses:
-        '302':
+        "302":
           content:
             application/json:
               schema:
                 description: Redirect to Google OAuth login
-          description: ''
+          description: ""
   /api/auth/login-jwt/:
     post:
       operationId: auth_login_jwt_create
       description: Authenticate with email and password and return a JWT access token.
       tags:
-      - auth
+        - auth
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
         required: true
       security:
-      - jwtAuth: []
-      - {}
+        - jwtAuth: []
+        - {}
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JwtAuthResponse'
-          description: ''
+                $ref: "#/components/schemas/JwtAuthResponse"
+          description: ""
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
       description: Return a logout confirmation response.
       tags:
-      - auth
+        - auth
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Logout successful
-          description: ''
+          description: ""
   /api/auth/register-jwt/:
     post:
       operationId: auth_register_jwt_create
       description: Register a new user account and return a JWT access token.
       tags:
-      - auth
+        - auth
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: "#/components/schemas/RegisterRequest"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: "#/components/schemas/RegisterRequest"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: "#/components/schemas/RegisterRequest"
         required: true
       security:
-      - jwtAuth: []
-      - {}
+        - jwtAuth: []
+        - {}
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JwtAuthResponse'
-          description: ''
+                $ref: "#/components/schemas/JwtAuthResponse"
+          description: ""
   /api/auth/status/:
     get:
       operationId: auth_status_retrieve
       description: Return authentication status and email for the current user.
       tags:
-      - auth
+        - auth
       security:
-      - jwtAuth: []
-      - {}
+        - jwtAuth: []
+        - {}
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthStatus'
-          description: ''
+                $ref: "#/components/schemas/AuthStatus"
+          description: ""
   /api/route/:
     get:
       operationId: route_list
       description: API view to list routes visible to the user or create a new route.
       tags:
-      - route
+        - route
       security:
-      - jwtAuth: []
-      - {}
+        - jwtAuth: []
+        - {}
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/RouteList'
-          description: ''
+                  $ref: "#/components/schemas/RouteList"
+          description: ""
     post:
       operationId: route_create
       description: API view to list routes visible to the user or create a new route.
       tags:
-      - route
+        - route
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RouteCreateRequest'
+              $ref: "#/components/schemas/RouteCreateRequest"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/RouteCreateRequest'
+              $ref: "#/components/schemas/RouteCreateRequest"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/RouteCreateRequest'
+              $ref: "#/components/schemas/RouteCreateRequest"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RouteCreate'
-          description: ''
+                $ref: "#/components/schemas/RouteCreate"
+          description: ""
   /api/route/{id}/:
     get:
       operationId: route_retrieve
       description: API view to retrieve, update, or delete a single route.
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - route
+        - route
       security:
-      - jwtAuth: []
-      - {}
+        - jwtAuth: []
+        - {}
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Route'
-          description: ''
+                $ref: "#/components/schemas/Route"
+          description: ""
     patch:
       operationId: route_partial_update
       description: API view to retrieve, update, or delete a single route.
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - route
+        - route
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedRouteUpdateRequest'
+              $ref: "#/components/schemas/PatchedRouteUpdateRequest"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedRouteUpdateRequest'
+              $ref: "#/components/schemas/PatchedRouteUpdateRequest"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedRouteUpdateRequest'
+              $ref: "#/components/schemas/PatchedRouteUpdateRequest"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Route'
-          description: ''
+                $ref: "#/components/schemas/Route"
+          description: ""
     delete:
       operationId: route_destroy
       description: API view to retrieve, update, or delete a single route.
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - route
+        - route
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '204':
+        "204":
           description: No response body
   /api/route/{id}/photos/:
     post:
       operationId: route_photos_create
-      description: Accept an image file, extract GPS EXIF, upload to Cloudinary, save
+      description:
+        Accept an image file, extract GPS EXIF, upload to Cloudinary, save
         Photo record.
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - route
+        - route
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Photo'
-          description: ''
+                $ref: "#/components/schemas/Photo"
+          description: ""
   /api/route/{id}/photos/{photo_pk}/:
     patch:
       operationId: route_photos_partial_update
       description: Change only the optional title and aware taken-at time of a photo.
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: photo_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: photo_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - route
+        - route
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedPhotoUpdateRequest'
+              $ref: "#/components/schemas/PatchedPhotoUpdateRequest"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Photo'
-          description: ''
+                $ref: "#/components/schemas/Photo"
+          description: ""
     delete:
       operationId: route_photos_destroy
       description: Delete the hosted image first, then its database record.
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: photo_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: photo_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - route
+        - route
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '204':
+        "204":
           description: No response body
   /api/route/parse-gpx/:
     post:
       operationId: route_parse_gpx_create
       description: Accept a GPX file, parse it, upload to ArcGIS, and return metadata.
       tags:
-      - route
+        - route
       requestBody:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ParseGpxRequestRequest'
+              $ref: "#/components/schemas/ParseGpxRequestRequest"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ParseGpxResponse'
-          description: ''
+                $ref: "#/components/schemas/ParseGpxResponse"
+          description: ""
 components:
   schemas:
     ActivityTypeEnum:
       enum:
-      - Hiking
-      - Running
-      - Cycling
-      - Backpacking
-      - Skiing
-      - Other
+        - Hiking
+        - Running
+        - Cycling
+        - Backpacking
+        - Skiing
+        - Other
       type: string
       description: |-
         * `Hiking` - Hiking
@@ -342,11 +343,11 @@ components:
           type: string
           nullable: true
       required:
-      - is_authenticated
-      - user_name
+        - is_authenticated
+        - user_name
     BlankEnum:
       enum:
-      - ''
+        - ""
     JwtAuthResponse:
       type: object
       description: Serializer for a successful JWT authentication response.
@@ -361,10 +362,10 @@ components:
           type: string
           format: email
       required:
-      - email
-      - message
-      - token
-      - user_id
+        - email
+        - message
+        - token
+        - user_id
     LoginRequest:
       type: object
       description: Serializer for JWT login credentials.
@@ -378,8 +379,8 @@ components:
           writeOnly: true
           minLength: 1
       required:
-      - email
-      - password
+        - email
+        - password
     ParseGpxRequestRequest:
       type: object
       description: Serializer for the multipart file upload accepted by ParseGpxView.
@@ -388,7 +389,7 @@ components:
           type: string
           format: binary
       required:
-      - file
+        - file
     ParseGpxResponse:
       type: object
       description: Serializer for the response returned by ParseGpxView.
@@ -419,14 +420,14 @@ components:
           type: integer
           nullable: true
       required:
-      - arcgis_item_id
-      - avg_pace_decimal
-      - date
-      - distance_m
-      - duration_s
-      - elevation_gain_m
-      - geojson
-      - track_point_count
+        - arcgis_item_id
+        - avg_pace_decimal
+        - date
+        - distance_m
+        - duration_s
+        - elevation_gain_m
+        - geojson
+        - track_point_count
     PatchedPhotoUpdateRequest:
       type: object
       description: Serializer restricted to an optional title and aware taken-at time.
@@ -447,7 +448,7 @@ components:
           minLength: 1
           maxLength: 255
         activity_type:
-          $ref: '#/components/schemas/ActivityTypeEnum'
+          $ref: "#/components/schemas/ActivityTypeEnum"
         notes:
           type: string
         is_public:
@@ -487,15 +488,16 @@ components:
         taken_at_timezone:
           type: string
           nullable: true
-          description: Return the local IANA zone used to interpret owner-entered
+          description:
+            Return the local IANA zone used to interpret owner-entered
             photo time.
           readOnly: true
       required:
-      - has_gps
-      - id
-      - route_id
-      - taken_at_timezone
-      - url
+        - has_gps
+        - id
+        - route_id
+        - taken_at_timezone
+        - url
     RegisterRequest:
       type: object
       description: Serializer for new user registration data.
@@ -513,12 +515,13 @@ components:
           writeOnly: true
           minLength: 1
       required:
-      - confirm_password
-      - email
-      - password
+        - confirm_password
+        - email
+        - password
     Route:
       type: object
-      description: Serializer for route detail, including canonical GeoJSON and nested
+      description:
+        Serializer for route detail, including canonical GeoJSON and nested
         photos.
       properties:
         id:
@@ -533,8 +536,8 @@ components:
           nullable: true
         activity_type:
           oneOf:
-          - $ref: '#/components/schemas/ActivityTypeEnum'
-          - $ref: '#/components/schemas/BlankEnum'
+            - $ref: "#/components/schemas/ActivityTypeEnum"
+            - $ref: "#/components/schemas/BlankEnum"
         distance:
           type: number
           format: double
@@ -577,7 +580,7 @@ components:
         photos:
           type: array
           items:
-            $ref: '#/components/schemas/Photo'
+            $ref: "#/components/schemas/Photo"
           readOnly: true
         created_at:
           type: string
@@ -590,12 +593,13 @@ components:
         geojson:
           nullable: true
       required:
-      - created_at
-      - distance
-      - id
-      - owner
-      - photos
-      - updated_at
+        - created_at
+        - distance
+        - id
+        - owner
+        - photos
+        - title
+        - updated_at
     RouteCreate:
       type: object
       description: Serializer for creating Route instances from parsed GPX data.
@@ -612,8 +616,8 @@ components:
           nullable: true
         activity_type:
           oneOf:
-          - $ref: '#/components/schemas/ActivityTypeEnum'
-          - $ref: '#/components/schemas/BlankEnum'
+            - $ref: "#/components/schemas/ActivityTypeEnum"
+            - $ref: "#/components/schemas/BlankEnum"
         distance:
           type: number
           format: double
@@ -652,14 +656,16 @@ components:
         is_public:
           type: boolean
       required:
-      - distance
-      - id
+        - distance
+        - id
+        - title
     RouteCreateRequest:
       type: object
       description: Serializer for creating Route instances from parsed GPX data.
       properties:
         title:
           type: string
+          minLength: 1
           maxLength: 255
         activity_date:
           type: string
@@ -667,8 +673,8 @@ components:
           nullable: true
         activity_type:
           oneOf:
-          - $ref: '#/components/schemas/ActivityTypeEnum'
-          - $ref: '#/components/schemas/BlankEnum'
+            - $ref: "#/components/schemas/ActivityTypeEnum"
+            - $ref: "#/components/schemas/BlankEnum"
         distance:
           type: number
           format: double
@@ -707,10 +713,12 @@ components:
         is_public:
           type: boolean
       required:
-      - distance
+        - distance
+        - title
     RouteList:
       type: object
-      description: Serializer for route collections without the canonical GeoJSON
+      description:
+        Serializer for route collections without the canonical GeoJSON
         payload.
       properties:
         id:
@@ -725,8 +733,8 @@ components:
           nullable: true
         activity_type:
           oneOf:
-          - $ref: '#/components/schemas/ActivityTypeEnum'
-          - $ref: '#/components/schemas/BlankEnum'
+            - $ref: "#/components/schemas/ActivityTypeEnum"
+            - $ref: "#/components/schemas/BlankEnum"
         distance:
           type: number
           format: double
@@ -769,7 +777,7 @@ components:
         photos:
           type: array
           items:
-            $ref: '#/components/schemas/Photo'
+            $ref: "#/components/schemas/Photo"
           readOnly: true
         created_at:
           type: string
@@ -780,12 +788,13 @@ components:
           format: date-time
           readOnly: true
       required:
-      - created_at
-      - distance
-      - id
-      - owner
-      - photos
-      - updated_at
+        - created_at
+        - distance
+        - id
+        - owner
+        - photos
+        - title
+        - updated_at
   securitySchemes:
     jwtAuth:
       type: http

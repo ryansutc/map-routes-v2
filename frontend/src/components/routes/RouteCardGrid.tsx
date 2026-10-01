@@ -64,7 +64,7 @@ function RouteCard({ route }: { route: RouteListResponseDto }) {
             component="img"
             height="160"
             image={thumbnailFor(route)}
-            alt={route.title ?? "Route thumbnail"}
+            alt={route.title}
             sx={{ objectFit: "cover", bgcolor: "grey.200", display: "block" }}
           />
           <Typography
@@ -85,7 +85,7 @@ function RouteCard({ route }: { route: RouteListResponseDto }) {
         </Box>
         <CardContent sx={{ flexGrow: 1 }}>
           <Typography variant="h6" component="div" gutterBottom noWrap>
-            {route.title ?? "Untitled route"}
+            {route.title}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
             <Chip
