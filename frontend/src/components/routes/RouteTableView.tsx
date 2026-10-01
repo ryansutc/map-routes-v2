@@ -1,151 +1,175 @@
+import { isRouteSortField, type RouteSort } from "@/domain/routeSort";
 import { useStore } from "@/state/store";
 import type { RouteListResponseDto } from "@/types/api";
 import { formatDate } from "@/utils/datetimeHelpers";
 import { formatDistance } from "@/utils/units";
+import { Box, Chip, Link as MuiLink, Paper, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import {
-  Box,
-  Chip,
-  Link as MuiLink,
-  Paper,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
+  DataGrid,
+  type GridColDef,
+  type GridSortModel,
+} from "@mui/x-data-grid";
 import { useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
+import { useCallback, useMemo } from "react";
 
-const COLUMNS = ["Title", "Activity", "Date", "Distance", "Visibility"];
-const XL_COLUMNS = ["Uploaded"];
-const visibilityColumnSx = {
-  display: { xs: "none", sm: "table-cell" },
-};
-
-function SkeletonRows() {
+function NoRoutesOverlay() {
   return (
-    <>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <TableRow key={i}>
-          {COLUMNS.map((c) => (
-            <TableCell
-              key={c}
-              sx={c === "Visibility" ? visibilityColumnSx : undefined}
-            >
-              <Skeleton variant="text" />
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </>
+    <Box
+      sx={{
+        display: "flex",
+        height: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Typography color="text.secondary">No routes to show.</Typography>
+    </Box>
   );
 }
 
 export default function RouteTableView({
   routes,
   isLoading,
+  sort,
+  onSortChange,
 }: {
   routes: RouteListResponseDto[];
   isLoading?: boolean;
+  sort: RouteSort;
+  onSortChange: (sort: RouteSort) => void;
 }) {
   const navigate = useNavigate();
   const units = useStore((s) => s.units);
+  const theme = useTheme();
+  const showVisibility = useMediaQuery(theme.breakpoints.up("sm"));
+  const showUploaded = useMediaQuery(theme.breakpoints.up("xl"));
 
-  if (!isLoading && !routes.length) {
-    return (
-      <Box sx={{ p: 4, textAlign: "center" }}>
-        <Typography color="text.secondary">No routes to show.</Typography>
-      </Box>
-    );
-  }
+  const goToRoute = useCallback(
+    (routeId: number) =>
+      void navigate({
+        to: "/routes/$routeId",
+        params: { routeId },
+      }),
+    [navigate],
+  );
+
+  const columns = useMemo<GridColDef<RouteListResponseDto>[]>(
+    () => [
+      {
+        field: "title",
+        headerName: "Title",
+        minWidth: 180,
+        flex: 1,
+        renderCell: ({ row }) => (
+          <MuiLink
+            component="button"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              goToRoute(row.id);
+            }}
+            underline="hover"
+            sx={{ textAlign: "left", font: "inherit" }}
+          >
+            {route.title}
+          </MuiLink>
+        ),
+      },
+      {
+        field: "activity_type",
+        headerName: "Activity",
+        minWidth: 130,
+        flex: 0.7,
+      },
+      {
+        field: "activity_date",
+        headerName: "Date",
+        minWidth: 125,
+        flex: 0.6,
+        renderCell: ({ value }) => formatDate(value, "mmm-dd-yyyy"),
+      },
+      {
+        field: "distance",
+        headerName: "Distance",
+        minWidth: 115,
+        flex: 0.5,
+        renderCell: ({ value }) => formatDistance(value, units),
+      },
+      {
+        field: "is_public",
+        headerName: "Visibility",
+        minWidth: 115,
+        flex: 0.5,
+        renderCell: ({ value }) => (
+          <Chip
+            label={value ? "Public" : "Private"}
+            size="small"
+            color={value ? "success" : "default"}
+            variant={value ? "filled" : "outlined"}
+          />
+        ),
+      },
+      {
+        field: "created_at",
+        headerName: "Uploaded",
+        minWidth: 145,
+        flex: 0.7,
+        renderCell: ({ value }) => (
+          <span title={formatDate(value, "mmm-dd-yyyy")}>
+            {formatDistanceToNow(new Date(value), { addSuffix: true })}
+          </span>
+        ),
+      },
+    ],
+    [goToRoute, units],
+  );
+
+  const handleSortModelChange = (model: GridSortModel) => {
+    const next = model[0];
+    if (next?.sort && isRouteSortField(next.field)) {
+      onSortChange({ field: next.field, direction: next.sort });
+    }
+  };
 
   return (
-    <TableContainer component={Paper} sx={{ width: "100%" }}>
-      <Table size="small" aria-label="Routes table">
-        <TableHead>
-          <TableRow>
-            {COLUMNS.map((col) => (
-              <TableCell
-                key={col}
-                sx={col === "Visibility" ? visibilityColumnSx : undefined}
-              >
-                {col}
-              </TableCell>
-            ))}
-            {XL_COLUMNS.map((col) => (
-              <TableCell
-                key={col}
-                sx={{ display: { xs: "none", xl: "table-cell" } }}
-              >
-                {col}
-              </TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {isLoading ? (
-            <SkeletonRows />
-          ) : (
-            routes.map((route) => {
-              const goToRoute = () =>
-                void navigate({
-                  to: "/routes/$routeId",
-                  params: { routeId: route.id },
-                });
-              return (
-                <TableRow
-                  key={route.id}
-                  hover
-                  onClick={goToRoute}
-                  sx={{
-                    cursor: "pointer",
-                    "&:last-child td, &:last-child th": { border: 0 },
-                  }}
-                >
-                  <TableCell>
-                    <MuiLink
-                      component="button"
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        goToRoute();
-                      }}
-                      underline="hover"
-                      sx={{ textAlign: "left", font: "inherit" }}
-                    >
-                      {route.title}
-                    </MuiLink>
-                  </TableCell>
-                  <TableCell>{route.activity_type}</TableCell>
-                  <TableCell>
-                    {formatDate(route.activity_date, "mmm-dd-yyyy")}
-                  </TableCell>
-                  <TableCell>{formatDistance(route.distance, units)}</TableCell>
-                  <TableCell sx={visibilityColumnSx}>
-                    <Chip
-                      label={route.is_public ? "Public" : "Private"}
-                      size="small"
-                      color={route.is_public ? "success" : "default"}
-                      variant={route.is_public ? "filled" : "outlined"}
-                    />
-                  </TableCell>
-                  <TableCell
-                    sx={{ display: { xs: "none", xl: "table-cell" } }}
-                    title={formatDate(route.created_at, "mmm-dd-yyyy")}
-                  >
-                    {formatDistanceToNow(new Date(route.created_at), {
-                      addSuffix: true,
-                    })}
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Paper sx={{ width: "100%" }}>
+      <DataGrid
+        aria-label="Routes table"
+        autoHeight
+        rows={routes}
+        columns={columns}
+        loading={isLoading}
+        sortingMode="server"
+        sortModel={[{ field: sort.field, sort: sort.direction }]}
+        onSortModelChange={handleSortModelChange}
+        sortingOrder={["asc", "desc"]}
+        disableColumnFilter
+        disableColumnMenu
+        disableColumnSelector
+        disableRowSelectionOnClick
+        columnVisibilityModel={{
+          is_public: showVisibility,
+          created_at: showUploaded,
+        }}
+        pagination
+        initialState={{
+          pagination: { paginationModel: { page: 0, pageSize: 100 } },
+        }}
+        pageSizeOptions={[100]}
+        hideFooter={routes.length <= 100}
+        onRowClick={({ row }) => goToRoute(row.id)}
+        slots={{ noRowsOverlay: NoRoutesOverlay }}
+        sx={{
+          border: 0,
+          "& .MuiDataGrid-row": { cursor: "pointer" },
+          "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+            outlineOffset: "-2px",
+          },
+        }}
+      />
+    </Paper>
   );
 }

@@ -1,5 +1,4 @@
-import RouteCardGrid from "@/components/routes/RouteCardGrid";
-import RouteTableView from "@/components/routes/RouteTableView";
+import RouteListViews from "@/components/routes/RouteListViews";
 import { useRoutes } from "@/hooks/useRoutes";
 import { useStore } from "@/state/store";
 import { GOOGLE_LOGIN_URL } from "@/utils/environment";
@@ -151,10 +150,12 @@ function RoutesIndex() {
           </Typography>
           <Typography color="text.secondary">{error?.message}</Typography>
         </Box>
-      ) : listView === "table" ? (
-        <RouteTableView routes={filteredRoutes} isLoading={isLoading} />
       ) : (
-        <RouteCardGrid routes={filteredRoutes} isLoading={isLoading} />
+        <RouteListViews
+          routes={filteredRoutes}
+          isLoading={isLoading}
+          listView={listView}
+        />
       )}
     </Box>
   );

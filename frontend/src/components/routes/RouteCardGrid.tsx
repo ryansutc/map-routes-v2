@@ -1,9 +1,16 @@
 import type { RouteListResponseDto } from "@/types/api";
+import {
+  ROUTE_SORT_FIELDS,
+  ROUTE_SORT_LABELS,
+  type RouteSort,
+  type RouteSortField,
+} from "@/domain/routeSort";
 import { dropboxShareUrlToDirectDownload } from "@/utils/dropboxImgHelpers";
 import { formatDate } from "@/utils/datetimeHelpers";
 import { formatDistance } from "@/utils/units";
 import { formatCompactDuration } from "@/utils/duration";
 import { useStore } from "@/state/store";
+import { ArrowDownward, ArrowUpward } from "@mui/icons-material";
 import {
   Box,
   Card,
@@ -12,8 +19,14 @@ import {
   CardMedia,
   Chip,
   Grid,
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Skeleton,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
@@ -125,12 +138,71 @@ function RouteCardSkeleton() {
 export default function RouteCardGrid({
   routes,
   isLoading,
+  sort,
+  onSortChange,
 }: {
   routes: RouteListResponseDto[];
   isLoading?: boolean;
+  sort: RouteSort;
+  onSortChange: (sort: RouteSort) => void;
 }) {
+  const directionAction =
+    sort.direction === "asc" ? "Sort descending" : "Sort ascending";
+
+  const controls = (
+    <Stack
+      direction="row"
+      spacing={1}
+      justifyContent="flex-end"
+      alignItems="center"
+      sx={{ mb: 2 }}
+    >
+      <FormControl size="small" sx={{ minWidth: 150 }}>
+        <InputLabel id="route-card-sort-label">Sort by</InputLabel>
+        <Select
+          labelId="route-card-sort-label"
+          value={sort.field}
+          label="Sort by"
+          onChange={(event) => {
+            const field = event.target.value as RouteSortField;
+            onSortChange({
+              field,
+              direction:
+                field === sort.field
+                  ? sort.direction === "asc"
+                    ? "desc"
+                    : "asc"
+                  : "asc",
+            });
+          }}
+        >
+          {ROUTE_SORT_FIELDS.map((field) => (
+            <MenuItem key={field} value={field}>
+              {ROUTE_SORT_LABELS[field]}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <Tooltip title={directionAction}>
+        <IconButton
+          size="small"
+          aria-label={directionAction}
+          onClick={() =>
+            onSortChange({
+              ...sort,
+              direction: sort.direction === "asc" ? "desc" : "asc",
+            })
+          }
+        >
+          {sort.direction === "asc" ? <ArrowUpward /> : <ArrowDownward />}
+        </IconButton>
+      </Tooltip>
+    </Stack>
+  );
+
+  let content;
   if (isLoading) {
-    return (
+    content = (
       <Grid container spacing={2}>
         {Array.from({ length: 8 }).map((_, i) => (
           <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
@@ -139,23 +211,28 @@ export default function RouteCardGrid({
         ))}
       </Grid>
     );
-  }
-
-  if (!routes.length) {
-    return (
+  } else if (!routes.length) {
+    content = (
       <Box sx={{ p: 4, textAlign: "center" }}>
         <Typography color="text.secondary">No routes to show.</Typography>
       </Box>
     );
+  } else {
+    content = (
+      <Grid container spacing={2}>
+        {routes.map((route) => (
+          <Grid key={route.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+            <RouteCard route={route} />
+          </Grid>
+        ))}
+      </Grid>
+    );
   }
 
   return (
-    <Grid container spacing={2}>
-      {routes.map((route) => (
-        <Grid key={route.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-          <RouteCard route={route} />
-        </Grid>
-      ))}
-    </Grid>
+    <>
+      {controls}
+      {content}
+    </>
   );
 }

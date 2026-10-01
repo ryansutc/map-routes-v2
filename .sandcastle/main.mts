@@ -24,13 +24,28 @@
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 
+import { parseArgs } from "node:util";
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
+const { values } = parseArgs({
+  options: {
+    issue: {
+      type: "string",
+      short: "i",
+    },
+  },
+});
+
+const issueNumber = values.issue;
+
+if (!issueNumber || !/^\d+$/.test(issueNumber)) {
+  throw new Error("Usage: npx tsx .sandcastle/main.mts --issue <issue-number>");
+}
 // Maximum number of implement→review cycles to run before stopping.
 // Each cycle works on one issue. Raise this to process more issues per run.
-const MAX_ITERATIONS = 10;
+const MAX_ITERATIONS = 1;
 
 // Hooks run inside the sandbox before the agent starts each iteration.
 // npm install ensures the sandbox always has fresh dependencies.
@@ -62,6 +77,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         {
           hostPath: "~/.codex/auth.json",
           sandboxPath: "/home/agent/.codex/auth.json",
+          readonly: true,
         },
       ],
     }),
@@ -86,8 +102,12 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     const implement = await sandbox.run({
       name: "implementer",
       maxIterations: 1,
-      agent: sandcastle.codex("gpt-5.4"),
+      agent: sandcastle.codex("gpt-5.6-sol"),
       promptFile: "./.sandcastle/implement-prompt.md",
+      promptArgs: {
+        ISSUE_NUMBER: issueNumber,
+        BRANCH: branch,
+      },
     });
 
     if (!implement.commits.length) {
