@@ -21,7 +21,9 @@ describe("RouteCompletionDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("dialog", { name: "Route complete" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: "Route complete! 😊" }),
+    ).toBeTruthy();
     expect(screen.getByText("Alpine loop")).toBeTruthy();
     expect(screen.getByText("0.00 km")).toBeTruthy();
     expect(screen.getByText("125 m")).toBeTruthy();
