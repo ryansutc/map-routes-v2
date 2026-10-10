@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import Graphic from "@arcgis/core/Graphic";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
@@ -59,23 +59,26 @@ export function useElevationProfile(
     return { profilePoints: points, hasElevation: hasElev };
   }, [track]);
 
-  const onHover = (index: number) => {
-    const layer = layerRef.current;
-    if (!layer) return;
-    const pt = profilePoints[index];
-    if (!pt) return;
-    layer.removeAll();
-    layer.add(
-      new Graphic({
-        geometry: new Point({ longitude: pt.lon, latitude: pt.lat }),
-        symbol: hoverSymbol,
-      }),
-    );
-  };
+  const onHover = useCallback(
+    (index: number) => {
+      const layer = layerRef.current;
+      if (!layer) return;
+      const pt = profilePoints[index];
+      if (!pt) return;
+      layer.removeAll();
+      layer.add(
+        new Graphic({
+          geometry: new Point({ longitude: pt.lon, latitude: pt.lat }),
+          symbol: hoverSymbol,
+        }),
+      );
+    },
+    [profilePoints],
+  );
 
-  const onHoverEnd = () => {
+  const onHoverEnd = useCallback(() => {
     layerRef.current?.removeAll();
-  };
+  }, []);
 
   return { profilePoints, hasElevation, onHover, onHoverEnd };
 }
