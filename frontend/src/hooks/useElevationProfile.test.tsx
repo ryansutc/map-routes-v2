@@ -16,11 +16,28 @@ vi.mock("@arcgis/core/symbols/SimpleMarkerSymbol", () => ({
 vi.mock("@arcgis/core/geometry/Point", () => ({ default: class Point {} }));
 
 const track = {
+  kind: "legacy",
+  reason: "missing-coordinate-times",
+  totalDistanceM: 100,
   profilePoints: [
-    { distance: 0, elevation: 10, lon: -123, lat: 49 },
-    { distance: 100, elevation: 20, lon: -122, lat: 50 },
+    {
+      distance: 0,
+      elevation: 10,
+      lon: -123,
+      lat: 49,
+      segmentIndex: 0,
+      pointIndex: 0,
+    },
+    {
+      distance: 100,
+      elevation: 20,
+      lon: -122,
+      lat: 50,
+      segmentIndex: 0,
+      pointIndex: 1,
+    },
   ],
-} as unknown as RouteTrack;
+} satisfies RouteTrack;
 
 describe("useElevationProfile", () => {
   it("keeps hover callbacks stable across parent rerenders", () => {
