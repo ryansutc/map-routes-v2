@@ -17,10 +17,10 @@
 // execution with a planning phase).
 //
 // Usage:
-//   npx tsx .sandcastle/main.mts
+//   npx tsx .sandcastle/main.mts --issue 91
 // Or add to package.json:
 //   "scripts": { "sandcastle": "npx tsx .sandcastle/main.mts" }
-
+// and call like pnpm run sandcastle -- --issue 80
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 

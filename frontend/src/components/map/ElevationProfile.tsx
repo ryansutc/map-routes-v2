@@ -1,16 +1,6 @@
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import { styled } from "@mui/material/styles";
-import { memo, useEffect, useMemo, useSyncExternalStore } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import type { ProfilePoint } from "@/hooks/useElevationProfile";
+import { routeAnimationProgress } from "@/state/routeAnimationProgress";
+import { useStore } from "@/state/store";
 import { elevationAtDistance } from "@/utils/elevationProfile";
 import {
   distanceAxisTicks,
@@ -18,8 +8,18 @@ import {
   formatDistanceTick,
   formatElevation,
 } from "@/utils/units";
-import { useStore } from "@/state/store";
-import { routeAnimationProgress } from "@/state/routeAnimationProgress";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import { styled } from "@mui/material/styles";
+import { memo, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type Props = {
   profilePoints: ProfilePoint[];
@@ -161,8 +161,7 @@ function ElevationAnimationCursor({
   const totalDistance = profilePoints.at(-1)?.distance ?? 0;
   const cursorDistance = distanceProgress * totalDistance;
   const cursorElevation = elevationAtDistance(profilePoints, cursorDistance);
-  const horizontalPercent =
-    axisMax > 0 ? (cursorDistance / axisMax) * 100 : 0;
+  const horizontalPercent = axisMax > 0 ? (cursorDistance / axisMax) * 100 : 0;
   const [minimumElevation, maximumElevation] = elevationDomain;
   const elevationSpan = maximumElevation - minimumElevation;
   const verticalPercent =
@@ -186,6 +185,9 @@ function ElevationAnimationCursor({
   );
 }
 
+/**
+ * The Elevation Profile component that shows at the bottom of a route page
+ */
 export default function ElevationProfile({
   profilePoints,
   hasElevation,
