@@ -7,6 +7,9 @@ exclude = [
     ".venv",
 ]
 
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
 [tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
@@ -17,6 +20,7 @@ select = [
     "UP",  # pyupgrade (modernize syntax)
     "DJ",  # flake8-django (Django-specific checks)
     "D",   # pydocstyle (docstring conventions)
+    "C901", # McCabe cyclomatic complexity
 ]
 ignore = [
     "E501", # line too long — handled by formatter, not linter
