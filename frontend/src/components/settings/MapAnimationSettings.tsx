@@ -66,6 +66,8 @@ export function MapAnimationSettings({
   const setSkipDetectedStops = useStore((state) => state.setSkipDetectedStops);
   const showTimedPhotos = useStore((state) => state.showTimedPhotos);
   const setShowTimedPhotos = useStore((state) => state.setShowTimedPhotos);
+  const followAlong = useStore((state) => state.followAlong);
+  const setFollowAlong = useStore((state) => state.setFollowAlong);
 
   const effectivePlaybackMode = routeContext?.effectivePlaybackMode;
   const settingsDisabled = routeContext?.animationSettingsDisabled ?? false;
@@ -141,6 +143,21 @@ export function MapAnimationSettings({
               {MODE_LABELS[effectivePlaybackMode]}”.
             </span>
           )}
+        </FormHelperText>
+      </FormControl>
+      <FormControl>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={followAlong}
+              disabled={settingsDisabled}
+              onChange={(event) => setFollowAlong(event.target.checked)}
+            />
+          }
+          label="Follow along"
+        />
+        <FormHelperText>
+          Keep the moving marker centered during playback.
         </FormHelperText>
       </FormControl>
       <FormControl>

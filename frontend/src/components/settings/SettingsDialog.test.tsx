@@ -35,7 +35,10 @@ function setMobileViewport(mobile: boolean) {
 
 function RouteRegistration({ context }: { context: RouteSettingsContext }) {
   const { registerRouteContext } = useSettingsDialog();
-  useEffect(() => registerRouteContext(context), [context, registerRouteContext]);
+  useEffect(
+    () => registerRouteContext(context),
+    [context, registerRouteContext],
+  );
   return null;
 }
 
@@ -65,6 +68,7 @@ describe("SettingsDialog", () => {
       animationPlaybackMode: "recorded",
       skipDetectedStops: true,
       showTimedPhotos: true,
+      followAlong: false,
     });
   });
 
@@ -80,7 +84,9 @@ describe("SettingsDialog", () => {
     render(<PlaybackEntry />);
     fireEvent.click(screen.getByRole("button", { name: "Playback settings" }));
 
-    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeTruthy();
+    expect(
+      await screen.findByRole("dialog", { name: "Settings" }),
+    ).toBeTruthy();
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.getByRole("heading", { name: "General" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Map Animation" })).toBeTruthy();
@@ -110,9 +116,9 @@ describe("SettingsDialog", () => {
     });
     await waitFor(() =>
       expect(
-        document.querySelector("#settings-general")?.getAttribute(
-          "data-highlighted",
-        ),
+        document
+          .querySelector("#settings-general")
+          ?.getAttribute("data-highlighted"),
       ).toBe("true"),
     );
   });
@@ -137,15 +143,24 @@ describe("SettingsDialog", () => {
       ),
     ).toBeTruthy();
     expect(
-      (screen.getByRole("switch", {
-        name: "Skip detected stops",
-      }) as HTMLInputElement).disabled,
+      (
+        screen.getByRole("switch", {
+          name: "Skip detected stops",
+        }) as HTMLInputElement
+      ).disabled,
     ).toBe(false);
     expect(
-      (screen.getByRole("switch", {
-        name: "Show timed photos",
-      }) as HTMLInputElement).disabled,
+      (
+        screen.getByRole("switch", {
+          name: "Show timed photos",
+        }) as HTMLInputElement
+      ).disabled,
     ).toBe(false);
+    expect(
+      screen.getByText("Keep the moving marker centered during playback."),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("switch", { name: "Follow along" }));
+    expect(useStore.getState().followAlong).toBe(true);
     expect(acquirePause).toHaveBeenCalledWith("settings-dialog");
 
     fireEvent.click(
@@ -179,9 +194,11 @@ describe("SettingsDialog", () => {
         .getAttribute("aria-disabled"),
     ).toBe("true");
     expect(
-      (screen.getByRole("switch", {
-        name: "Show timed photos",
-      }) as HTMLInputElement).disabled,
+      (
+        screen.getByRole("switch", {
+          name: "Show timed photos",
+        }) as HTMLInputElement
+      ).disabled,
     ).toBe(true);
   });
 
