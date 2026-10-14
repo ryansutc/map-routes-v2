@@ -65,8 +65,8 @@ const copyToWorktree = ["node_modules"];
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
 
-  // Generate a unique branch name for this iteration.
-  const branch = `sandcastle/sequential-reviewer/${Date.now()}`;
+  // Keep the branch and Sandcastle's default log filenames tied to the issue.
+  const branch = `sandcastle/issue-${issueNumber}`;
 
   // Create a single sandbox that both the implementer and reviewer share.
   // This gives both agents a real, named branch that persists across phases.
