@@ -9,6 +9,7 @@ describe("animation settings persistence", () => {
       animationPlaybackMode: "recorded",
       skipDetectedStops: true,
       showTimedPhotos: true,
+      followAlong: false,
     });
   });
 
@@ -17,11 +18,13 @@ describe("animation settings persistence", () => {
     useStore.getState().setAnimationPlaybackMode("distance");
     useStore.getState().setSkipDetectedStops(false);
     useStore.getState().setShowTimedPhotos(false);
+    useStore.getState().setFollowAlong(true);
 
     expect(useStore.getState().animationDurationSec).toBe(120);
     expect(useStore.getState().animationPlaybackMode).toBe("distance");
     expect(useStore.getState().skipDetectedStops).toBe(false);
     expect(useStore.getState().showTimedPhotos).toBe(false);
+    expect(useStore.getState().followAlong).toBe(true);
   });
 
   it("migrates points-per-second preferences to the target-duration default", () => {
@@ -34,6 +37,7 @@ describe("animation settings persistence", () => {
     expect(migrated.animationPlaybackMode).toBe("indexed");
     expect(migrated.skipDetectedStops).toBe(true);
     expect(migrated.showTimedPhotos).toBe(true);
+    expect(migrated.followAlong).toBe(false);
     expect(migrated).not.toHaveProperty("animationSpeed");
   });
 
@@ -53,9 +57,11 @@ describe("animation settings persistence", () => {
     const migrated = migratePersistedAnimationState({
       skipDetectedStops: false,
       showTimedPhotos: false,
+      followAlong: true,
     });
 
     expect(migrated.skipDetectedStops).toBe(false);
     expect(migrated.showTimedPhotos).toBe(false);
+    expect(migrated.followAlong).toBe(true);
   });
 });

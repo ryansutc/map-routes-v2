@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
 
 import { buildRouteTrack } from "@/domain/timedTrack";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ComponentProps, RefObject } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RouteAnimationController } from "./RouteAnimationController";
+import { useStore } from "@/state/store";
 
 const mocks = vi.hoisted(() => ({
   state: "idle" as "idle" | "playing" | "paused" | "completed",
@@ -12,6 +20,9 @@ const mocks = vi.hoisted(() => ({
   stop: vi.fn(),
   showOverview: vi.fn(),
   showStartOverview: vi.fn(),
+  centerRoutePosition: vi.fn(),
+  captureFollowZoom: vi.fn(() => 9),
+  frameListener: null as null | ((snapshot: never) => void),
 }));
 
 vi.mock("@/hooks/useRouteAnimation", () => ({
@@ -23,12 +34,32 @@ vi.mock("@/hooks/useRouteAnimation", () => ({
     stop: mocks.stop,
     acquirePause: vi.fn(() => vi.fn()),
     photoPlaybackEngine: {},
+    position: {
+      coordinate: [0, 0],
+      pointIndex: 0,
+      originalElapsedMs: null,
+      cumulativeDistanceM: 0,
+    },
+    subscribeToFrames: vi.fn((listener) => {
+      mocks.frameListener = listener;
+      return () => {
+        mocks.frameListener = null;
+      };
+    }),
   }),
 }));
 
+vi.mock("@/components/map/routeFollowCamera", () => ({
+  captureFollowZoom: () => mocks.captureFollowZoom(),
+  centerRoutePosition: (...args: unknown[]) =>
+    mocks.centerRoutePosition(...args),
+}));
+
 vi.mock("@/components/map/routeCompletionCamera", () => ({
-  showCompletedRouteOverview: (...args: unknown[]) => mocks.showOverview(...args),
-  showRouteStartOverview: (...args: unknown[]) => mocks.showStartOverview(...args),
+  showCompletedRouteOverview: (...args: unknown[]) =>
+    mocks.showOverview(...args),
+  showRouteStartOverview: (...args: unknown[]) =>
+    mocks.showStartOverview(...args),
 }));
 
 vi.mock("@/components/settings/SettingsDialog", () => ({
@@ -62,15 +93,21 @@ const track = buildRouteTrack({
   features: [
     {
       type: "Feature",
-      geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [0, 0],
+          [1, 1],
+        ],
+      },
       properties: {},
     },
   ],
 });
 
 const baseProps: ComponentProps<typeof RouteAnimationController> = {
-  getMap: () => ({} as never),
-  getView: () => ({ type: "2d" } as never),
+  getMap: () => ({}) as never,
+  getView: () => ({ type: "2d" }) as never,
   track,
   photos: [],
   timedPhotoPresenter: { open: vi.fn(), close: vi.fn(), preload: vi.fn() },
@@ -89,7 +126,14 @@ describe("RouteAnimationController completion presentation", () => {
     mocks.stop.mockReset();
     mocks.showOverview.mockReset().mockResolvedValue(undefined);
     mocks.showStartOverview.mockReset().mockResolvedValue(undefined);
-    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false })));
+    mocks.centerRoutePosition.mockReset().mockResolvedValue(undefined);
+    mocks.captureFollowZoom.mockClear();
+    mocks.frameListener = null;
+    useStore.setState({ followAlong: false });
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: false })),
+    );
   });
 
   afterEach(() => {
@@ -122,9 +166,11 @@ describe("RouteAnimationController completion presentation", () => {
     );
 
     expect(
-      (screen.getByRole("button", {
-        name: "Replay route",
-      }) as HTMLButtonElement).disabled,
+      (
+        screen.getByRole("button", {
+          name: "Replay route",
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(true);
     expect(mocks.showOverview).toHaveBeenCalledOnce();
     expect(
@@ -132,7 +178,9 @@ describe("RouteAnimationController completion presentation", () => {
     ).toBeTruthy();
     expect(onSessionActiveChange).toHaveBeenLastCalledWith(true);
 
-    fireEvent.click(screen.getByRole("button", { name: "Close route summary" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close route summary" }),
+    );
     await waitFor(() => {
       expect(onSessionActiveChange).toHaveBeenLastCalledWith(false);
       expect(document.activeElement).toBe(
@@ -173,12 +221,115 @@ describe("RouteAnimationController completion presentation", () => {
   });
 
   it("starts playback when the route extent navigation fails", async () => {
-    mocks.showStartOverview.mockRejectedValue(new Error("navigation cancelled"));
+    mocks.showStartOverview.mockRejectedValue(
+      new Error("navigation cancelled"),
+    );
     render(<RouteAnimationController {...baseProps} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
 
     await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
+  });
+
+  it("waits for the initial followed position before playback", async () => {
+    let finishFollowMove: () => void = () => undefined;
+    mocks.centerRoutePosition.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishFollowMove = resolve;
+      }),
+    );
+    useStore.setState({ followAlong: true });
+    render(<RouteAnimationController {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
+
+    await waitFor(() => expect(mocks.centerRoutePosition).toHaveBeenCalled());
+    expect(mocks.play).not.toHaveBeenCalled();
+    finishFollowMove();
+    await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
+  });
+
+  it("uses an instantaneous initial follow for reduced motion", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: true })),
+    );
+    useStore.setState({ followAlong: true });
+    render(<RouteAnimationController {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
+
+    await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
+    expect(mocks.centerRoutePosition).toHaveBeenCalledWith(
+      baseProps.getView(),
+      expect.objectContaining({ coordinate: [0, 0, 0] }),
+      9,
+      false,
+    );
+  });
+
+  it("starts playback when the initial followed navigation fails", async () => {
+    useStore.setState({ followAlong: true });
+    mocks.centerRoutePosition.mockRejectedValue(new Error("view unavailable"));
+    render(<RouteAnimationController {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
+
+    await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
+  });
+
+  it("retries failed frame follows without interrupting playback", async () => {
+    useStore.setState({ followAlong: true });
+    mocks.centerRoutePosition.mockRejectedValueOnce(new Error("cancelled"));
+    render(<RouteAnimationController {...baseProps} />);
+    const frameListener = mocks.frameListener as unknown as (
+      snapshot: object,
+    ) => void;
+
+    frameListener({
+      state: "playing",
+      position: {
+        coordinate: [1, 1],
+        pointIndex: 1,
+        originalElapsedMs: null,
+        cumulativeDistanceM: 1,
+      },
+    });
+    frameListener({
+      state: "playing",
+      position: {
+        coordinate: [2, 2],
+        pointIndex: 2,
+        originalElapsedMs: null,
+        cumulativeDistanceM: 2,
+      },
+    });
+
+    await waitFor(() =>
+      expect(mocks.centerRoutePosition).toHaveBeenCalledTimes(2),
+    );
+    expect(mocks.play).not.toHaveBeenCalled();
+  });
+
+  it("follows live toggles without recapturing or compounding zoom", async () => {
+    const { rerender } = render(<RouteAnimationController {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
+    await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
+    expect(mocks.captureFollowZoom).toHaveBeenCalledOnce();
+
+    mocks.state = "playing";
+    rerender(<RouteAnimationController {...baseProps} />);
+    useStore.getState().setFollowAlong(true);
+    await waitFor(() =>
+      expect(mocks.centerRoutePosition).toHaveBeenCalledOnce(),
+    );
+
+    await act(async () => useStore.getState().setFollowAlong(false));
+    await act(async () => useStore.getState().setFollowAlong(true));
+    await waitFor(() =>
+      expect(mocks.centerRoutePosition).toHaveBeenCalledTimes(2),
+    );
+    expect(mocks.captureFollowZoom).toHaveBeenCalledOnce();
   });
 
   it("does not present completion after Stop returns the session to idle", () => {

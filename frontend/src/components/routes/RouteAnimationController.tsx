@@ -2,6 +2,10 @@ import {
   showCompletedRouteOverview,
   showRouteStartOverview,
 } from "@/components/map/routeCompletionCamera";
+import {
+  captureFollowZoom,
+  centerRoutePosition,
+} from "@/components/map/routeFollowCamera";
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
 import { RouteCompletionDialog } from "@/components/routes/RouteCompletionDialog";
 import { useSettingsDialog } from "@/components/settings/SettingsDialog";
@@ -76,6 +80,7 @@ export function RouteAnimationController({
   );
   const skipDetectedStops = useStore((state) => state.skipDetectedStops);
   const showTimedPhotos = useStore((state) => state.showTimedPhotos);
+  const followAlong = useStore((state) => state.followAlong);
   const playbackMode = resolvePlaybackMode(track, preferredPlaybackMode);
   const { registerRouteContext } = useSettingsDialog();
   const [completionPhase, setCompletionPhase] =
@@ -85,6 +90,8 @@ export function RouteAnimationController({
   const completionStartedRef = useRef(false);
   const completionTransitionIdRef = useRef(0);
   const playbackStartPendingRef = useRef(false);
+  const followAlongRef = useRef(followAlong);
+  const followZoomRef = useRef<number | null>(null);
 
   const {
     state,
@@ -94,6 +101,8 @@ export function RouteAnimationController({
     stop,
     photoPlaybackEngine,
     acquirePause,
+    position,
+    subscribeToFrames,
   } = useRouteAnimation(map, view, track, {
     targetDurationSec,
     playbackMode,
@@ -101,9 +110,50 @@ export function RouteAnimationController({
     activityType,
   });
   const isSessionActive = isAnimationSessionActive(state);
+
+  useEffect(() => {
+    followAlongRef.current = followAlong;
+    if (!followAlong || !isSessionActive) return;
+    void centerRoutePosition(
+      view,
+      position,
+      followZoomRef.current,
+      false,
+    ).catch(() => undefined);
+  }, [followAlong, isSessionActive, position, view]);
+
+  useEffect(
+    () =>
+      subscribeToFrames((frameSnapshot) => {
+        if (
+          !followAlongRef.current ||
+          !isAnimationSessionActive(frameSnapshot.state)
+        ) {
+          return;
+        }
+        void centerRoutePosition(
+          view,
+          frameSnapshot.position,
+          followZoomRef.current,
+          false,
+        ).catch(() => undefined);
+      }),
+    [subscribeToFrames, view],
+  );
   const completionPresentationActive =
     completionPhase !== null || (state === "completed" && !completionDismissed);
   const playbackModes = useMemo(() => availablePlaybackModes(track), [track]);
+  const routeStartPosition = useMemo(() => {
+    const firstPoint = track.profilePoints[0];
+    if (!firstPoint) return null;
+    return {
+      coordinate: [
+        firstPoint.lon,
+        firstPoint.lat,
+        firstPoint.elevation,
+      ] as const,
+    };
+  }, [track]);
   const settingsRouteContext = useMemo(
     () => ({
       availablePlaybackModes: playbackModes,
@@ -193,9 +243,7 @@ export function RouteAnimationController({
   ]);
 
   useEffect(() => {
-    onSessionActiveChange?.(
-      isSessionActive || completionPresentationActive,
-    );
+    onSessionActiveChange?.(isSessionActive || completionPresentationActive);
   }, [completionPresentationActive, isSessionActive, onSessionActiveChange]);
 
   useEffect(() => {
@@ -212,9 +260,8 @@ export function RouteAnimationController({
     const transitionId = ++completionTransitionIdRef.current;
     setCompletionPhase("transitioning");
     photoCoordinatorRef.current?.dismissAutomaticPhoto();
-    const reducedMotion = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches ?? false;
+    const reducedMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
     const showCompletionSummary = async () => {
       try {
@@ -250,11 +297,24 @@ export function RouteAnimationController({
       // Camera navigation is best-effort; playback should still start when
       // ArcGIS rejects or cancels the transition.
     }
+    followZoomRef.current = captureFollowZoom(view);
+    if (followAlongRef.current) {
+      try {
+        await centerRoutePosition(
+          view,
+          routeStartPosition,
+          followZoomRef.current,
+          !reducedMotion,
+        );
+      } catch {
+        // Following is best-effort and must never prevent playback.
+      }
+    }
     playbackStartPendingRef.current = false;
     completionStartedRef.current = false;
     setCompletionDismissed(false);
     play();
-  }, [play, track, view]);
+  }, [play, routeStartPosition, track, view]);
 
   const handleCompletionClose = useCallback(() => {
     completionTransitionIdRef.current += 1;

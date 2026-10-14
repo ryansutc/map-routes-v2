@@ -45,6 +45,8 @@ type MapRouteState = {
   setSkipDetectedStops: (skipDetectedStops: boolean) => void;
   showTimedPhotos: boolean;
   setShowTimedPhotos: (showTimedPhotos: boolean) => void;
+  followAlong: boolean;
+  setFollowAlong: (followAlong: boolean) => void;
 };
 
 type PersistedAnimationState = {
@@ -53,6 +55,7 @@ type PersistedAnimationState = {
   animationSpeed?: unknown;
   skipDetectedStops?: unknown;
   showTimedPhotos?: unknown;
+  followAlong?: unknown;
 };
 
 export function migratePersistedAnimationState(persistedState: unknown) {
@@ -78,6 +81,10 @@ export function migratePersistedAnimationState(persistedState: unknown) {
       typeof persisted.showTimedPhotos === "boolean"
         ? persisted.showTimedPhotos
         : true,
+    followAlong:
+      typeof persisted.followAlong === "boolean"
+        ? persisted.followAlong
+        : false,
   };
 }
 
@@ -96,6 +103,7 @@ export const useStore = create<MapRouteState>()(
           animationPlaybackMode: "recorded" as RoutePlaybackMode,
           skipDetectedStops: true,
           showTimedPhotos: true,
+          followAlong: false,
         } as MapRouteState,
         (set) => ({
           setPage: (page: PageType) => set({ page }, undefined, "page/setPage"),
@@ -146,11 +154,14 @@ export const useStore = create<MapRouteState>()(
           setShowTimedPhotos: (showTimedPhotos: boolean) => {
             set({ showTimedPhotos }, undefined, "animation/setShowTimedPhotos");
           },
+          setFollowAlong: (followAlong: boolean) => {
+            set({ followAlong }, undefined, "animation/setFollowAlong");
+          },
         }),
       ),
       {
         name: "map-routes-store",
-        version: 2,
+        version: 3,
         migrate: (persistedState) =>
           migratePersistedAnimationState(persistedState),
         partialize: (state) => ({
@@ -160,6 +171,7 @@ export const useStore = create<MapRouteState>()(
           animationPlaybackMode: state.animationPlaybackMode,
           skipDetectedStops: state.skipDetectedStops,
           showTimedPhotos: state.showTimedPhotos,
+          followAlong: state.followAlong,
         }),
       },
     ),
