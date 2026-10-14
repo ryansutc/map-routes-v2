@@ -5,6 +5,7 @@ import {
 import {
   captureFollowZoom,
   centerRoutePosition,
+  type FollowPosition,
 } from "@/components/map/routeFollowCamera";
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
 import { RouteCompletionDialog } from "@/components/routes/RouteCompletionDialog";
@@ -55,6 +56,12 @@ interface RouteAnimationControllerProps {
   onPhotoSessionControllerChange?: (
     controller: PhotoSessionController | null,
   ) => void;
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+  );
 }
 
 export function RouteAnimationController({
@@ -110,17 +117,27 @@ export function RouteAnimationController({
     activityType,
   });
   const isSessionActive = isAnimationSessionActive(state);
+  const centerFollowCamera = useCallback(
+    async (nextPosition: FollowPosition | null, animate: boolean) => {
+      try {
+        await centerRoutePosition(
+          view,
+          nextPosition,
+          followZoomRef.current,
+          animate,
+        );
+      } catch {
+        // Camera navigation is best-effort and must not interrupt playback.
+      }
+    },
+    [view],
+  );
 
   useEffect(() => {
     followAlongRef.current = followAlong;
     if (!followAlong || !isSessionActive) return;
-    void centerRoutePosition(
-      view,
-      position,
-      followZoomRef.current,
-      false,
-    ).catch(() => undefined);
-  }, [followAlong, isSessionActive, position, view]);
+    void centerFollowCamera(position, false);
+  }, [centerFollowCamera, followAlong, isSessionActive, position]);
 
   useEffect(
     () =>
@@ -131,14 +148,9 @@ export function RouteAnimationController({
         ) {
           return;
         }
-        void centerRoutePosition(
-          view,
-          frameSnapshot.position,
-          followZoomRef.current,
-          false,
-        ).catch(() => undefined);
+        void centerFollowCamera(frameSnapshot.position, false);
       }),
-    [subscribeToFrames, view],
+    [centerFollowCamera, subscribeToFrames],
   );
   const completionPresentationActive =
     completionPhase !== null || (state === "completed" && !completionDismissed);
@@ -260,8 +272,7 @@ export function RouteAnimationController({
     const transitionId = ++completionTransitionIdRef.current;
     setCompletionPhase("transitioning");
     photoCoordinatorRef.current?.dismissAutomaticPhoto();
-    const reducedMotion =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const reducedMotion = prefersReducedMotion();
 
     const showCompletionSummary = async () => {
       try {
@@ -289,8 +300,7 @@ export function RouteAnimationController({
     playbackStartPendingRef.current = true;
     completionTransitionIdRef.current += 1;
     setCompletionPhase(null);
-    const reducedMotion =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const reducedMotion = prefersReducedMotion();
     try {
       await showRouteStartOverview(view, track, reducedMotion);
     } catch {
@@ -299,22 +309,13 @@ export function RouteAnimationController({
     }
     followZoomRef.current = captureFollowZoom(view);
     if (followAlongRef.current) {
-      try {
-        await centerRoutePosition(
-          view,
-          routeStartPosition,
-          followZoomRef.current,
-          !reducedMotion,
-        );
-      } catch {
-        // Following is best-effort and must never prevent playback.
-      }
+      await centerFollowCamera(routeStartPosition, !reducedMotion);
     }
     playbackStartPendingRef.current = false;
     completionStartedRef.current = false;
     setCompletionDismissed(false);
     play();
-  }, [play, routeStartPosition, track, view]);
+  }, [centerFollowCamera, play, routeStartPosition, track, view]);
 
   const handleCompletionClose = useCallback(() => {
     completionTransitionIdRef.current += 1;
