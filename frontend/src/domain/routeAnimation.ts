@@ -12,15 +12,9 @@ export type TargetRouteDurationSec =
   (typeof TARGET_ROUTE_DURATIONS_SEC)[number];
 export type RoutePlaybackMode = "recorded" | "indexed" | "distance";
 export type AnimationLifecycleState =
-  | "idle"
-  | "playing"
-  | "paused"
-  | "completed";
+  "idle" | "playing" | "paused" | "completed";
 export type AnimationPauseReason =
-  | "document-hidden"
-  | "photo"
-  | "manual-gallery"
-  | "settings-dialog";
+  "document-hidden" | "photo" | "manual-gallery" | "settings-dialog";
 
 export type AnimationPosition = {
   coordinate: TrackCoordinate;
@@ -37,6 +31,8 @@ export type RouteAnimationSnapshot = {
   distanceProgress: number;
   position: AnimationPosition | null;
   activePauseReasons: readonly AnimationPauseReason[];
+  /** Changes when playback relocates or its projection is reconfigured. */
+  positionRevision: number;
 };
 
 export type RouteAnimationSettings = {
@@ -52,6 +48,8 @@ export type AnimationFrameClock = {
 
 export type RouteAnimationEngine = {
   getSnapshot: () => RouteAnimationSnapshot;
+  /** Preview wall-clock playback time ahead without mutating playback. Stops at segment boundaries. */
+  getPositionAfter: (milliseconds: number) => AnimationPosition | null;
   subscribe: (listener: () => void) => () => void;
   subscribeToFrames: (
     listener: (snapshot: RouteAnimationSnapshot) => void,
@@ -336,6 +334,9 @@ export function createRouteAnimationEngine(
   initialSettings: RouteAnimationSettings,
   clock: AnimationFrameClock = browserAnimationClock(),
 ): RouteAnimationEngine {
+  const segmentEnds = new Map<number, TrackProfilePoint>();
+  for (const point of track.profilePoints)
+    segmentEnds.set(point.segmentIndex, point);
   let settings = {
     ...initialSettings,
     playbackMode: resolvePlaybackMode(track, initialSettings.playbackMode),
@@ -354,6 +355,7 @@ export function createRouteAnimationEngine(
   let lastUiUpdateAt = 0;
   let lastUiProgress = 0;
   let rebasedPosition: AnimationPosition | null = null;
+  let positionRevision = 0;
   const pauseLeases = new Map<AnimationPauseReason, Set<symbol>>();
   const listeners = new Set<() => void>();
   const frameListeners = new Set<(snapshot: RouteAnimationSnapshot) => void>();
@@ -366,11 +368,19 @@ export function createRouteAnimationEngine(
     distanceProgress: 0,
     position: projection.positionAt(0),
     activePauseReasons: [],
+    positionRevision,
   };
 
   const updateSnapshot = () => {
     const position = rebasedPosition ?? projection.positionAt(playbackProgress);
+    const previousSegment =
+      snapshot.position &&
+      track.profilePoints[snapshot.position.pointIndex]?.segmentIndex;
+    const nextSegment =
+      position && track.profilePoints[position.pointIndex]?.segmentIndex;
+    if (previousSegment !== nextSegment) positionRevision += 1;
     snapshot = {
+      positionRevision,
       state,
       playbackMode: settings.playbackMode,
       skipDetectedStops: settings.skipDetectedStops,
@@ -394,6 +404,7 @@ export function createRouteAnimationEngine(
   const routeDurationMs = () => settings.targetDurationSec * 1000;
 
   const rebaseAtCursor = (cursor: TrackCursor) => {
+    positionRevision += 1;
     rebasedPosition = positionAtTimedCursor(cursor);
     playbackProgress = projection.progressAt(rebasedPosition);
     elapsedPlaybackMs = playbackProgress * routeDurationMs();
@@ -479,6 +490,29 @@ export function createRouteAnimationEngine(
 
   return {
     getSnapshot: () => snapshot,
+    getPositionAfter: (milliseconds) => {
+      if (
+        state !== "playing" ||
+        milliseconds <= 0 ||
+        !Number.isFinite(milliseconds)
+      )
+        return snapshot.position;
+      const current = snapshot.position;
+      if (!current) return null;
+      const segment = track.profilePoints[current.pointIndex]?.segmentIndex;
+      const future = projection.positionAt(
+        Math.min(1, playbackProgress + milliseconds / routeDurationMs()),
+      );
+      if (
+        !future ||
+        track.profilePoints[future.pointIndex]?.segmentIndex === segment
+      )
+        return future;
+      // Look ahead within this segment only: a recording gap is a relocation,
+      // not a path for either the marker or camera to interpolate across.
+      const end = segment === undefined ? undefined : segmentEnds.get(segment);
+      return end ? positionAtProfilePoint(end) : current;
+    },
     subscribe: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -540,6 +574,7 @@ export function createRouteAnimationEngine(
       if (destroyed) return;
       const position = snapshot.position;
       const nextMode = resolvePlaybackMode(track, nextSettings.playbackMode);
+      positionRevision += 1;
       settings = { ...nextSettings, playbackMode: nextMode };
       projection = playbackProjection(
         track,

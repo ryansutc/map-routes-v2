@@ -157,7 +157,7 @@ describe("SettingsDialog", () => {
       ).disabled,
     ).toBe(false);
     expect(
-      screen.getByText("Keep the moving marker centered during playback."),
+      screen.getByText("Keep the moving marker in view during playback."),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("switch", { name: "Follow along" }));
     expect(useStore.getState().followAlong).toBe(true);

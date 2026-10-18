@@ -9,7 +9,11 @@ import {
   resolvePlaybackMode,
   type AnimationFrameClock,
 } from "./routeAnimation";
-import { buildRouteTrack, type RouteTrack, type TimedTrack } from "./timedTrack";
+import {
+  buildRouteTrack,
+  type RouteTrack,
+  type TimedTrack,
+} from "./timedTrack";
 
 function routeTrack(times?: string[]): RouteTrack {
   return buildRouteTrack({
@@ -602,5 +606,131 @@ describe("route animation engine", () => {
     fake.step(0);
     fake.step(1_000);
     expect(engine.getSnapshot().playbackProgress).toBeGreaterThan(0);
+  });
+});
+
+describe("read-only playback look-ahead", () => {
+  it.each([
+    { mode: "recorded" as const, skipStops: false },
+    { mode: "recorded" as const, skipStops: true },
+    { mode: "distance" as const, skipStops: false },
+    { mode: "indexed" as const, skipStops: false },
+  ])(
+    "previews the actual playback path for $mode (skip stops: $skipStops)",
+    ({ mode, skipStops }) => {
+      const fake = fakeClock();
+      const engine = createRouteAnimationEngine(
+        mode === "indexed" ? routeTrack() : stopTrack(),
+        {
+          playbackMode: mode,
+          skipDetectedStops: skipStops,
+          targetDurationSec: 10,
+        },
+        fake.clock,
+      );
+      engine.play();
+      fake.step(0);
+      const snapshot = engine.getSnapshot();
+      const predicted = engine.getPositionAfter(3000);
+      expect(engine.getSnapshot()).toBe(snapshot);
+      fake.step(3000);
+      expect(engine.getSnapshot().position).toEqual(predicted);
+      expect(engine.getPositionAfter(100000)).not.toBeNull();
+      fake.step(100000);
+      expect(engine.getPositionAfter(1000)).toEqual(
+        engine.getSnapshot().position,
+      );
+    },
+  );
+
+  it("holds position during composed pauses and uses reconfigured playback speed", () => {
+    const fake = fakeClock();
+    const engine = createRouteAnimationEngine(
+      routeTrack(),
+      {
+        playbackMode: "distance",
+        skipDetectedStops: false,
+        targetDurationSec: 10,
+      },
+      fake.clock,
+    );
+    engine.play();
+    fake.step(0);
+    fake.step(2000);
+    const before = engine.getPositionAfter(2000);
+    const release = engine.acquirePause("settings-dialog");
+    expect(engine.getPositionAfter(2000)).toEqual(
+      engine.getSnapshot().position,
+    );
+    engine.configure({
+      playbackMode: "distance",
+      skipDetectedStops: false,
+      targetDurationSec: 20,
+    });
+    release();
+    const after = engine.getPositionAfter(2000);
+    expect(after?.cumulativeDistanceM).toBeLessThan(
+      before!.cumulativeDistanceM,
+    );
+    fake.step(0);
+    fake.step(2000);
+    expect(engine.getSnapshot().position?.cumulativeDistanceM).toBeCloseTo(
+      after!.cumulativeDistanceM,
+    );
+  });
+
+  it("limits prediction to the current segment and signals a recording-gap jump", () => {
+    const track = buildRouteTrack({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [0, 0],
+              [0.001, 0],
+            ],
+          },
+          properties: {
+            coordinate_times: ["2026-01-01T00:00:00Z", "2026-01-01T00:00:01Z"],
+          },
+        },
+        {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [1, 0],
+              [1.001, 0],
+            ],
+          },
+          properties: {
+            coordinate_times: ["2026-01-01T00:00:10Z", "2026-01-01T00:00:11Z"],
+          },
+        },
+      ],
+    });
+    const fake = fakeClock();
+    const engine = createRouteAnimationEngine(
+      track,
+      {
+        playbackMode: "recorded",
+        skipDetectedStops: false,
+        targetDurationSec: 10,
+      },
+      fake.clock,
+    );
+    engine.play();
+    fake.step(0);
+    const revision = engine.getSnapshot().positionRevision;
+    expect(engine.getPositionAfter(10000)?.coordinate.slice(0, 2)).toEqual([
+      0.001, 0,
+    ]);
+    fake.step(9500);
+    expect(engine.getSnapshot().positionRevision).toBeGreaterThan(revision);
+    expect(engine.getSnapshot().position?.coordinate[0]).toBeGreaterThanOrEqual(
+      1,
+    );
   });
 });

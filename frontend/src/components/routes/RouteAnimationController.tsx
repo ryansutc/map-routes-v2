@@ -4,8 +4,7 @@ import {
 } from "@/components/map/routeCompletionCamera";
 import {
   captureFollowZoom,
-  centerRoutePosition,
-  type FollowPosition,
+  createRouteFollowCamera,
 } from "@/components/map/routeFollowCamera";
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
 import { RouteCompletionDialog } from "@/components/routes/RouteCompletionDialog";
@@ -98,7 +97,6 @@ export function RouteAnimationController({
   const completionTransitionIdRef = useRef(0);
   const playbackStartPendingRef = useRef(false);
   const followAlongRef = useRef(followAlong);
-  const followZoomRef = useRef<number | null>(null);
 
   const {
     state,
@@ -108,7 +106,6 @@ export function RouteAnimationController({
     stop,
     photoPlaybackEngine,
     acquirePause,
-    position,
     subscribeToFrames,
   } = useRouteAnimation(map, view, track, {
     targetDurationSec,
@@ -117,41 +114,28 @@ export function RouteAnimationController({
     activityType,
   });
   const isSessionActive = isAnimationSessionActive(state);
-  const centerFollowCamera = useCallback(
-    async (nextPosition: FollowPosition | null, animate: boolean) => {
-      try {
-        await centerRoutePosition(
-          view,
-          nextPosition,
-          followZoomRef.current,
-          animate,
-        );
-      } catch {
-        // Camera navigation is best-effort and must not interrupt playback.
-      }
-    },
-    [view],
+  const followCamera = useMemo(
+    () =>
+      createRouteFollowCamera(
+        view,
+        photoPlaybackEngine.getPositionAfter,
+        prefersReducedMotion,
+      ),
+    [view, photoPlaybackEngine],
   );
-
   useEffect(() => {
     followAlongRef.current = followAlong;
-    if (!followAlong || !isSessionActive) return;
-    void centerFollowCamera(position, false);
-  }, [centerFollowCamera, followAlong, isSessionActive, position]);
-
-  useEffect(
-    () =>
-      subscribeToFrames((frameSnapshot) => {
-        if (
-          !followAlongRef.current ||
-          !isAnimationSessionActive(frameSnapshot.state)
-        ) {
-          return;
-        }
-        void centerFollowCamera(frameSnapshot.position, false);
-      }),
-    [centerFollowCamera, subscribeToFrames],
-  );
+    followCamera.setEnabled(followAlong);
+  }, [followAlong, followCamera]);
+  useEffect(() => {
+    followCamera.update(photoPlaybackEngine.getSnapshot());
+    const unsubscribe = subscribeToFrames(followCamera.update);
+    return () => {
+      unsubscribe();
+      followCamera.setEnabled(false);
+      followCamera.cancel();
+    };
+  }, [followCamera, photoPlaybackEngine, subscribeToFrames]);
   const completionPresentationActive =
     completionPhase !== null || (state === "completed" && !completionDismissed);
   const playbackModes = useMemo(() => availablePlaybackModes(track), [track]);
@@ -298,6 +282,7 @@ export function RouteAnimationController({
   const handlePlay = useCallback(async () => {
     if (playbackStartPendingRef.current) return;
     playbackStartPendingRef.current = true;
+    followCamera.cancel();
     completionTransitionIdRef.current += 1;
     setCompletionPhase(null);
     const reducedMotion = prefersReducedMotion();
@@ -307,15 +292,27 @@ export function RouteAnimationController({
       // Camera navigation is best-effort; playback should still start when
       // ArcGIS rejects or cancels the transition.
     }
-    followZoomRef.current = captureFollowZoom(view);
-    if (followAlongRef.current) {
-      await centerFollowCamera(routeStartPosition, !reducedMotion);
+    followCamera.setZoom(captureFollowZoom(view));
+    if (followAlongRef.current && routeStartPosition) {
+      try {
+        await followCamera.centerStart(
+          {
+            ...routeStartPosition,
+            pointIndex: 0,
+            originalElapsedMs: null,
+            cumulativeDistanceM: 0,
+          },
+          !reducedMotion,
+        );
+      } catch {
+        // Even an unavailable camera must not prevent playback.
+      }
     }
     playbackStartPendingRef.current = false;
     completionStartedRef.current = false;
     setCompletionDismissed(false);
     play();
-  }, [centerFollowCamera, play, routeStartPosition, track, view]);
+  }, [followCamera, play, routeStartPosition, track, view]);
 
   const handleCompletionClose = useCallback(() => {
     completionTransitionIdRef.current += 1;

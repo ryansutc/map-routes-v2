@@ -23,6 +23,12 @@ const mocks = vi.hoisted(() => ({
   centerRoutePosition: vi.fn(),
   captureFollowZoom: vi.fn(() => 9),
   frameListener: null as null | ((snapshot: never) => void),
+  engine: { getSnapshot: vi.fn(), getPositionAfter: vi.fn() },
+  updateFollow: vi.fn(),
+  toggleFollow: vi.fn(),
+  cancelFollow: vi.fn(),
+  setFollowZoom: vi.fn(),
+  subscribeToFrames: vi.fn(),
 }));
 
 vi.mock("@/hooks/useRouteAnimation", () => ({
@@ -33,26 +39,33 @@ vi.mock("@/hooks/useRouteAnimation", () => ({
     play: mocks.play,
     stop: mocks.stop,
     acquirePause: vi.fn(() => vi.fn()),
-    photoPlaybackEngine: {},
+    photoPlaybackEngine: mocks.engine,
     position: {
       coordinate: [0, 0],
       pointIndex: 0,
       originalElapsedMs: null,
       cumulativeDistanceM: 0,
     },
-    subscribeToFrames: vi.fn((listener) => {
-      mocks.frameListener = listener;
-      return () => {
-        mocks.frameListener = null;
-      };
-    }),
+    subscribeToFrames: mocks.subscribeToFrames,
   }),
 }));
 
 vi.mock("@/components/map/routeFollowCamera", () => ({
   captureFollowZoom: () => mocks.captureFollowZoom(),
-  centerRoutePosition: (...args: unknown[]) =>
-    mocks.centerRoutePosition(...args),
+  createRouteFollowCamera: (view: unknown) => {
+    let zoom: number | null = null;
+    return {
+      setEnabled: mocks.toggleFollow,
+      setZoom: (nextZoom: number) => {
+        zoom = nextZoom;
+        mocks.setFollowZoom(nextZoom);
+      },
+      update: mocks.updateFollow,
+      cancel: mocks.cancelFollow,
+      centerStart: (position: unknown, animate: boolean) =>
+        mocks.centerRoutePosition(view, position, zoom, animate),
+    };
+  },
 }));
 
 vi.mock("@/components/map/routeCompletionCamera", () => ({
@@ -129,6 +142,17 @@ describe("RouteAnimationController completion presentation", () => {
     mocks.centerRoutePosition.mockReset().mockResolvedValue(undefined);
     mocks.captureFollowZoom.mockClear();
     mocks.frameListener = null;
+    mocks.updateFollow.mockClear();
+    mocks.toggleFollow.mockClear();
+    mocks.cancelFollow.mockClear();
+    mocks.setFollowZoom.mockClear();
+    mocks.engine.getSnapshot.mockImplementation(() => ({ state: mocks.state }));
+    mocks.subscribeToFrames.mockImplementation((listener) => {
+      mocks.frameListener = listener;
+      return () => {
+        mocks.frameListener = null;
+      };
+    });
     useStore.setState({ followAlong: false });
     vi.stubGlobal(
       "matchMedia",
@@ -278,58 +302,31 @@ describe("RouteAnimationController completion presentation", () => {
     await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
   });
 
-  it("retries failed frame follows without interrupting playback", async () => {
-    useStore.setState({ followAlong: true });
-    mocks.centerRoutePosition.mockRejectedValueOnce(new Error("cancelled"));
+  it("forwards playback frames directly to the follow adapter", () => {
     render(<RouteAnimationController {...baseProps} />);
-    const frameListener = mocks.frameListener as unknown as (
-      snapshot: object,
-    ) => void;
-
-    frameListener({
+    const snapshot = {
       state: "playing",
-      position: {
-        coordinate: [1, 1],
-        pointIndex: 1,
-        originalElapsedMs: null,
-        cumulativeDistanceM: 1,
-      },
-    });
-    frameListener({
-      state: "playing",
-      position: {
-        coordinate: [2, 2],
-        pointIndex: 2,
-        originalElapsedMs: null,
-        cumulativeDistanceM: 2,
-      },
-    });
-
-    await waitFor(() =>
-      expect(mocks.centerRoutePosition).toHaveBeenCalledTimes(2),
-    );
-    expect(mocks.play).not.toHaveBeenCalled();
+      position: { coordinate: [1, 2] },
+      positionRevision: 3,
+    };
+    mocks.frameListener?.(snapshot as never);
+    expect(mocks.updateFollow).toHaveBeenLastCalledWith(snapshot);
   });
 
-  it("follows live toggles without recapturing or compounding zoom", async () => {
-    const { rerender } = render(<RouteAnimationController {...baseProps} />);
+  it("updates the preference without recapturing session zoom and cancels on unmount", async () => {
+    const { unmount } = render(<RouteAnimationController {...baseProps} />);
     fireEvent.click(screen.getByRole("button", { name: "Replay route" }));
     await waitFor(() => expect(mocks.play).toHaveBeenCalledOnce());
-    expect(mocks.captureFollowZoom).toHaveBeenCalledOnce();
-
-    mocks.state = "playing";
-    rerender(<RouteAnimationController {...baseProps} />);
-    useStore.getState().setFollowAlong(true);
-    await waitFor(() =>
-      expect(mocks.centerRoutePosition).toHaveBeenCalledOnce(),
-    );
-
-    await act(async () => useStore.getState().setFollowAlong(false));
+    expect(mocks.setFollowZoom).toHaveBeenCalledExactlyOnceWith(9);
     await act(async () => useStore.getState().setFollowAlong(true));
-    await waitFor(() =>
-      expect(mocks.centerRoutePosition).toHaveBeenCalledTimes(2),
-    );
+    expect(mocks.toggleFollow).toHaveBeenLastCalledWith(true);
+    await act(async () => useStore.getState().setFollowAlong(false));
+    expect(mocks.toggleFollow).toHaveBeenLastCalledWith(false);
     expect(mocks.captureFollowZoom).toHaveBeenCalledOnce();
+    mocks.cancelFollow.mockClear();
+    unmount();
+    expect(mocks.cancelFollow).toHaveBeenCalledOnce();
+    expect(mocks.frameListener).toBeNull();
   });
 
   it("does not present completion after Stop returns the session to idle", () => {

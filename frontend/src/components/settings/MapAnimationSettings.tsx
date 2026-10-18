@@ -157,7 +157,7 @@ export function MapAnimationSettings({
           label="Follow along"
         />
         <FormHelperText>
-          Keep the moving marker centered during playback.
+          Keep the moving marker in view during playback.
         </FormHelperText>
       </FormControl>
       <FormControl>
