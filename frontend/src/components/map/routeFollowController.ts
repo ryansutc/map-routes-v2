@@ -26,6 +26,17 @@ type FollowAdapter = {
   ) => Promise<void>;
 };
 
+/**
+ * Returns true when a projected route point lies within the viewport’s
+ *  safe inset, so the follow controller can tell  whether the current
+ * route position is still comfortably visible and not too close to
+ * the edges.
+ *
+ * @param point
+ * @param viewport
+ * @param inset
+ * @returns
+ */
 function inside(
   point: ScreenPoint | null,
   viewport: FollowViewport,
