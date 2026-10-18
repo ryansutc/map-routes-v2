@@ -5,8 +5,12 @@ import LineCallout3D from "@arcgis/core/symbols/callouts/LineCallout3D.js";
 import Symbol3DVerticalOffset from "@arcgis/core/symbols/support/Symbol3DVerticalOffset.js";
 import sphereMarkerUrl from "./sphereMarker.svg";
 
-const BALL_DIAMETER_PX = 24;
-const BALL_VERTICAL_OFFSET_PX = 24;
+import {
+  BALL_DIAMETER_PX,
+  BALL_MAX_WORLD_OFFSET_M,
+  BALL_MIN_WORLD_OFFSET_M,
+  BALL_VERTICAL_OFFSET_PX,
+} from "../routeMarkerLayout";
 
 export const ball3D = new PointSymbol3D({
   callout: new LineCallout3D({
@@ -23,8 +27,8 @@ export const ball3D = new PointSymbol3D({
     }),
   ],
   verticalOffset: new Symbol3DVerticalOffset({
-    maxWorldLength: 101,
-    minWorldLength: 4,
+    maxWorldLength: BALL_MAX_WORLD_OFFSET_M,
+    minWorldLength: BALL_MIN_WORLD_OFFSET_M,
     // A CSS unit keeps the lift stable on screen as the camera scale changes.
     screenLength: `${BALL_VERTICAL_OFFSET_PX}px`,
   }),

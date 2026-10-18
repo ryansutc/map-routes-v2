@@ -245,5 +245,6 @@ export function useRouteAnimation(
     stop: engine.stop,
     acquirePause: engine.acquirePause,
     photoPlaybackEngine: engine,
+    subscribeToFrames: engine.subscribeToFrames,
   };
 }

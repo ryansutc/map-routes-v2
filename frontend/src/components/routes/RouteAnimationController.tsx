@@ -2,6 +2,10 @@ import {
   showCompletedRouteOverview,
   showRouteStartOverview,
 } from "@/components/map/routeCompletionCamera";
+import {
+  captureFollowZoom,
+  createRouteFollowCamera,
+} from "@/components/map/routeFollowCamera";
 import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
 import { RouteCompletionDialog } from "@/components/routes/RouteCompletionDialog";
 import { useSettingsDialog } from "@/components/settings/SettingsDialog";
@@ -53,6 +57,12 @@ interface RouteAnimationControllerProps {
   ) => void;
 }
 
+function prefersReducedMotion(): boolean {
+  return (
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+  );
+}
+
 export function RouteAnimationController({
   getMap,
   getView,
@@ -76,6 +86,7 @@ export function RouteAnimationController({
   );
   const skipDetectedStops = useStore((state) => state.skipDetectedStops);
   const showTimedPhotos = useStore((state) => state.showTimedPhotos);
+  const followAlong = useStore((state) => state.followAlong);
   const playbackMode = resolvePlaybackMode(track, preferredPlaybackMode);
   const { registerRouteContext } = useSettingsDialog();
   const [completionPhase, setCompletionPhase] =
@@ -85,6 +96,7 @@ export function RouteAnimationController({
   const completionStartedRef = useRef(false);
   const completionTransitionIdRef = useRef(0);
   const playbackStartPendingRef = useRef(false);
+  const followAlongRef = useRef(followAlong);
 
   const {
     state,
@@ -94,6 +106,7 @@ export function RouteAnimationController({
     stop,
     photoPlaybackEngine,
     acquirePause,
+    subscribeToFrames,
   } = useRouteAnimation(map, view, track, {
     targetDurationSec,
     playbackMode,
@@ -101,9 +114,42 @@ export function RouteAnimationController({
     activityType,
   });
   const isSessionActive = isAnimationSessionActive(state);
+  const followCamera = useMemo(
+    () =>
+      createRouteFollowCamera(
+        view,
+        photoPlaybackEngine.getPositionAfter,
+        prefersReducedMotion,
+      ),
+    [view, photoPlaybackEngine],
+  );
+  useEffect(() => {
+    followAlongRef.current = followAlong;
+    followCamera.setEnabled(followAlong);
+  }, [followAlong, followCamera]);
+  useEffect(() => {
+    followCamera.update(photoPlaybackEngine.getSnapshot());
+    const unsubscribe = subscribeToFrames(followCamera.update);
+    return () => {
+      unsubscribe();
+      followCamera.setEnabled(false);
+      followCamera.cancel();
+    };
+  }, [followCamera, photoPlaybackEngine, subscribeToFrames]);
   const completionPresentationActive =
     completionPhase !== null || (state === "completed" && !completionDismissed);
   const playbackModes = useMemo(() => availablePlaybackModes(track), [track]);
+  const routeStartPosition = useMemo(() => {
+    const firstPoint = track.profilePoints[0];
+    if (!firstPoint) return null;
+    return {
+      coordinate: [
+        firstPoint.lon,
+        firstPoint.lat,
+        firstPoint.elevation,
+      ] as const,
+    };
+  }, [track]);
   const settingsRouteContext = useMemo(
     () => ({
       availablePlaybackModes: playbackModes,
@@ -193,9 +239,7 @@ export function RouteAnimationController({
   ]);
 
   useEffect(() => {
-    onSessionActiveChange?.(
-      isSessionActive || completionPresentationActive,
-    );
+    onSessionActiveChange?.(isSessionActive || completionPresentationActive);
   }, [completionPresentationActive, isSessionActive, onSessionActiveChange]);
 
   useEffect(() => {
@@ -212,9 +256,7 @@ export function RouteAnimationController({
     const transitionId = ++completionTransitionIdRef.current;
     setCompletionPhase("transitioning");
     photoCoordinatorRef.current?.dismissAutomaticPhoto();
-    const reducedMotion = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches ?? false;
+    const reducedMotion = prefersReducedMotion();
 
     const showCompletionSummary = async () => {
       try {
@@ -240,21 +282,37 @@ export function RouteAnimationController({
   const handlePlay = useCallback(async () => {
     if (playbackStartPendingRef.current) return;
     playbackStartPendingRef.current = true;
+    followCamera.cancel();
     completionTransitionIdRef.current += 1;
     setCompletionPhase(null);
-    const reducedMotion =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const reducedMotion = prefersReducedMotion();
     try {
       await showRouteStartOverview(view, track, reducedMotion);
     } catch {
       // Camera navigation is best-effort; playback should still start when
       // ArcGIS rejects or cancels the transition.
     }
+    followCamera.setZoom(captureFollowZoom(view));
+    if (followAlongRef.current && routeStartPosition) {
+      try {
+        await followCamera.centerStart(
+          {
+            ...routeStartPosition,
+            pointIndex: 0,
+            originalElapsedMs: null,
+            cumulativeDistanceM: 0,
+          },
+          !reducedMotion,
+        );
+      } catch {
+        // Even an unavailable camera must not prevent playback.
+      }
+    }
     playbackStartPendingRef.current = false;
     completionStartedRef.current = false;
     setCompletionDismissed(false);
     play();
-  }, [play, track, view]);
+  }, [followCamera, play, routeStartPosition, track, view]);
 
   const handleCompletionClose = useCallback(() => {
     completionTransitionIdRef.current += 1;
