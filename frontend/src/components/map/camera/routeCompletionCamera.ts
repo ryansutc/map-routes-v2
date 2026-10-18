@@ -1,3 +1,4 @@
+/** ArcGIS camera transitions used before and after route playback. */
 import type { RouteTrack } from "@/domain/timedTrack";
 import Extent from "@arcgis/core/geometry/Extent";
 import type MapView from "@arcgis/core/views/MapView";

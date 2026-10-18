@@ -1,3 +1,4 @@
+/** Route title normalization and validation shared by route forms. */
 export const MAX_ROUTE_TITLE_LENGTH = 255;
 
 export function normalizeRouteTitle(title: string): string {

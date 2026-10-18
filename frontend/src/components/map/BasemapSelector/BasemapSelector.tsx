@@ -1,9 +1,9 @@
 import { basemap24 } from "@esri/calcite-ui-icons/js/basemap24";
-import { DISABLED_MAP_CONTROL_OPACITY } from "@/components/map/mapControlAppearance";
+import { DISABLED_MAP_CONTROL_OPACITY } from "@/components/map/controls/mapControlAppearance";
 import {
   BASEMAP_CONTROL_LEFT_PX,
   BASEMAP_CONTROL_SIZE_PX,
-} from "@/components/map/mapOverlayLayout";
+} from "@/components/map/layout/mapOverlayLayout";
 import CheckIcon from "@mui/icons-material/Check";
 import {
   Box,

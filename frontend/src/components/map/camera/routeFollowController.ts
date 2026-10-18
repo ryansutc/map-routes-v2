@@ -1,3 +1,4 @@
+/** Provider-independent viewport and scheduling logic for the follow camera. */
 import {
   isAnimationSessionActive,
   type AnimationPosition,

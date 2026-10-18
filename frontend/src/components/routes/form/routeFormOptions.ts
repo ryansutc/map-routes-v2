@@ -1,3 +1,4 @@
+/** Route form choices shared by create and edit experiences. */
 export const ACTIVITY_TYPES = [
   "Hiking",
   "Running",

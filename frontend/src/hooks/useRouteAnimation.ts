@@ -1,11 +1,11 @@
-import { ball3D } from "@/components/map/layerSymbols/3dSymbol";
-import { bikeIcon } from "@/components/map/layerSymbols/bikeIcon";
-import { hikerSymbol } from "@/components/map/layerSymbols/hikerIcon";
+import { ball3D } from "@/components/map/layers/symbols/3dSymbol";
+import { bikeIcon } from "@/components/map/layers/symbols/bikeIcon";
+import { hikerSymbol } from "@/components/map/layers/symbols/hikerIcon";
 import {
   addRouteAnimationLayers,
   ROUTE_ANIMATION_MARKER_LAYER_ID,
   ROUTE_ANIMATION_TRAIL_LAYER_ID,
-} from "@/components/map/mapLayerOrder";
+} from "@/components/map/layers/mapLayerOrder";
 import {
   buildRouteTrailPaths,
   createRouteAnimationEngine,

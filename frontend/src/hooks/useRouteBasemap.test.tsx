@@ -5,13 +5,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const adapter = vi.hoisted(() => ({ switchBasemap: vi.fn() }));
 
-vi.mock("@/components/map/arcgisBasemaps", async (importOriginal) => {
-  const original =
-    await importOriginal<
-      typeof import("@/components/map/arcgisBasemaps")
-    >();
-  return { ...original, switchArcGISBasemap: adapter.switchBasemap };
-});
+vi.mock(
+  "@/components/map/BasemapSelector/arcgisBasemaps",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("@/components/map/BasemapSelector/arcgisBasemaps")
+      >();
+    return { ...original, switchArcGISBasemap: adapter.switchBasemap };
+  },
+);
 
 import type Map from "@arcgis/core/Map";
 import { useRouteBasemap } from "./useRouteBasemap";
@@ -21,7 +24,9 @@ function mockMap(id: string) {
 }
 
 describe("useRouteBasemap", () => {
-  beforeEach(() => adapter.switchBasemap.mockReset().mockResolvedValue(undefined));
+  beforeEach(() =>
+    adapter.switchBasemap.mockReset().mockResolvedValue(undefined),
+  );
   afterEach(cleanup);
 
   it("starts at Satellite and carries a choice across a map rebuild", async () => {
@@ -45,8 +50,16 @@ describe("useRouteBasemap", () => {
     finishFirstLoad();
     await act(() => selection);
 
-    expect(adapter.switchBasemap).toHaveBeenNthCalledWith(1, firstMap, "terrain");
-    expect(adapter.switchBasemap).toHaveBeenNthCalledWith(2, rebuiltMap, "terrain");
+    expect(adapter.switchBasemap).toHaveBeenNthCalledWith(
+      1,
+      firstMap,
+      "terrain",
+    );
+    expect(adapter.switchBasemap).toHaveBeenNthCalledWith(
+      2,
+      rebuiltMap,
+      "terrain",
+    );
     expect(result.current.selectedId).toBe("terrain");
     expect(result.current.isChanging).toBe(false);
     expect(onError).not.toHaveBeenCalled();

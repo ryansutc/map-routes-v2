@@ -1,10 +1,13 @@
 import type { AutomaticPhotoPresentation } from "@/domain/timedPhotoPlayback";
-import type { PhotoMapAnchor, PhotoMapAnchorSnapshot } from "@/domain/photoMapAnchor";
+import type {
+  PhotoMapAnchor,
+  PhotoMapAnchorSnapshot,
+} from "@/domain/photoMapAnchor";
 import { resolvePhotoUrl } from "@/utils/dropboxImgHelpers";
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, IconButton, Paper, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ANIMATION_CONTROLS_RESERVED_HEIGHT_PX } from "./mapOverlayLayout";
+import { ANIMATION_CONTROLS_RESERVED_HEIGHT_PX } from "./layout/mapOverlayLayout";
 
 const DESKTOP_POPUP_WIDTH = 240;
 const MOBILE_POPUP_WIDTH = 180;
@@ -35,9 +38,7 @@ function placePhotoPopup(
   const side =
     anchor.y - ANCHOR_GAP - height >= POPUP_MARGIN ? "above" : "below";
   const preferredTop =
-    side === "above"
-      ? anchor.y - ANCHOR_GAP - height
-      : anchor.y + ANCHOR_GAP;
+    side === "above" ? anchor.y - ANCHOR_GAP - height : anchor.y + ANCHOR_GAP;
   const clearControlsBottom = Math.max(
     POPUP_MARGIN,
     anchor.viewportHeight - ANIMATION_CONTROLS_RESERVED_HEIGHT_PX,
@@ -49,11 +50,7 @@ function placePhotoPopup(
       POPUP_MARGIN,
       anchor.viewportWidth - width - POPUP_MARGIN,
     ),
-    top: clamp(
-      preferredTop,
-      POPUP_MARGIN,
-      clearControlsBottom - height,
-    ),
+    top: clamp(preferredTop, POPUP_MARGIN, clearControlsBottom - height),
     width,
     side,
   };
@@ -68,9 +65,7 @@ export function AutomaticPhotoPopup({
   presentation: AutomaticPhotoPresentation;
   mapAnchor: PhotoMapAnchor;
 }) {
-  const [anchor, setAnchor] = useState(() =>
-    mapAnchor.getSnapshot(photo.id),
-  );
+  const [anchor, setAnchor] = useState(() => mapAnchor.getSnapshot(photo.id));
   const popupRef = useRef<HTMLDivElement>(null);
   const hoveredRef = useRef(false);
   const focusedRef = useRef(false);
@@ -187,11 +182,21 @@ export function AutomaticPhotoPopup({
           alt={photo.title ?? "Route photo"}
           onLoad={presentation.onLoad}
           onError={presentation.onError}
-          sx={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          sx={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            display: "block",
+          }}
         />
       </Box>
       {photo.title && (
-        <Typography variant="caption" component="p" noWrap sx={{ px: 1, py: 0.75, m: 0 }}>
+        <Typography
+          variant="caption"
+          component="p"
+          noWrap
+          sx={{ px: 1, py: 0.75, m: 0 }}
+        >
           {photo.title}
         </Typography>
       )}

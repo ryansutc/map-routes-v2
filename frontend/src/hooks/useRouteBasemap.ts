@@ -2,7 +2,7 @@ import {
   DEFAULT_BASEMAP_ID,
   switchArcGISBasemap,
   type ArcGISBasemapId,
-} from "@/components/map/arcgisBasemaps";
+} from "@/components/map/BasemapSelector/arcgisBasemaps";
 import type Map from "@arcgis/core/Map";
 import { useCallback, useEffect, useRef, useState } from "react";
 

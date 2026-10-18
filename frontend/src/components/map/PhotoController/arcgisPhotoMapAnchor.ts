@@ -1,3 +1,4 @@
+/** ArcGIS implementation of the provider-independent photo anchor interface. */
 import type Graphic from "@arcgis/core/Graphic";
 import type Point from "@arcgis/core/geometry/Point";
 import type MapView from "@arcgis/core/views/MapView";

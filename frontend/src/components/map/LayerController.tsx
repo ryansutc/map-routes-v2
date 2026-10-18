@@ -1,5 +1,5 @@
-import { addRouteLayer } from "@/components/map/mapLayerOrder";
-import { setMapWidgetDisabledAppearance } from "@/components/map/mapControlAppearance";
+import { addRouteLayer } from "@/components/map/layers/mapLayerOrder";
+import { setMapWidgetDisabledAppearance } from "@/components/map/controls/mapControlAppearance";
 import { useToast } from "@/hooks/useToast";
 import { isAbortError } from "@arcgis/core/core/promiseUtils";
 import GeoJSONLayer from "@arcgis/core/layers/GeoJSONLayer";

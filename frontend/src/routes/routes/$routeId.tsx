@@ -1,9 +1,9 @@
 import ElevationProfile from "@/components/map/ElevationProfile";
 import { AutomaticPhotoPopup } from "@/components/map/AutomaticPhotoPopup";
-import BasemapSelector from "@/components/map/BasemapSelector";
+import BasemapSelector from "@/components/map/BasemapSelector/BasemapSelector";
 import LayerController from "@/components/map/LayerController";
 import MapContainer from "@/components/map/MapContainer";
-import PhotoController from "@/components/map/PhotoController";
+import PhotoController from "@/components/map/PhotoController/PhotoController";
 import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 import RouteInfoContainer, {
   RouteInfoSkeleton,
@@ -13,9 +13,9 @@ import {
   ARCGIS_BASEMAP_OPTIONS,
   isArcGISBasemapId,
   type ArcGISBasemapId,
-} from "@/components/map/arcgisBasemaps";
+} from "@/components/map/BasemapSelector/arcgisBasemaps";
 import PhotoGallery, { PhotoLightbox } from "@/components/routes/PhotoGallery";
-import { RouteAnimationController } from "@/components/routes/RouteAnimationController";
+import { RouteAnimationController } from "@/components/routes/RouteAnimationController/RouteAnimationController";
 import type {
   AutomaticPhotoPresentation,
   PhotoSessionController,
@@ -205,8 +205,9 @@ function RouteDetail() {
   const [view, setView] = useState<MapView | SceneView | null>(null);
   const [fullscreenRequested, setFullscreenRequested] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [photoMapAnchor, setPhotoMapAnchor] =
-    useState<PhotoMapAnchor | null>(null);
+  const [photoMapAnchor, setPhotoMapAnchor] = useState<PhotoMapAnchor | null>(
+    null,
+  );
   const routePhotos = routeItem?.photos ?? EMPTY_ROUTE_PHOTOS;
   const photoSessions = useRoutePhotoSessions(routePhotos);
   const { enqueueError } = useToast();
@@ -369,10 +370,7 @@ function RouteDetail() {
   return (
     <>
       {createPortal(mapTree, mapHost)}
-      <PhotoLightbox
-        photos={routePhotos}
-        {...photoSessions.lightbox}
-      />
+      <PhotoLightbox photos={routePhotos} {...photoSessions.lightbox} />
 
       {isMobile && isFullscreenMap && (
         <Box

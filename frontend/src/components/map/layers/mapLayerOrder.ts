@@ -1,3 +1,4 @@
+/** Layer identifiers and ordering rules shared by route map features. */
 import type Layer from "@arcgis/core/layers/Layer";
 import type GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 

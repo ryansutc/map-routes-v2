@@ -1,3 +1,4 @@
+/** ArcGIS CIM symbol for on-foot route playback. */
 const HIKER_FRAME_CENTER = 10.5;
 const HIKER_BACKGROUND_RADIUS = 10;
 const HIKER_BACKGROUND_SEGMENTS = 32;

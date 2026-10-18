@@ -1,3 +1,4 @@
+/** Shared visual treatment for disabled ArcGIS and React map controls. */
 export const DISABLED_MAP_CONTROL_OPACITY = 0.7;
 
 type WidgetWithContainer = {
@@ -11,7 +12,5 @@ export function setMapWidgetDisabledAppearance(
   if (!widget || typeof widget !== "object") return;
   const container = (widget as WidgetWithContainer).container;
   if (!(container instanceof HTMLElement)) return;
-  container.style.opacity = String(
-    disabled ? DISABLED_MAP_CONTROL_OPACITY : 1,
-  );
+  container.style.opacity = String(disabled ? DISABLED_MAP_CONTROL_OPACITY : 1);
 }

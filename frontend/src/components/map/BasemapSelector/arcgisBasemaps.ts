@@ -1,4 +1,5 @@
-import type { BasemapOption } from "@/components/map/BasemapSelector";
+/** ArcGIS basemap choices and switching behavior owned by BasemapSelector. */
+import type { BasemapOption } from "./BasemapSelector";
 import Basemap from "@arcgis/core/Basemap";
 import type Map from "@arcgis/core/Map";
 

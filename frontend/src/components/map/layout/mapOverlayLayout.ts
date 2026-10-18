@@ -1,3 +1,4 @@
+/** Shared dimensions and collision boundaries for map overlay controls. */
 export const ANIMATION_CONTROLS_BOTTOM_PX = 24;
 export const ANIMATION_CONTROLS_HEIGHT_PX = 42;
 export const MAP_OVERLAY_GAP_PX = 16;
