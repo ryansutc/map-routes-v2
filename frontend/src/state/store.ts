@@ -84,7 +84,7 @@ export function migratePersistedAnimationState(persistedState: unknown) {
     followAlong:
       typeof persisted.followAlong === "boolean"
         ? persisted.followAlong
-        : false,
+        : true,
   };
 }
 
@@ -103,7 +103,7 @@ export const useStore = create<MapRouteState>()(
           animationPlaybackMode: "recorded" as RoutePlaybackMode,
           skipDetectedStops: true,
           showTimedPhotos: true,
-          followAlong: false,
+          followAlong: true,
         } as MapRouteState,
         (set) => ({
           setPage: (page: PageType) => set({ page }, undefined, "page/setPage"),

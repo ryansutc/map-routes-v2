@@ -37,7 +37,7 @@ describe("animation settings persistence", () => {
     expect(migrated.animationPlaybackMode).toBe("indexed");
     expect(migrated.skipDetectedStops).toBe(true);
     expect(migrated.showTimedPhotos).toBe(true);
-    expect(migrated.followAlong).toBe(false);
+    expect(migrated.followAlong).toBe(true);
     expect(migrated).not.toHaveProperty("animationSpeed");
   });
 
@@ -57,11 +57,11 @@ describe("animation settings persistence", () => {
     const migrated = migratePersistedAnimationState({
       skipDetectedStops: false,
       showTimedPhotos: false,
-      followAlong: true,
+      followAlong: false,
     });
 
     expect(migrated.skipDetectedStops).toBe(false);
     expect(migrated.showTimedPhotos).toBe(false);
-    expect(migrated.followAlong).toBe(true);
+    expect(migrated.followAlong).toBe(false);
   });
 });
