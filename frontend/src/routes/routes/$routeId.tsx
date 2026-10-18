@@ -80,6 +80,7 @@ interface RouteMapOverlaysProps {
   selectedBasemapId: ArcGISBasemapId;
   onBasemapSelect: (id: string) => void;
   onPhotoClick: (index: number) => void;
+  openPhotoId: number | null;
   onPlayingChange: (isPlaying: boolean) => void;
   timedPhotoPresenter: TimedPhotoPresenter;
   automaticPhoto: AutomaticPhotoPresentation | null;
@@ -104,6 +105,7 @@ export function RouteMapOverlays({
   selectedBasemapId,
   onBasemapSelect,
   onPhotoClick,
+  openPhotoId,
   onPlayingChange,
   timedPhotoPresenter,
   automaticPhoto,
@@ -141,6 +143,7 @@ export function RouteMapOverlays({
             getMap={getMap}
             getView={getView}
             photos={routeItem.photos || []}
+            openPhotoId={openPhotoId}
             onPhotoClick={onPhotoClick}
             onMapAnchorChange={onPhotoMapAnchorChange}
           />
@@ -310,6 +313,7 @@ function RouteDetail() {
         selectedBasemapId={selectedBasemapId}
         onBasemapSelect={handleBasemapSelect}
         onPhotoClick={photoSessions.onPhotoClick}
+        openPhotoId={photoSessions.openPhotoId}
         onPlayingChange={setIsAnimating}
         timedPhotoPresenter={photoSessions.presenter}
         automaticPhoto={photoSessions.automaticPhoto}
