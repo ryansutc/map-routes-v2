@@ -20,7 +20,7 @@ import {
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { ActivityType, WizardState } from "./CreateRouteWizard";
-import { getRouteTitleError, normalizeRouteTitle } from "./routeTitle";
+import { getRouteTitleError, normalizeRouteTitle } from "../form/routeTitle";
 
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 const ACTIVITY_TYPES: ActivityType[] = [

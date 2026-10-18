@@ -50,7 +50,7 @@ vi.mock("@/hooks/useRouteAnimation", () => ({
   }),
 }));
 
-vi.mock("@/components/map/routeFollowCamera", () => ({
+vi.mock("@/components/map/camera/routeFollowCamera", () => ({
   captureFollowZoom: () => mocks.captureFollowZoom(),
   createRouteFollowCamera: (view: unknown) => {
     let zoom: number | null = null;
@@ -68,7 +68,7 @@ vi.mock("@/components/map/routeFollowCamera", () => ({
   },
 }));
 
-vi.mock("@/components/map/routeCompletionCamera", () => ({
+vi.mock("@/components/map/camera/routeCompletionCamera", () => ({
   showCompletedRouteOverview: (...args: unknown[]) =>
     mocks.showOverview(...args),
   showRouteStartOverview: (...args: unknown[]) =>

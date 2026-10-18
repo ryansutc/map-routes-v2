@@ -6,7 +6,7 @@ import {
   ANIMATION_CONTROLS_MAX_WIDTH_PX,
   ANIMATION_CONTROLS_MIN_LEFT_PX,
   BASEMAP_CONTROL_LEFT_PX,
-} from "@/components/map/mapOverlayLayout";
+} from "@/components/map/layout/mapOverlayLayout";
 import {
   isAnimationSessionActive,
   type AnimationLifecycleState,
@@ -68,12 +68,13 @@ export function RouteAnimationControls({
         zIndex: 10,
         width: ANIMATION_CONTROLS_MAX_WIDTH_PX,
         maxWidth: ANIMATION_CONTROLS_MAX_WIDTH_PX,
-        [`@media (max-width: ${ANIMATION_CONTROLS_COLLISION_BREAKPOINT_PX}px)`]: {
-          left: ANIMATION_CONTROLS_MIN_LEFT_PX,
-          right: BASEMAP_CONTROL_LEFT_PX,
-          width: "auto",
-          transform: "none",
-        },
+        [`@media (max-width: ${ANIMATION_CONTROLS_COLLISION_BREAKPOINT_PX}px)`]:
+          {
+            left: ANIMATION_CONTROLS_MIN_LEFT_PX,
+            right: BASEMAP_CONTROL_LEFT_PX,
+            width: "auto",
+            transform: "none",
+          },
       }}
     >
       <Tooltip title={isActive ? "Stop" : "Replay route"}>

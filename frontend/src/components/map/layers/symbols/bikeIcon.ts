@@ -1,3 +1,4 @@
+/** ArcGIS CIM symbol for cycling route playback. */
 const BIKE_FRAME_CENTER = 8;
 const BIKE_BACKGROUND_RADIUS = 7.5;
 const BIKE_BACKGROUND_SEGMENTS = 32;

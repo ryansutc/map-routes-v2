@@ -7,7 +7,7 @@ import IconSymbol3DLayer from "@arcgis/core/symbols/IconSymbol3DLayer";
 import type PointSymbol3D from "@arcgis/core/symbols/PointSymbol3D";
 import { describe, expect, it } from "vitest";
 
-import { ROUTE_ANIMATION_MARKER_LAYER_ID } from "@/components/map/mapLayerOrder";
+import { ROUTE_ANIMATION_MARKER_LAYER_ID } from "@/components/map/layers/mapLayerOrder";
 import { buildRouteTrack } from "@/domain/timedTrack";
 import { useRouteAnimation } from "./useRouteAnimation";
 
@@ -33,16 +33,11 @@ describe("3D route animation marker", () => {
     const map = new Map();
 
     const { unmount } = renderHook(() =>
-      useRouteAnimation(
-        map,
-        { type: "3d" } as __esri.SceneView,
-        track,
-        {
-          targetDurationSec: 20,
-          playbackMode: "distance",
-          skipDetectedStops: false,
-        },
-      ),
+      useRouteAnimation(map, { type: "3d" } as __esri.SceneView, track, {
+        targetDurationSec: 20,
+        playbackMode: "distance",
+        skipDetectedStops: false,
+      }),
     );
 
     const markerLayer = map.findLayerById(ROUTE_ANIMATION_MARKER_LAYER_ID);

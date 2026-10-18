@@ -1,5 +1,5 @@
 import { useStore } from "@/state/store";
-import { setMapWidgetDisabledAppearance } from "@/components/map/mapControlAppearance";
+import { setMapWidgetDisabledAppearance } from "@/components/map/controls/mapControlAppearance";
 import esriConfig from "@arcgis/core/config";
 import { isAbortError } from "@arcgis/core/core/promiseUtils";
 import ElevationLayer from "@arcgis/core/layers/ElevationLayer";
@@ -136,9 +136,7 @@ const MapContainer = (props: MapContainerProps) => {
           },
           (error: unknown) => {
             if (!disposed && !isArcGISAbortError(error)) {
-              onFail(
-                error instanceof Error ? error.message : String(error),
-              );
+              onFail(error instanceof Error ? error.message : String(error));
             }
           },
         );

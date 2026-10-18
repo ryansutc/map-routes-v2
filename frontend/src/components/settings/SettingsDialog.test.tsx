@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
+import { RouteAnimationControls } from "@/components/routes/RouteAnimationController/RouteAnimationControls";
 import { useStore } from "@/state/store";
 import {
   cleanup,

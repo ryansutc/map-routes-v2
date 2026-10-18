@@ -1,7 +1,7 @@
 import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import WebStyleSymbol from "@arcgis/core/symbols/WebStyleSymbol.js";
-import { PHOTO_MARKERS_LAYER_ID } from "./mapLayerOrder";
+import { PHOTO_MARKERS_LAYER_ID } from "../layers/mapLayerOrder";
 import { createArcGisPhotoMapAnchor } from "./arcgisPhotoMapAnchor";
 import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 
@@ -63,7 +63,10 @@ function PhotoController({
 
     map.add(graphicsLayer);
     const graphicsByPhotoId = new Map(
-      graphics.map((graphic) => [graphic.attributes!.ObjectID as number, graphic]),
+      graphics.map((graphic) => [
+        graphic.attributes!.ObjectID as number,
+        graphic,
+      ]),
     );
     const mapAnchor = createArcGisPhotoMapAnchor(view, graphicsByPhotoId);
     onMapAnchorChange?.(mapAnchor);

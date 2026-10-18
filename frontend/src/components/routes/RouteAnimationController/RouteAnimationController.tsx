@@ -1,13 +1,13 @@
 import {
   showCompletedRouteOverview,
   showRouteStartOverview,
-} from "@/components/map/routeCompletionCamera";
+} from "@/components/map/camera/routeCompletionCamera";
 import {
   captureFollowZoom,
   createRouteFollowCamera,
-} from "@/components/map/routeFollowCamera";
-import { RouteAnimationControls } from "@/components/routes/RouteAnimationControls";
-import { RouteCompletionDialog } from "@/components/routes/RouteCompletionDialog";
+} from "@/components/map/camera/routeFollowCamera";
+import { RouteAnimationControls } from "@/components/routes/RouteAnimationController/RouteAnimationControls";
+import { RouteCompletionDialog } from "@/components/routes/RouteAnimationController/RouteCompletionDialog";
 import { useSettingsDialog } from "@/components/settings/SettingsDialog";
 import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 import {

@@ -1,10 +1,11 @@
+/** Adapts provider-independent follow decisions to an ArcGIS map view. */
 import type { AnimationPosition } from "@/domain/routeAnimation";
 import { createRouteFollowController } from "./routeFollowController";
 import {
   ANIMATION_CONTROLS_RESERVED_HEIGHT_PX,
   MAP_OVERLAY_GAP_PX,
-} from "./mapOverlayLayout";
-import { BALL_VERTICAL_OFFSET_PX } from "./routeMarkerLayout";
+} from "../layout/mapOverlayLayout";
+import { BALL_VERTICAL_OFFSET_PX } from "../layout/routeMarkerLayout";
 import type { TrackCoordinate } from "@/domain/timedTrack";
 import Point from "@arcgis/core/geometry/Point";
 import type MapView from "@arcgis/core/views/MapView";

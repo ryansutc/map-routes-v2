@@ -1,4 +1,4 @@
-import RouteListViews from "@/components/routes/RouteListViews";
+import RouteListViews from "@/components/routes/RouteListViews/RouteListViews";
 import { useRoutes } from "@/hooks/useRoutes";
 import { useStore } from "@/state/store";
 import { GOOGLE_LOGIN_URL } from "@/utils/environment";

@@ -12,11 +12,16 @@ vi.mock("@/components/map/LayerController", () => ({
     return null;
   },
 }));
-vi.mock("@/components/map/PhotoController", () => ({ default: () => null }));
-vi.mock("@/components/map/Toggle3d", () => ({ default: () => null }));
-vi.mock("@/components/routes/RouteAnimationController", () => ({
-  RouteAnimationController: () => null,
+vi.mock("@/components/map/PhotoController/PhotoController", () => ({
+  default: () => null,
 }));
+vi.mock("@/components/map/Toggle3d", () => ({ default: () => null }));
+vi.mock(
+  "@/components/routes/RouteAnimationController/RouteAnimationController",
+  () => ({
+    RouteAnimationController: () => null,
+  }),
+);
 
 import { RouteMapOverlays } from "./$routeId";
 
@@ -59,14 +64,14 @@ describe("route detail basemap control", () => {
       expect.objectContaining({ disabled: true }),
     );
     expect(
-      (screen.getByRole("button", {
-        name: "Choose basemap",
-      }) as HTMLButtonElement).disabled,
+      (
+        screen.getByRole("button", {
+          name: "Choose basemap",
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(true);
 
     rerender(<RouteMapOverlays {...baseProps} isPreview />);
-    expect(
-      screen.queryByRole("button", { name: "Choose basemap" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Choose basemap" })).toBeNull();
   });
 });

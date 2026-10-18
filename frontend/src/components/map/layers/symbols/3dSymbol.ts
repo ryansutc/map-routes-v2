@@ -1,3 +1,4 @@
+/** ArcGIS 3D symbol for the moving route playback marker. */
 import Color from "@arcgis/core/Color.js";
 import IconSymbol3DLayer from "@arcgis/core/symbols/IconSymbol3DLayer.js";
 import PointSymbol3D from "@arcgis/core/symbols/PointSymbol3D.js";
@@ -10,7 +11,7 @@ import {
   BALL_MAX_WORLD_OFFSET_M,
   BALL_MIN_WORLD_OFFSET_M,
   BALL_VERTICAL_OFFSET_PX,
-} from "../routeMarkerLayout";
+} from "../../layout/routeMarkerLayout";
 
 export const ball3D = new PointSymbol3D({
   callout: new LineCallout3D({

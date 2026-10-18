@@ -3,11 +3,11 @@ import { DeleteRouteSection } from "@/components/routes/DeleteRouteSection";
 import {
   ACTIVITY_TYPES,
   type ActivityType,
-} from "@/components/routes/routeFormOptions";
+} from "@/components/routes/form/routeFormOptions";
 import {
   getRouteTitleError,
   normalizeRouteTitle,
-} from "@/components/routes/routeTitle";
+} from "@/components/routes/form/routeTitle";
 import { routeQueryKey, useRoute } from "@/hooks/useRoute";
 import { useToast } from "@/hooks/useToast";
 import { useStore } from "@/state/store";

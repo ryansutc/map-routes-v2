@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useStore } from "@/state/store";
 import { GOOGLE_LOGIN_URL } from "@/utils/environment";
-import CreateRouteWizard from "@/components/routes/CreateRouteWizard";
+import CreateRouteWizard from "@/components/routes/CreateRouteWizard/CreateRouteWizard";
 
 export const Route = createFileRoute("/routes/new")({
   beforeLoad: () => {
