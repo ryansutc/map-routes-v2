@@ -6,8 +6,6 @@ import {
   captureFollowZoom,
   createRouteFollowCamera,
 } from "@/components/map/camera/routeFollowCamera";
-import { RouteAnimationControls } from "@/components/routes/RouteAnimationController/RouteAnimationControls";
-import { RouteCompletionDialog } from "@/components/routes/RouteAnimationController/RouteCompletionDialog";
 import { useSettingsDialog } from "@/components/settings/SettingsDialog";
 import type { PhotoMapAnchor } from "@/domain/photoMapAnchor";
 import {
@@ -28,6 +26,8 @@ import type Map from "@arcgis/core/Map";
 import type MapView from "@arcgis/core/views/MapView";
 import type SceneView from "@arcgis/core/views/SceneView";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RouteAnimationControls } from "./RouteAnimationControls";
+import { RouteCompletionDialog } from "./RouteCompletionDialog";
 
 type RoutePhotoTiming = {
   id: number;
