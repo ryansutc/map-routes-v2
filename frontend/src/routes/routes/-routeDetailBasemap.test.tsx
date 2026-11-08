@@ -43,6 +43,7 @@ const baseProps: Props = {
   selectedBasemapId: "satellite",
   onBasemapSelect: vi.fn(),
   onPhotoClick: vi.fn(),
+  openPhotoId: null,
   onPlayingChange: vi.fn(),
   timedPhotoPresenter: {} as Props["timedPhotoPresenter"],
   automaticPhoto: null,

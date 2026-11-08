@@ -28,9 +28,7 @@ export function useRoutePhotoSessions(photos: readonly RoutePhoto[]) {
   const controllerRef = useRef<PhotoSessionController | null>(null);
   const photoUrls = useMemo(
     () =>
-      new Map(
-        photos.map((photo) => [photo.id, resolvePhotoUrl(photo.url)]),
-      ),
+      new Map(photos.map((photo) => [photo.id, resolvePhotoUrl(photo.url)])),
     [photos],
   );
   const presenter = useMemo<TimedPhotoPresenter>(
@@ -93,16 +91,22 @@ export function useRoutePhotoSessions(photos: readonly RoutePhoto[]) {
     },
     [manualAnimationPhoto, photos],
   );
+  const lightboxIndex = manualAnimationPhoto
+    ? photos.findIndex((photo) => photo.id === manualAnimationPhoto.photoId)
+    : selectedPhotoIndex;
+  const openPhotoId =
+    (lightboxIndex === null ? undefined : photos[lightboxIndex]?.id) ??
+    automaticPhoto?.photoId ??
+    null;
 
   return {
     presenter,
     onControllerChange,
     onPhotoClick,
     automaticPhoto,
+    openPhotoId,
     lightbox: {
-      index: manualAnimationPhoto
-        ? photos.findIndex((photo) => photo.id === manualAnimationPhoto.photoId)
-        : selectedPhotoIndex,
+      index: lightboxIndex,
       onIndexChange,
       onClose: manualAnimationPhoto
         ? manualAnimationPhoto.onDismiss
