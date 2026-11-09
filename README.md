@@ -1,5 +1,5 @@
 <h1 align="center">
-<img src="https://raw.githubusercontent.com/ryansutc/map-routes-v2/master/assets/blob/map-routes.png" alt="map-routes" width="60%">
+<img src="https://raw.githubusercontent.com/ryansutc/map-routes-v2/main/assets/map-routes.png" alt="map-routes" width="60%">
     <br>
         map-routes-v2
     <br>
