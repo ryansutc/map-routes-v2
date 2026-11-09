@@ -18,3 +18,7 @@ At the top of spec docs put lifecycle metadata:
 ```
 
 **Status** Draft → Accepted → In Progress → Done → Superseded
+
+### How to Write
+
+We do not need to use normative language. These are not contracts. They capture high level thinking and design in a way to make it clear and understandable.
