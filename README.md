@@ -1,4 +1,21 @@
-# map-routes
+<h1 align="center">
+<img src="https://raw.githubusercontent.com/ryansutc/map-routes-v2/master/assets/blob/map-routes.png" alt="map-routes" width="60%">
+    <br>
+        map-routes-v2
+    <br>
+  <h4 align="center">Map Routes: View GPX Routes Animated</h4>
+</h1>
+
+<p align="center">
+  <a href="https://github.com/ryansutc/map-routes-v2/actions/workflows/vitest.yml">
+    <img src="https://github.com/ryansutc/map-routes-v2/actions/workflows/vitest.yml/badge.svg"
+         alt="Unit Tests">
+  </a>
+  <a href="https://github.com/ryansutc/map-routes-v2/actions/workflows/playwright.yml">
+    <img src="https://github.com/ryansutc/map-routes-v2/actions/workflows/playwright.yml/badge.svg"
+         alt="License">
+  </a>
+</p>
 
 An revised approach example app allowing users to share routes on a map
 (based on experiments with [map-routes](https://github.com/ryansutc/map-routes)).
@@ -6,9 +23,10 @@ This version built on Django REST Framework backend.
 
 ## About
 
-This is mainly an experiment with Claude code and code planning.
+Show and follow along your gpx routes in an ArcGIS map.
+This version built on Django REST Framework backend (previous [map-routes](https://github.com/ryansutc/map-routes)).
 
-## Details
+This is mainly an experiment with **Claude code, AI orchestration and code planning**.
 
 ## Running
 
@@ -36,6 +54,10 @@ launch: http://localhost:8000/api/schema/swagger-ui
 ```
 pnpm run dev
 ```
+
+### Try It
+
+https://map-routes-v2.ryansutc.workers.dev
 
 ### Inspiration
 
