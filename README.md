@@ -17,10 +17,6 @@
   </a>
 </p>
 
-An revised approach example app allowing users to share routes on a map
-(based on experiments with [map-routes](https://github.com/ryansutc/map-routes)).
-This version built on Django REST Framework backend.
-
 ## About
 
 Show and follow along your gpx routes in an ArcGIS map.
