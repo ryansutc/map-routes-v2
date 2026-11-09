@@ -56,6 +56,7 @@ export function RouteCompletionDialog({
   const metrics = [
     {
       label: "Distance",
+      testId: "completion-distance",
       value:
         distanceValue === null
           ? MISSING_METRIC
@@ -63,6 +64,7 @@ export function RouteCompletionDialog({
     },
     {
       label: "Elevation Gain",
+      testId: "completion-elevation-gain",
       value:
         elevationValue === null
           ? MISSING_METRIC
@@ -70,6 +72,7 @@ export function RouteCompletionDialog({
     },
     {
       label: "Duration",
+      testId: "completion-duration",
       value:
         durationValue === null
           ? MISSING_METRIC
@@ -154,7 +157,11 @@ export function RouteCompletionDialog({
                     timeout={METRIC_REVEAL_DURATION_MS}
                     style={{ transitionDelay: getMetricRevealDelay(index) }}
                   >
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ fontWeight: 600 }}
+                      data-testid={metric.testId}
+                    >
                       {metric.value}
                     </Typography>
                   </Fade>

@@ -30,8 +30,7 @@
       "@/utils/*": ["./src/utils/*"]
     },
 
-    "sourceMap": true,
-    "types": ["node"]
+    "sourceMap": true
   },
   "include": ["src"]
 }

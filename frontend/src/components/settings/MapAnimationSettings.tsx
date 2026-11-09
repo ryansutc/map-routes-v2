@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   TARGET_ROUTE_DURATIONS_SEC,
   type RoutePlaybackMode,
@@ -52,6 +53,10 @@ const playbackDescription = {
 export function MapAnimationSettings({
   routeContext,
 }: MapAnimationSettingsProps) {
+  const [durationTooltipOpen, setDurationTooltipOpen] = useState(false);
+  const [durationSelectFocused, setDurationSelectFocused] = useState(false);
+  const [playbackTooltipOpen, setPlaybackTooltipOpen] = useState(false);
+  const [playbackSelectFocused, setPlaybackSelectFocused] = useState(false);
   const targetDurationSec = useStore((state) => state.animationDurationSec);
   const setTargetDurationSec = useStore(
     (state) => state.setAnimationDurationSec,
@@ -95,6 +100,9 @@ export function MapAnimationSettings({
         </InputLabel>
         <Tooltip
           describeChild
+          open={durationTooltipOpen && !durationSelectFocused}
+          onOpen={() => setDurationTooltipOpen(true)}
+          onClose={() => setDurationTooltipOpen(false)}
           title="The time that the animation will take to complete from start to finish"
         >
           <Select<TargetRouteDurationSec>
@@ -102,6 +110,8 @@ export function MapAnimationSettings({
             label="Target route duration"
             value={targetDurationSec}
             disabled={settingsDisabled}
+            onFocus={() => setDurationSelectFocused(true)}
+            onBlur={() => setDurationSelectFocused(false)}
             onChange={(event) => setTargetDurationSec(event.target.value)}
           >
             {TARGET_ROUTE_DURATIONS_SEC.map((value) => (
@@ -119,6 +129,9 @@ export function MapAnimationSettings({
         </InputLabel>
         <Tooltip
           describeChild
+          open={playbackTooltipOpen && !playbackSelectFocused}
+          onOpen={() => setPlaybackTooltipOpen(true)}
+          onClose={() => setPlaybackTooltipOpen(false)}
           title="How the animation marker advances along the route."
         >
           <Select<RoutePlaybackMode>
@@ -126,6 +139,8 @@ export function MapAnimationSettings({
             label="Preferred playback mode"
             value={preferredPlaybackMode}
             disabled={settingsDisabled}
+            onFocus={() => setPlaybackSelectFocused(true)}
+            onBlur={() => setPlaybackSelectFocused(false)}
             onChange={(event) => setPreferredPlaybackMode(event.target.value)}
           >
             {PLAYBACK_MODES.map((mode) => (
