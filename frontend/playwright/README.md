@@ -17,3 +17,10 @@ Useful commands:
 pnpm exec playwright test --ui
 pnpm exec playwright show-report
 ```
+
+Useful commands to build new tests:
+(from `frontend/`)
+
+```
+npx playwright codegen
+```

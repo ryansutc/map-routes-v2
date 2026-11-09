@@ -1,7 +1,7 @@
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 
-import { defineConfig } from "vite";
+import { configDefaults, defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig(({ mode }) => ({
@@ -44,6 +44,9 @@ export default defineConfig(({ mode }) => ({
     global: "globalThis",
   },
   assetsInclude: ["**/*.wasm", "**/*.woff", "**/*.woff2"],
+  test: {
+    exclude: [...configDefaults.exclude, "**/playwright/**"],
+  },
   plugins: [
     tanstackRouter({
       target: "react",
