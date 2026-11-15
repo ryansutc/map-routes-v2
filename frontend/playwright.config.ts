@@ -12,8 +12,6 @@ export default defineConfig({
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [["list"], ["html", { open: "never" }]],
   timeout: 60_000, // 60 seconds per test
-  // Keep a hung or interrupted run from occupying the Actions runner for 30 minutes.
-  globalTimeout: process.env.CI ? 5 * 60_000 : undefined,
   use: {
     baseURL: "http://127.0.0.1:5173",
     trace: "retain-on-failure",
@@ -60,7 +58,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "pnpm run dev --host 127.0.0.1",
+    command: "./node_modules/.bin/vite --host 127.0.0.1",
     url: "http://127.0.0.1:5173",
     reuseExistingServer: !process.env.CI,
   },
