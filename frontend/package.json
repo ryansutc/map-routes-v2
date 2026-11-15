@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "NODE_OPTIONS='--max-old-space-size=8192' pnpm exec tsc -b && NODE_OPTIONS='--max-old-space-size=8192' pnpm exec vite build",
     "lint": "eslint .",
+    "playwright": "pnpm exec playwright test",
+    "playwright-ui": "pnpm exec playwright test --ui",
     "preview": "vite preview",
     "schema-fetch": "curl -s 'http://localhost:8000/api/schema/?format=json' -o ./docs/schema.json",
     "schema-to-zod": "openapi-zod-client ./docs/schema.json --output ./src/generatedtypes/django_generated.ts --with-docs --with-description  -p ./.prettierrc && ./cleanup_django_generated.sh",
