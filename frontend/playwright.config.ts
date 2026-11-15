@@ -10,11 +10,15 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: "html",
+  reporter: [["list"], ["html", { open: "never" }]],
   timeout: 60_000, // 60 seconds per test
+  // Keep a hung or interrupted run from occupying the Actions runner for 30 minutes.
+  globalTimeout: process.env.CI ? 5 * 60_000 : undefined,
   use: {
     baseURL: "http://127.0.0.1:5173",
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
   },
 
   /* Configure projects for major browsers */
