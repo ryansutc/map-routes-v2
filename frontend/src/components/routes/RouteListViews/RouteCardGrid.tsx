@@ -92,7 +92,7 @@ function RouteCard({ route }: { route: RouteListResponseDto }) {
               label={route.activity_type}
               size="small"
               color="secondary"
-              variant="outlined"
+              variant="filled"
             />
             <Chip
               label={route.is_public ? "Public" : "Private"}

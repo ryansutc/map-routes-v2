@@ -84,7 +84,7 @@ export default function RouteInfoContainer({
           label={routeItem.activity_type}
           size="small"
           color="secondary"
-          variant="outlined"
+          variant="filled"
         />
         <Chip
           label={routeItem.is_public ? "Public" : "Private"}

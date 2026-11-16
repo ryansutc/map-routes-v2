@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@arcgis/core": "^4.33.11",
+    "@axe-core/playwright": "^4.14.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@esri/calcite-ui-icons": "4.2.0",
