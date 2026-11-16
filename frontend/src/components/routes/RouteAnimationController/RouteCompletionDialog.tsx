@@ -122,6 +122,7 @@ export function RouteCompletionDialog({
           sx={{ position: "relative", width: "min(100%, 460px)", p: 3 }}
         >
           <IconButton
+            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             aria-label="Close route summary"
             onClick={onClose}
