@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 import pluginRouter from "@tanstack/eslint-plugin-router";
 import vitest from "@vitest/eslint-plugin";
 import reactDom from "eslint-plugin-react-dom";
@@ -14,6 +15,7 @@ export default tseslint.config([
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
+      jsxA11y.flatConfigs.recommended,
       // v7 moved the flat configs under `configs.flat.*`; the top-level keys
       // are now the eslintrc-format ones and are rejected by ESLint 10.
       reactHooks.configs.flat["recommended-latest"],
