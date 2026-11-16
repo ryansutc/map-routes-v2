@@ -56,7 +56,6 @@ function App() {
           <CssBaseline />
           <Container
             id="appContainer"
-            component="main"
             maxWidth={false}
             disableGutters
             sx={{

@@ -2,7 +2,7 @@ import { alpha, createTheme } from "@mui/material/styles";
 
 // My default color:
 const primaryBase = "#273E72";
-const secondaryBase = "#AB812E";
+const secondaryBase = "#FFEB3B";
 
 const primary = {
   main: primaryBase,
@@ -31,9 +31,9 @@ const theme = createTheme({
   palette: {
     primary: primary,
     secondary: {
-      main: alpha(secondaryBase, 0.7),
-      light: alpha(secondaryBase, 0.5),
-      dark: alpha(secondaryBase, 0.9),
+      main: secondaryBase,
+      light: "#FFF176",
+      dark: "#FBC02D",
       contrastText: alpha("#000", 0.7), // Black text for contrast
     },
     background: {

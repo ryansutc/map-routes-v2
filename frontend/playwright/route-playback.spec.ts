@@ -27,6 +27,7 @@ const route = {
 };
 
 test("plays a route and shows its completion distance", async ({ page }) => {
+  // Simple navigation to a route, and running the animation on it
   page.on("console", (message) => {
     if (message.type() === "error") {
       console.error(`[browser console] ${message.text()}`);

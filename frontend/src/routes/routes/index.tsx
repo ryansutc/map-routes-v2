@@ -100,6 +100,19 @@ function RoutesIndex() {
       id="mainbox"
       sx={{ p: { xs: 2, sm: 3 }, maxWidth: "1800px", mx: "auto" }}
     >
+      <Box sx={{ mb: 3 }}>
+        <Typography component="h1" variant="h4" gutterBottom>
+          Map Routes: Explore GPX Tracklogs of Your Adventures
+        </Typography>
+        <Typography color="text.secondary">
+          <span>
+            Browse GPX tracklogs from outdoor activities. This is a
+            demonstration app; you can view my activities and read more about
+            the project on my{" "}
+          </span>
+          <a href="https://rsutcliffegis.xyz/project/map-routes-app"> blog</a>.
+        </Typography>
+      </Box>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2}
@@ -132,13 +145,14 @@ function RoutesIndex() {
             onChange={handleViewChange}
             size="small"
             aria-label="List presentation"
+            sx={{
+              "& .MuiToggleButton-root:not(.Mui-selected)": {
+                color: "text.primary",
+              },
+            }}
           >
-            <ToggleButton value="cards" aria-label="Card view">
-              Cards
-            </ToggleButton>
-            <ToggleButton value="table" aria-label="Table view">
-              Table
-            </ToggleButton>
+            <ToggleButton value="cards">Cards</ToggleButton>
+            <ToggleButton value="table">Table</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
       </Stack>
