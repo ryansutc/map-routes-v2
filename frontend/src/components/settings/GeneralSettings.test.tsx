@@ -21,9 +21,7 @@ describe("GeneralSettings", () => {
       screen.getByText("use meters (m) and kilometers (km) in app."),
     ).toBeTruthy();
 
-    fireEvent.mouseOver(
-      screen.getByRole("group", { name: "Distance units" }),
-    );
+    fireEvent.mouseOver(screen.getByRole("group", { name: "Distance units" }));
     expect(
       await screen.findByRole("tooltip", {
         name: "Show distances and elevations in appropriate units",
@@ -36,5 +34,24 @@ describe("GeneralSettings", () => {
     expect(
       screen.getByText("use feet (ft) and miles (mi) in app."),
     ).toBeTruthy();
+  });
+
+  it("toggles dark mode and persists the preference", async () => {
+    useStore.setState({ themeMode: "light" });
+    render(<GeneralSettings />);
+
+    const darkMode = screen.getByRole("switch", { name: "Dark mode" });
+    expect((darkMode as HTMLInputElement).checked).toBe(false);
+    expect(
+      screen.getByText("Use a darker color scheme throughout the app."),
+    ).toBeTruthy();
+
+    fireEvent.click(darkMode);
+
+    expect(useStore.getState().themeMode).toBe("dark");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(localStorage.getItem("map-routes-store")).toContain(
+      '"themeMode":"dark"',
+    );
   });
 });

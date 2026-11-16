@@ -30,6 +30,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
+import { alpha } from "@mui/material/styles";
 
 const PLACEHOLDER_IMG =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 180'><rect width='320' height='180' fill='%23e0e0e0'/><text x='50%' y='50%' fill='%23888' font-family='sans-serif' font-size='16' text-anchor='middle' dominant-baseline='middle'>No photo</text></svg>";
@@ -76,7 +77,7 @@ function RouteCard({ route }: { route: RouteListResponseDto }) {
               right: 0,
               px: 1,
               py: 0.5,
-              bgcolor: "rgba(200,200,200,0.65)",
+              bgcolor: (theme) => alpha(theme.palette.background.paper, 0.88),
               color: "text.primary",
             }}
           >

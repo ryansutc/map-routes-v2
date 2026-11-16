@@ -58,6 +58,8 @@ test("routes, settings, and route detail have no axe accessibility violations", 
   await page.getByRole("button", { name: "Open settings" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expectNoAccessibilityViolations(page, "the open settings dialog");
+  await page.getByRole("switch", { name: "Dark mode" }).check();
+  await expectNoAccessibilityViolations(page, "dark mode settings");
   await page.getByRole("button", { name: "Close settings" }).click();
 
   await page.getByRole("button", { name: route.title }).click();

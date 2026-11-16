@@ -1,13 +1,14 @@
 import MainWrapper from "@/components/main/MainWrapper";
 import { ToastContainer } from "@/components/layout/ToastContainer";
 
-import theme from "@/utils/muitheme";
+import { useStore } from "@/state/store";
+import createAppTheme from "@/utils/muitheme";
 import { Container, ThemeProvider } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import "./App.css";
 import { routeTree } from "./routeTree.gen";
 
@@ -38,6 +39,9 @@ declare module "@tanstack/react-router" {
 }
 
 function App() {
+  const themeMode = useStore((state) => state.themeMode);
+  const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
+
   useEffect(() => {
     // In production, navigate to the initial path from the server
     if (
@@ -53,7 +57,7 @@ function App() {
     <>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
-          <CssBaseline />
+          <CssBaseline enableColorScheme />
           <Container
             id="appContainer"
             maxWidth={false}
