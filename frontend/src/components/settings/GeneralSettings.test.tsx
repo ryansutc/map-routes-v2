@@ -7,7 +7,7 @@ import { GeneralSettings } from "./GeneralSettings";
 
 describe("GeneralSettings", () => {
   beforeEach(() => {
-    useStore.setState({ units: "metric" });
+    useStore.setState({ units: "metric", themeMode: "light" });
   });
 
   afterEach(cleanup);
@@ -36,8 +36,7 @@ describe("GeneralSettings", () => {
     ).toBeTruthy();
   });
 
-  it("toggles dark mode and persists the preference", async () => {
-    useStore.setState({ themeMode: "light" });
+  it("toggles dark mode and persists the preference", () => {
     render(<GeneralSettings />);
 
     const darkMode = screen.getByRole("switch", { name: "Dark mode" });
@@ -49,7 +48,6 @@ describe("GeneralSettings", () => {
     fireEvent.click(darkMode);
 
     expect(useStore.getState().themeMode).toBe("dark");
-    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(localStorage.getItem("map-routes-store")).toContain(
       '"themeMode":"dark"',
     );

@@ -11,7 +11,23 @@ const lightPrimary = {
   contrastText: "#fff",
 };
 
+const darkPrimary = {
+  main: "#B8C9FF",
+  light: "#DEE6FF",
+  dark: "#7D9CEB",
+  contrastText: "#10234D",
+};
+
+const lightBackground = {
+  default: "#f5f5f5", // Light gray background
+  paper: "#fff", // White paper background
+};
+
+/** Creates the application's Material UI theme for the selected color mode. */
 export function createAppTheme(mode: PaletteMode) {
+  const primary = mode === "dark" ? darkPrimary : lightPrimary;
+  const background = mode === "light" ? lightBackground : undefined;
+
   return createTheme({
     typography: {
       fontFamily: "var(--font-roboto)",
@@ -31,27 +47,14 @@ export function createAppTheme(mode: PaletteMode) {
     },
     palette: {
       mode,
-      primary:
-        mode === "dark"
-          ? {
-              main: "#B8C9FF",
-              light: "#DEE6FF",
-              dark: "#7D9CEB",
-              contrastText: "#10234D",
-            }
-          : lightPrimary,
+      primary,
       secondary: {
         main: secondaryBase,
         light: "#FFF176",
         dark: "#FBC02D",
         contrastText: alpha("#000", 0.7), // Black text for contrast
       },
-      ...(mode === "light" && {
-        background: {
-          default: "#f5f5f5", // Light gray background
-          paper: "#fff", // White paper background
-        },
-      }),
+      ...(background && { background }),
     },
   });
 }
