@@ -3,8 +3,10 @@
 From `frontend/`, install the browser once and run the suite:
 
 ```sh
+pnpm exec playwright install
 pnpm exec playwright install chromium
-pnpm exec playwright test
+pnpm run playwright
+pnpm run playwright-ui
 ```
 
 Playwright starts the Vite development server. The route playback test stubs the
@@ -15,7 +17,7 @@ Useful commands:
 
 ```sh
 pnpm exec playwright test --ui
-pnpm exec playwright show-report
+pnpm run playwright -- show-report
 ```
 
 Useful commands to build new tests:
