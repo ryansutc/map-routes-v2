@@ -56,7 +56,12 @@ test("routes, settings, and route detail have no axe accessibility violations", 
   await expectNoAccessibilityViolations(page, "the routes page");
 
   await page.getByRole("button", { name: "Open settings" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  const settingsDialog = page.getByRole("dialog");
+  await expect(settingsDialog).toBeVisible();
+  await expect(page.locator(".MuiDialog-container")).toHaveCSS(
+    "opacity",
+    "1",
+  );
   await expectNoAccessibilityViolations(page, "the open settings dialog");
   await page.getByRole("switch", { name: "Dark mode" }).check();
   await expectNoAccessibilityViolations(page, "dark mode settings");

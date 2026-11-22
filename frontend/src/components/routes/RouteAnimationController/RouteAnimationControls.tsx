@@ -92,6 +92,7 @@ export function RouteAnimationControls({
       <LinearProgress
         variant="determinate"
         value={playbackProgress * 100}
+        aria-label="Route playback progress"
         sx={{ flex: 1, borderRadius: 1, height: 6 }}
       />
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
