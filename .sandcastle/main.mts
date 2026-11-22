@@ -102,11 +102,16 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     const implement = await sandbox.run({
       name: "implementer",
       maxIterations: 1,
-      agent: sandcastle.codex("gpt-5.6-sol"),
+      agent: sandcastle.codex("gpt-5.6-terra"),
       promptFile: "./.sandcastle/implement-prompt.md",
       promptArgs: {
         ISSUE_NUMBER: issueNumber,
         BRANCH: branch,
+      },
+      logging: {
+        type: "file",
+        path: `.sandcastle/logs/issue-${issueNumber}-debug.log`,
+        verbose: false,
       },
     });
 
@@ -130,7 +135,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     await sandbox.run({
       name: "reviewer",
       maxIterations: 1,
-      agent: sandcastle.codex("gpt-5.6-sol"),
+      agent: sandcastle.codex("gpt-5.6-terra"),
       promptFile: "./.sandcastle/review-prompt.md",
       promptArgs: {
         BRANCH: branch,
