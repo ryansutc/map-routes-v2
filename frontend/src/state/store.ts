@@ -21,6 +21,7 @@ import { create } from "zustand";
 export type State = ExtractState<typeof useStore>;
 
 export type ListView = "cards" | "table";
+export type ThemeMode = "light" | "dark";
 
 type MapRouteState = {
   page: PageType;
@@ -35,6 +36,8 @@ type MapRouteState = {
   setListView: (view: ListView) => void;
   units: UnitSystem;
   setUnits: (units: UnitSystem) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (themeMode: ThemeMode) => void;
   animationDurationSec: TargetRouteDurationSec;
   setAnimationDurationSec: (
     animationDurationSec: TargetRouteDurationSec,
@@ -56,7 +59,12 @@ type PersistedAnimationState = {
   skipDetectedStops?: unknown;
   showTimedPhotos?: unknown;
   followAlong?: unknown;
+  themeMode?: unknown;
 };
+
+function isThemeMode(value: unknown): value is ThemeMode {
+  return value === "light" || value === "dark";
+}
 
 export function migratePersistedAnimationState(persistedState: unknown) {
   const persisted =
@@ -82,9 +90,9 @@ export function migratePersistedAnimationState(persistedState: unknown) {
         ? persisted.showTimedPhotos
         : true,
     followAlong:
-      typeof persisted.followAlong === "boolean"
-        ? persisted.followAlong
-        : true,
+      typeof persisted.followAlong === "boolean" ? persisted.followAlong : true,
+    // Light remains the default until a user explicitly changes this setting.
+    themeMode: isThemeMode(persisted.themeMode) ? persisted.themeMode : "light",
   };
 }
 
@@ -99,6 +107,7 @@ export const useStore = create<MapRouteState>()(
           viewMode: "2d" as "2d" | "3d",
           listView: "cards" as ListView,
           units: "metric" as UnitSystem,
+          themeMode: "light" as ThemeMode,
           animationDurationSec: DEFAULT_TARGET_ROUTE_DURATION_SEC,
           animationPlaybackMode: "recorded" as RoutePlaybackMode,
           skipDetectedStops: true,
@@ -125,6 +134,9 @@ export const useStore = create<MapRouteState>()(
           },
           setUnits: (units: UnitSystem) => {
             set({ units }, undefined, "units/setUnits");
+          },
+          setThemeMode: (themeMode: ThemeMode) => {
+            set({ themeMode }, undefined, "theme/setThemeMode");
           },
           setAnimationDurationSec: (
             animationDurationSec: TargetRouteDurationSec,
@@ -161,12 +173,13 @@ export const useStore = create<MapRouteState>()(
       ),
       {
         name: "map-routes-store",
-        version: 3,
+        version: 4,
         migrate: (persistedState) =>
           migratePersistedAnimationState(persistedState),
         partialize: (state) => ({
           listView: state.listView,
           units: state.units,
+          themeMode: state.themeMode,
           animationDurationSec: state.animationDurationSec,
           animationPlaybackMode: state.animationPlaybackMode,
           skipDetectedStops: state.skipDetectedStops,

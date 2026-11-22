@@ -69,7 +69,7 @@ export default function BasemapSelector({
         zIndex: 1000,
         width: BASEMAP_CONTROL_SIZE_PX,
         height: BASEMAP_CONTROL_SIZE_PX,
-        backgroundColor: "white",
+        backgroundColor: "background.paper",
         borderRadius: "50%",
         opacity: disabled ? DISABLED_MAP_CONTROL_OPACITY : 1,
       }}

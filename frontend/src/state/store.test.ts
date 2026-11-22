@@ -10,6 +10,7 @@ describe("animation settings persistence", () => {
       skipDetectedStops: true,
       showTimedPhotos: true,
       followAlong: false,
+      themeMode: "light",
     });
   });
 
@@ -19,12 +20,14 @@ describe("animation settings persistence", () => {
     useStore.getState().setSkipDetectedStops(false);
     useStore.getState().setShowTimedPhotos(false);
     useStore.getState().setFollowAlong(true);
+    useStore.getState().setThemeMode("dark");
 
     expect(useStore.getState().animationDurationSec).toBe(120);
     expect(useStore.getState().animationPlaybackMode).toBe("distance");
     expect(useStore.getState().skipDetectedStops).toBe(false);
     expect(useStore.getState().showTimedPhotos).toBe(false);
     expect(useStore.getState().followAlong).toBe(true);
+    expect(useStore.getState().themeMode).toBe("dark");
   });
 
   it("migrates points-per-second preferences to the target-duration default", () => {
@@ -38,7 +41,21 @@ describe("animation settings persistence", () => {
     expect(migrated.skipDetectedStops).toBe(true);
     expect(migrated.showTimedPhotos).toBe(true);
     expect(migrated.followAlong).toBe(true);
+    expect(migrated.themeMode).toBe("light");
     expect(migrated).not.toHaveProperty("animationSpeed");
+  });
+
+  it("preserves a valid persisted theme preference and ignores invalid values", () => {
+    expect(migratePersistedAnimationState({ themeMode: "dark" })).toMatchObject(
+      {
+        themeMode: "dark",
+      },
+    );
+    expect(
+      migratePersistedAnimationState({ themeMode: "system" }),
+    ).toMatchObject({
+      themeMode: "light",
+    });
   });
 
   it("replaces incompatible persisted animation preferences", () => {
