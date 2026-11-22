@@ -126,7 +126,7 @@ function RoutesIndex() {
           aria-label="Route list tabs"
         >
           <Tab label="Public" value="public" />
-          <Tab label="My Routes" value="mine" />
+          {userIsAuthenticated && <Tab label="My Routes" value="mine" />}
         </Tabs>
 
         <Stack direction="row" spacing={1} alignItems="center">
